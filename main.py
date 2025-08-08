@@ -84,8 +84,9 @@ def run_ycsb(protocol, interface) -> None:
     already_exists = False
     for item in data:
         if (item["project"] == selected_project.name
-                and item["protocol"] == protocol['name']
-                and item["workload"] == workload_path.name):
+                and item["protocol"] == protocol["name"]
+                and item["workload"] == workload_path.name
+                and item["language"] == protocol["language"]):
             already_exists = True
             item["result"] = result
 
@@ -100,7 +101,7 @@ def run_ycsb(protocol, interface) -> None:
 
     with open(DATA, "w") as f:
         json.dump(data, f, separators=(",", ":"))
-    print(f"Data has been inserted to {DATA}.")
+    print(f"{workload_path.name} result has been inserted into {DATA}.")
 
 
 def parse_ycsb_output(lines) -> dict[str]:

@@ -191,7 +191,7 @@ async function createRuntimeChart(json) {
 	const name = `${entry.project} (${entry.protocol})`;
 	const runtime = entry.result["OVERALL"]["RunTime(ms)"];
 	return { name: name, value: runtime }
-    }).sort((a, b) => b.value - a.value);
+    }).sort((a, b) => a.value - b.value);
 
     const chart = new Chart(canvas, {
 	type: "bar",
