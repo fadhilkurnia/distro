@@ -335,7 +335,7 @@ function loadTable() {
 
 	const language = document.createElement("td");
 	language.classList.add("flex-1", "select-none", "basis-0", "w-0");
-	language.textContent = "Go";
+	language.textContent = row.language;
 
 	const runtime = document.createElement("td");
 	runtime.classList.add("flex-1", "select-none", "basis-0", "w-0");
@@ -343,7 +343,7 @@ function loadTable() {
 
 	const throughput = document.createElement("td");
 	throughput.classList.add("flex-2", "select-none", "basis-0", "w-0");
-	throughput.textContent = row.result.OVERALL["Throughput(ops/sec)"];
+	throughput.textContent = Number(row.result.OVERALL["Throughput(ops/sec)"]).toFixed(3);
 
 	tr.append(project, protocol, language, runtime, throughput);
 	tableBody.appendChild(tr);

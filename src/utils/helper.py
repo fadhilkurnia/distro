@@ -4,11 +4,12 @@ import sys
 def get_option(min, max, opts) -> int:
     """
     Print opts to stdout then gets user number input.
-    :param min: smallest index for the option
+
+    :param min: Smallest index for the option
     :type min: int
-    :param max: largest index for the option
+    :param max: Largest index for the option
     :type max: int
-    :param opts: list of options
+    :param opts: List of options
     :type opts: { num: int, text: str }
     """
     while True:
@@ -27,7 +28,3 @@ def get_option(min, max, opts) -> int:
             sys.exit()
         except ValueError:
             pass
-
-
-def hello():
-    print("Hello from helper")

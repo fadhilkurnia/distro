@@ -9,13 +9,18 @@ from src.utils import helper
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = Path("./bin/ycsb")
 YCSB_WORKLOAD_DIR = Path("./workloads")
-WORKLOADS = ["workloada", "workloadb", "workloadc", "workloadd"]
-DATA = "data.json"
+WORKLOADS = ["read-heavy", "update-heavy"]
+DATA = "data.local.json"
 
 selected_project = None
 
 
-def main():
+def main() -> None:
+    """
+    List out all directories in sut/ for user to pick.
+    The chosen directory will have its run.py script called
+    to setup the protocol instance before running YCSB benchmark.
+    """
     global selected_project
     systems_under_test = Path("./sut")
     systems = [p for p in systems_under_test.iterdir() if p.is_dir()]
@@ -38,7 +43,17 @@ def main():
     module.main(run_ycsb)
 
 
-def run_ycsb(protocol, interface):
+def run_ycsb(protocol, interface) -> None:
+    """
+    Give user options to pick a workload, then runs that workload
+    onto the specified protocol. The YCSB output is then parsed and
+    later stored in a .json file specified by DATA.
+
+    :param protocol: Protocol data that will be benchmarked.
+    :type protocol: dict[str, str]
+    :param interface: YCSB interface name for the protocol
+    :type interface: str
+    """
     global selected_project
     options = [{"num": i, "text": name}
                for i, name in enumerate(WORKLOADS, start=1)]
@@ -58,11 +73,6 @@ def run_ycsb(protocol, interface):
         text=True)
 
     parsed = parse_ycsb_output(result.stdout.splitlines())
-    '''
-    print(f"Project: {selected_project.name}")
-    print(f"Protocol: {protocol}")
-    print(f"{workload_path.name} output:")
-    '''
     print(json.dumps(parsed, indent=2))
 
     keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
@@ -74,7 +84,7 @@ def run_ycsb(protocol, interface):
     already_exists = False
     for item in data:
         if (item["project"] == selected_project.name
-                and item["protocol"] == protocol
+                and item["protocol"] == protocol['name']
                 and item["workload"] == workload_path.name):
             already_exists = True
             item["result"] = result
@@ -82,17 +92,27 @@ def run_ycsb(protocol, interface):
     if not already_exists:
         data.append({
             "project": selected_project.name,
-            "protocol": protocol,
+            "protocol": protocol['name'],
+            "language": protocol['language'],
             "workload": workload_path.name,
             "result": result
         })
 
-    print("data:", data)
     with open(DATA, "w") as f:
         json.dump(data, f, separators=(",", ":"))
+    print(f"Data has been inserted to {DATA}.")
 
 
-def parse_ycsb_output(lines):
+def parse_ycsb_output(lines) -> dict[str]:
+    """
+    Parses the output of YCSB benchmark. Only takes the
+    final results and parses it into a dictionary.
+
+    :param lines: The YCSB benchmark output.
+    :type lines: str[]
+    :return: A dictionary of the benchmark result.
+    :rtype: dict[str...]
+    """
     data = {}
     for line in lines:
         line = line.strip()
@@ -103,14 +123,12 @@ def parse_ycsb_output(lines):
             continue  # skip empty lines or non-data lines
 
         try:
-            # Split into components
             parts = line.split("],")
-            section = parts[0][1:].strip()  # Remove opening '['
+            section = parts[0][1:].strip()
             key_value = parts[1].split(",", 1)
             key = key_value[0].strip()
             value = key_value[1].strip()
 
-            # Try to parse value as float or int
             if '.' in value:
                 try:
                     value = float(value)
