@@ -1,5 +1,5 @@
 from pathlib import Path
-import importlib
+import importlib.util
 import sys
 import subprocess
 import json
