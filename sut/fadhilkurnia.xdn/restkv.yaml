@@ -1,0 +1,14 @@
+---
+name: restkv
+components:
+   - restkv:
+        image: restkv:1
+        stateful: true
+        entry: true
+        port: 8080
+        environments:
+          - RUST_BACKTRACE: full
+
+state: restkv:/app/data/
+deterministic: false
+consistency: linearizability

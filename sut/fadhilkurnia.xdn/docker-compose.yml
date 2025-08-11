@@ -1,0 +1,12 @@
+services:
+  restkv:
+    image: restkv:1
+    container_name: restkv
+    user: 1000:1000
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - RUST_BACKTRACE=full
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
