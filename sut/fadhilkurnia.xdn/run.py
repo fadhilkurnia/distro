@@ -5,31 +5,61 @@ import os
 
 from src.utils import helper
 
-CURR_DIR = Path("./sut/ailidani.paxi")
-PAXI_BIN = CURR_DIR / "paxi" / "bin"
+CURR_DIR = Path("./sut/fadhilkurnia.xdn")
+XDN_BIN = CURR_DIR / "xdn" / "bin"
+START_CONFIG = CURR_DIR / "xdn" / "eval" / "static" / "gigapaxos.xdn.3way.local.properties"
 
-OPTIONS = [{"num": 0, "text": "Start Paxi"},
-           {"num": 1, "text": "Stop Paxi"},
+OPTIONS = [{"num": 0, "text": "Start XDN"},
+           {"num": 1, "text": "Stop XDN"},
            {"num": 2, "text": "Run Benchmark"}]
 
-PROTOCOLS = [{"num": 1, "text": "paxos"},
-             {"num": 2, "text": "epaxos"},
-             {"num": 3, "text": "sdpaxos"},
-             {"num": 4, "text": "wpaxos"},
-             {"num": 5, "text": "abd"},
-             {"num": 6, "text": "chain"},
-             {"num": 7, "text": "vpaxos"},
-             {"num": 8, "text": "wankeeper"},
-             {"num": 9, "text": "kpaxos"},
-             {"num": 10, "text": "paxos_groups"},
-             {"num": 11, "text": "dynamo"},
-             {"num": 12, "text": "blockchain"},
-             {"num": 13, "text": "m2paxos"},
-             {"num": 14, "text": "hpaxos"}]
+'''
+SERVICE_TYPE = [{"num": 1, "text": "deterministic"},
+                {"num": 2, "text": "non-deterministic"},
+'''
 
 
-# Shared list to store job info
-jobs = []
+class TriggerWatcher:
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.process = None
+        self.thread = None
+        self._lock = threading.Lock()
+        self._trigger_text = None
+        self._trigger_event = threading.Event()
+
+    def start(self):
+        self.process = subprocess.Popen(
+            self.cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        self.thread = threading.Thread(target=self._watch_output, daemon=True)
+        self.thread.start()
+
+    def _watch_output(self):
+        for line in self.process.stdout:
+            print(f"[OUTPUT] {line.strip()}")
+            with self._lock:
+                if self._trigger_text and self._trigger_text in line:
+                    self._trigger_event.set()
+
+    def wait_for(self, trigger_text, timeout=None):
+        with self._lock:
+            self._trigger_text = trigger_text
+            self._trigger_event.clear()
+        print(f"Waiting for: {trigger_text}")
+        found = self._trigger_event.wait(timeout=timeout)
+        if not found:
+            raise TimeoutError(f"Timeout waiting for: {trigger_text}")
+        print(f"Trigger '{trigger_text}' detected")
+
+    def stop(self):
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
 
 
 def run_command(cmd) -> None:
@@ -40,89 +70,76 @@ def run_command(cmd) -> None:
     :type cmd: str[]
     """
     proc = subprocess.Popen(cmd)
-    jobs.append({
-        'cmd': cmd,
-        'process': proc,
-        'thread': threading.current_thread()
-    })
     proc.wait()
 
 
 def main(run_ycsb) -> None:
     """
     Main function called by the root main.py script.
-    Gives user a choice to start/stop paxi instances
+    Gives user a choice to start/stop instances
     and to run the YCSB benchmark on the instance.
 
     :param run_ycsb: Function to run YCSB benchmark. Takes in protocol
                      data {name, language} and YCSB interface name as argument.
     :type run_ycsb: Callable[dict[str, str], str]
     """
-    selected_protocol = None
     while True:
         val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
         print()
 
         match val:
             case 0:
-                prot_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
-                selected_protocol = {
-                    "name": PROTOCOLS[prot_num-1]["text"],
-                    "language": "Go",
-                }
-                start_paxi(PAXI_BIN, selected_protocol)
+                start_xdn(XDN_BIN, START_CONFIG)
             case 1:
-                stop_paxi()
+                stop_xdn(XDN_BIN, START_CONFIG)
             case 2:
-                run_ycsb(selected_protocol, "paxi")
+                run_ycsb({"name": "Primary-Backup", "language": "Java"}, "xdn")
 
 
-def start_paxi(path, protocol) -> None:
+def start_xdn(path, config) -> None:
     """
-    Runs the paxi instances with the specified protocol in different
+    Runs the XDN instances with the specified protocol in different
     threads concurrently. Currently only supports local startup.
 
-    :param path: Path to bin/ directory inside the paxi repository.
+    :param path: Path to bin/ directory inside the xdn repository.
     :type path: Path
-    :param protocol: Protocol data that is being started.
-    :type protocol: dict[str, str]
+    :param config: Path to config file to run XDN startup script
+    :type config: Path
     """
-    server = path / "server"
-    config = CURR_DIR / "config.json"
+    start_script = path / "gpServer.sh"
 
-    commands = [
-        [server, "-id", "1.1", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "1.2", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "1.3", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "2.1", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "2.2", f"-algorithm={protocol['name']}", "-config", config],
-    ]
+    cmd_xdn = [start_script, f"-DgigapaxosConfig={config}", "start", "all"]
+    watcher = TriggerWatcher(cmd_xdn)
+    watcher.start()
 
-    # Start each command in its own thread
-    for cmd in commands:
-        print(f"Starting: {' '.join(map(str, cmd))}")
-        t = threading.Thread(target=run_command, args=(cmd,))
-        t.start()
-    print(f"Paxi {protocol['name']} instances successfully started")
+    watcher.wait_for("HttpReconfigurator ready on")
+    print("XDN has finished initialzing. Now starting restkv service...")
+
+    yaml_path = CURR_DIR / "restkv.yaml"
+    cmd_service = ["xdn", "launch", "restkv", f"--file={yaml_path}"]
+    subprocess.run(cmd_service, text=True)
+
+    watcher.wait_for("non-deterministic service initialization complete")
+    print("restkv service has started in XDN")
 
 
-def stop_paxi() -> None:
+def stop_xdn(bin_path, config) -> None:
     """
     Terminates all running instances of paxi that are still recorded inside
     the jobs list, then removes all the logfiles created by the instances.
     """
-    for job in jobs:
-        proc = job['process']
-        if proc.poll() is None:  # Still running
-            print(f"Terminating: {' '.join(map(str, job['cmd']))}")
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                print(f"Force killing: {' '.join(map(str, job['cmd']))}")
-                proc.kill()
+    start_script = bin_path / "gpServer.sh"
 
-    os.system("rm server.*")
+    cmd_xdn = [start_script, f"-DgigapaxosConfig={config}", "forceclear", "all"]
+    subprocess.run(cmd_xdn, text=True)
+
+    subprocess.run(["docker", "network", "prune", "--force"], text=True)
+
+    os.system("fusermount -u /tmp/xdn/state/fuselog/ar0/mnt/restkv/e0")
+    os.system("rm -rf /tmp/gigapaxos")
+    os.system("rm -rf /tmp/xdn")
+    os.system("rm -rf ./output ./derby.log")
+    print("XDN has stopped")
 
 
 if __name__ == "__main__":
@@ -130,4 +147,4 @@ if __name__ == "__main__":
 
 
 def hello():
-    print("Hello from paxi")
+    print("Hello from XDN")
