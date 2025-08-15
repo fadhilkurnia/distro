@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Distrobench</title>
+	<link rel="stylesheet" href="style.css">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="./script.js" defer></script>
+    </head>
+
+    <body class="w-screen overflow-x-hidden box-border">
+	<div id="root" class="bg-gray-950 w-screen min-h-screen overflow-auto">
+	    <div class="flex justify-between items-center px-5 py-4 tracking-tight border-b border-gray-700 fixed top-0 w-screen backdrop-blur-sm backdrop-opacity-100 z-100 select-none">
+		<h1 class="font-sans text-gray-100 text-lg font-bold">Distrobench</h1>
+
+		<button id="edit-metadata" type="button" class="bg-sky-500 self-end py-2 px-3 text-sm rounded-lg hover:bg-sky-600 hover:duration-200">Edit Metadata</button>
+	    </div>
+
+	    <div class="px-5 pt-20 flex flex-col gap-3 pb-5">
+		<!-- Select Area -->
+		<div class="flex gap-3 select-none">
+		    <div class="flex flex-col flex-1 gap-3">
+			<div class="relative h-min flex-1">
+			    <select name="workload" id="workload-select" class="appearance-none border border-gray-600 bg-gray-900 text-gray-100 rounded-lg px-4 py-2 w-full hover:bg-gray-800 hover:duration-100">
+				<option value="">Select a workload</option>
+			    </select>	
+
+			    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+				    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				</svg>
+			    </div>
+			</div>
+
+			<div class="relative h-min flex-1">
+			    <select name="metric" id="metric-select" class="appearance-none border border-gray-600 bg-gray-900 text-gray-100 rounded-lg px-4 py-2 w-full hover:bg-gray-800 hover:duration-100">
+				<option value="">Select a metric</option>
+			    </select>	
+
+			    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+				    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				</svg>
+			    </div>
+			</div>
+		    </div>
+
+		    <!-- Filter by Protocol -->
+		    <fieldset class="flex-1 text-gray-100 border border-gray-700 rounded-lg bg-gray-900 px-2 pb-2">
+			<legend class="text-xs capitalize mb-1">Filter by Consensus Protocol</legend>
+
+			<div id="select-protocol" class="flex gap-1 flex-wrap">
+			    <label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-800 text-gray-100 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
+				<input class="cursor-pointer sr-only" type="radio" name="protocol" value="All"/>
+				<span class="text-xs">All</span>
+			    </label>
+			</div>
+		    </fieldset>
+
+		    <!-- Filter by Consistency Model -->
+		    <fieldset class="flex-1 text-gray-100 border border-gray-700 rounded-lg bg-gray-900 px-2 pb-2">
+			<legend class="text-xs capitalize mb-1">Filter by Consistency Model</legend>
+
+			<div id="select-consistency" class="flex gap-1 flex-wrap">
+			    <label class="flex bg-sky-500 rounded-md px-2 align-center border border-sky-500">
+				<input class="cursor-pointer sr-only" type="radio" name="protocol" value="All"/>
+				<span class="text-gray-950 text-xs">All</span>
+			    </label>
+			</div>
+		    </fieldset>
+
+		    <!-- Filter by Persistency -->
+		    <fieldset class="flex-1 text-gray-100 border border-gray-700 rounded-lg bg-gray-900 px-2 pb-2">
+			<legend class="text-xs capitalize mb-1">Filter by Persistency</legend>
+
+			<div id="select-persistency" class="flex gap-1 flex-wrap">
+			    <label class="flex bg-sky-500 rounded-md px-2 align-center border border-sky-500">
+				<input class="cursor-pointer sr-only" type="radio" name="protocol" value="All"/>
+				<span class="text-gray-950 text-xs">All</span>
+			    </label>
+			</div>
+		    </fieldset>
+		</div>
+
+		<!-- Chart -->
+		<div id="chart-section" class="flex gap-3">
+		</div>
+
+		<!-- Table -->
+		<div class="border border-gray-700 rounded-lg overflow-hidden">
+		    <table id="main-table" class="w-full">
+			<thead>
+			    <tr class="text-gray-100 border-b border-gray-700 flex gap-5 text-base text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<th class="flex-2 select-none basis-0" onclick="sortTable(0)">Project</th>
+				<th class="flex-2 select-none basis-0" onclick="sortTable(1)">Protocol</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(2)">Language</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(3)">Runtime (ms)</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(4)">Throughput (ops/sec)</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(5)">Consistency Model</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(6)">Persistency</th>
+			    </tr>
+			</thead>
+
+			<tbody class="divide-y divide-gray-700">
+			    <tr class="text-gray-100 flex gap-5 text-base text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<td class="flex-2">Project</th>
+				<td class="flex-2">Protocol</th>
+				<td class="flex-1">Language</th>
+				<td class="flex-1">Runtime (ms)</th>
+				<td class="flex-1">Throughput (ops/sec)</th>
+				<td class="flex-1">Consistency Model</th>
+				<td class="flex-1">Persistency</th>
+			    </tr>
+			</tbody>
+		    </table>
+		</div>
+
+	    </div>
+
+	    <div id="get-data" class="hidden w-screen h-screen backdrop-blur-sm z-100 top-0 right-0 flex items-center justify-center">
+		<div class="bg-gray-950 border border-gray-700 rounded-lg p-5 flex flex-col gap-2">
+		    <h3 class="text-gray-100 font-bold font-sans text-lg">Load Dataset</h3>
+
+		    <p class="text-gray-400 text-sm">Load data.json file to view the benchmark results for all the existing protocols.</p>
+
+		    <div class="grid w-full max-w-sm items-center gap-1">
+			<label htmlFor="json" class="text-gray-100 text-sm font-bold">JSON</Label>
+			<input id="json" type="file" accept=".json" class="text-gray-100 border border-gray-700 bg-gray-900 rounded-lg overflow-hidden px-3 py-1"/>
+		    </div>
+
+		    <button type="button" disabled=true class="bg-sky-500 self-end py-2 px-3 text-sm rounded-lg hover:bg-sky-600 hover:duration-200 disabled:bg-gray-800 disabled:text-gray-100">Continue</button>
+		</div>
+	    </div>
+
+	    <div id="metadata" class="hidden z-1000 w-screen h-screen top-0 right-0 backdrop-blur-sm p-5 overflow-y-scroll">
+		<table id="metadata-table" class="w-full bg-gray-950 rounded-lg mb-3">
+		    <thead>
+			<tr class="text-gray-100 border-b border-gray-700 flex gap-5 text-base text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+			    <th class="flex-2 select-none basis-0">Project</th>
+			    <th class="flex-1 select-none basis-0">Protocol</th>
+			    <th class="flex-1 select-none basis-0">Language</th>
+			    <th class="flex-2 select-none basis-0">Consistency Model</th>
+			    <th class="flex-1 select-none basis-0">Persistency</th>
+			</tr>
+		    </thead>
+
+		    <tbody class="divide-y divide-gray-700">
+			<tr class="text-gray-100 flex gap-5 text-base text-left py-2 px-4 hover:duration-100">
+			    <td class="flex-2">Project</td>
+			    <td class="flex-1">Protocol</th>
+			    <td class="flex-1">
+				<input type="text" name="project" value="project" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-700">
+			    </td>
+			    <td class="flex-2">Consistency Model</th>
+			    <td class="flex-1">Persistency</th>
+			</tr>
+		    </tbody>
+		</table>
+
+		<div class="flex gap-3 justify-center items-center">
+		    <button type="button" id="metadata-confirm" class="bg-sky-500 self-end py-2 px-3 text-sm rounded-lg hover:bg-sky-600 hover:duration-200">Confirm</button>
+		    <button type="button" id="metadata-cancel" class="self-end py-2 px-3 text-sm rounded-lg hover:duration-200 bg-gray-800 text-gray-100 hover:bg-gray-700">Cancel</button>
+		</div>
+	    </div>
+
+	</div>
+    </body>
+</html>

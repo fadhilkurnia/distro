@@ -15,3 +15,8 @@ mv tailwindcss-linux-x64 tailwindcss
 ```sh
 ./tailwindcss --watch -i ./input.css -o ./style.css
 ```
+
+## Run Python HTTP Server
+```sh
+python3 -m http.server 8000
+```
