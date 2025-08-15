@@ -96,11 +96,13 @@ def run_ycsb(protocol, interface) -> None:
             "protocol": protocol['name'],
             "language": protocol['language'],
             "workload": workload_path.name,
-            "result": result
+            "result": result,
+            "consistency": "",
+            "persistency": "",
         })
 
     with open(DATA, "w") as f:
-        json.dump(data, f, separators=(",", ":"))
+        json.dump(data, f, indent=2)
     print(f"{workload_path.name} result has been inserted into {DATA}.")
 
 
