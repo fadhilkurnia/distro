@@ -49,8 +49,9 @@ def run_ycsb(protocol, interface) -> None:
     onto the specified protocol. The YCSB output is then parsed and
     later stored in a .json file specified by DATA.
 
-    :param protocol: Protocol data that will be benchmarked.
-    :type protocol: dict[str, str]
+    :param protocol: Protocol data that will be benchmarked
+                     (project, protocol, language, consistency, persistency)
+    :type protocol: dict[str, str, str, str, str]
     :param interface: YCSB interface name for the protocol
     :type interface: str
     """
@@ -85,8 +86,7 @@ def run_ycsb(protocol, interface) -> None:
     for item in data:
         if (item["project"] == selected_project.name
                 and item["protocol"] == protocol["name"]
-                and item["workload"] == workload_path.name
-                and item["language"] == protocol["language"]):
+                and item["workload"] == workload_path.name):
             already_exists = True
             item["result"] = result
 
@@ -94,11 +94,11 @@ def run_ycsb(protocol, interface) -> None:
         data.append({
             "project": selected_project.name,
             "protocol": protocol['name'],
-            "language": protocol['language'],
+            "language": protocol.get("language", ""),
             "workload": workload_path.name,
             "result": result,
-            "consistency": "",
-            "persistency": "",
+            "consistency": protocol.get("consistency", ""),
+            "persistency": protocol.get("persistency", ""),
         })
 
     with open(DATA, "w") as f:
