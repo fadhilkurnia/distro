@@ -41,10 +41,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		    project: item.project.replaceAll(".", "/"),
 		};
 	    });
-	    sessionStorage.setItem("data", JSON.stringify(renamed));
+	    const renamedData = JSON.stringify(renamed);
+	    sessionStorage.setItem("data", renamedData);
 
-	    loadWorkloadSelect(renamed);
-	    loadOverviewTables(renamed, selectedWorkload);
+	    loadWorkloadSelect(renamedData);
+	    loadOverviewTables(renamedData, selectedWorkload);
 	})
 	.catch(error => {
 	    console.error('Error fetching file:', error);
