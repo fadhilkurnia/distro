@@ -55,12 +55,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		    project: item.project.replaceAll(".", "/"),
 		};
 	    });
-	    sessionStorage.setItem("data", JSON.stringify(renamed));
+	    const renamedData = JSON.stringify(renamed);
+	    sessionStorage.setItem("data", renamedData);
 
-	    loadWorkloadSelect(renamed);
-	    loadMetricSelect(renamed);
-	    loadFilters(renamed);
-	    loadTable(renamed);
+
+	    loadWorkloadSelect(renamedData);
+	    loadMetricSelect(renamedData);
+	    loadFilters(renamedData);
+	    loadTable(renamedData);
 	})
 	.catch(error => {
 	    console.error('Error fetching file:', error);
