@@ -1,6 +1,3 @@
-const getDataDialog = document.querySelector("div#get-data");
-const jsonInput = document.querySelector("input#json");
-const getDataButton = document.querySelector("div#get-data button");
 const tableBody = document.querySelector("table#main-table tbody");
 const workloadSelect = document.querySelector("select#workload-select");
 const metricSelect = document.querySelector("select#metric-select");
@@ -34,12 +31,14 @@ const colorPalette = Object.values(colors);
 let prevChart = [];
 Chart.defaults.color = colors.gray100;
 
-document.addEventListener("DOMContentLoaded", function () {
-    if (sessionStorage.getItem("data")) {
-	loadWorkloadSelect();
-	loadMetricSelect();
-	loadFilters();
-	loadTable();
+document.addEventListener("DOMContentLoaded", () => {
+    const data = sessionStorage.getItem("data");
+
+    if (data) {
+	loadWorkloadSelect(data);
+	loadMetricSelect(data);
+	loadFilters(data);
+	loadTable(data);
 	return;
     }
 
@@ -50,60 +49,38 @@ document.addEventListener("DOMContentLoaded", function () {
 	    return res.json(); // Or .json() if JSON
 	})
 	.then(data => {
-	    console.log(data);
-	    sessionStorage.setItem("data", JSON.stringify(data));
+	    const renamed = data.map(item => {
+		return {
+		    ...item,
+		    project: item.project.replaceAll(".", "/"),
+		};
+	    });
+	    sessionStorage.setItem("data", JSON.stringify(renamed));
 
-	    loadWorkloadSelect();
-	    loadMetricSelect();
-	    loadFilters();
-	    loadTable();
+	    loadWorkloadSelect(renamed);
+	    loadMetricSelect(renamed);
+	    loadFilters(renamed);
+	    loadTable(renamed);
 	})
 	.catch(error => {
 	    console.error('Error fetching file:', error);
 	});
-    /*
-    getDataDialog.classList.remove("hidden");
-    getDataDialog.classList.add("fixed");
-    */
 });
 
-getDataButton.addEventListener("click", () => {
-    const file = jsonInput.files[0];
-
-    if (file) {
-	const reader = new FileReader();
-
-	reader.onload = function (e) {
-	    try {
-		const json = JSON.parse(e.target.result);
-		sessionStorage.setItem("data", JSON.stringify(json));
-
-		getDataDialog.classList.add("fixed");
-		getDataDialog.classList.add("hidden");
-		
-		loadWorkloadSelect();
-		loadMetricSelect();
-		loadFilters();
-		loadTable();
-	    } catch (err) {
-		console.error("Invalid JSON:", err);
-	    }
-	};
-
-	reader.readAsText(file);
-    }
-});
-
-jsonInput.addEventListener("change", () => {
-    getDataButton.disabled = jsonInput.files.length === 0;
-});
-
-
-function loadWorkloadSelect() {
-    const data = sessionStorage.getItem("data");
+function loadWorkloadSelect(data) {
     const json = JSON.parse(data);
     workloads = [...new Set(json.map(item => item.workload))];
-    selectedWorkload = workloads[0];
+    const consistencies = [...new Set(json.map(item => item.consistency))];
+
+    const params = new URLSearchParams(window.location.search);
+    selectedWorkload = params.get("workload");
+    selectedConsistency = params.get("consistency")
+
+    if (!selectedWorkload) selectedWorkload = workloads[0];
+    if (
+	!selectedConsistency ||
+	!consistencies.includes(selectedConsistency)
+    ) selectedConsistency = "All";
 
     // Load Workload Selection
     while (workloadSelect.firstChild)
@@ -121,13 +98,16 @@ function loadWorkloadSelect() {
 
 workloadSelect.addEventListener("change", (e) => {
     selectedWorkload = e.target.value;
-    loadTable();
-    loadMetricSelect();
+    const data = sessionStorage.getItem("data");
+    loadTable(data);
+    renderChart(data);
 });
 
-function loadMetricSelect() {
-    const data = sessionStorage.getItem("data");
+function loadMetricSelect(data) {
+    if (!data) return;
+
     const json = JSON.parse(data).filter(item => item.workload === selectedWorkload);
+
     const keys = Object.keys(json[0].result);
     selectedMetric = "OVERALL";
 
@@ -142,19 +122,18 @@ function loadMetricSelect() {
     });
 
     metricSelect.value = selectedMetric;
-    renderChart();
+    renderChart(data);
 }
 
 metricSelect.addEventListener("change", (e) => {
     selectedMetric = e.target.value;
-    renderChart();
+    const data = sessionStorage.getItem("data");
+    renderChart(data);
 });
 
 
-async function renderChart() {
+async function renderChart(data) {
     selectedMetric;
-
-    const data = sessionStorage.getItem("data");
     const json = JSON.parse(data).filter(item => item.workload === selectedWorkload 
 	&& (selectedProtocol !== "All" ? item.protocol === selectedProtocol : true)
 	&& (selectedConsistency !== "All" ? item.consistency === selectedConsistency : true)
@@ -347,8 +326,7 @@ async function createLatencyChart(json) {
     return container;
 }
 
-function loadTable() {
-    const data = sessionStorage.getItem("data");
+function loadTable(data) {
     const json = JSON.parse(data).filter(item => item.workload === selectedWorkload 
 	&& (selectedProtocol !== "All" ? item.protocol === selectedProtocol : true)
 	&& (selectedConsistency !== "All" ? item.consistency === selectedConsistency : true)
@@ -445,8 +423,7 @@ window.addEventListener('resize', () => {
     prevChart.forEach(chart => chart.resize());
 });
 
-function loadFilters() {
-    const data = sessionStorage.getItem("data");
+function loadFilters(data) {
     const json = JSON.parse(data);
     loadProtocolFilter(json);
     loadConsistencyFilter(json);
@@ -501,8 +478,9 @@ function loadProtocolFilter(json) {
 	    current.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
 	    current.classList.remove("border-gray-700", "text-gray-100", "hover:bg-gray-800");
 
-	    loadTable();
-	    renderChart();
+	    const data = sessionStorage.getItem("data");
+	    loadTable(data);
+	    renderChart(data);
 	});
     });
 }
@@ -555,8 +533,9 @@ function loadConsistencyFilter(json) {
 	    current.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
 	    current.classList.remove("border-gray-700", "text-gray-100", "hover:bg-gray-800");
 
-	    loadTable();
-	    renderChart();
+	    const data = sessionStorage.getItem("data");
+	    loadTable(data);
+	    renderChart(data);
 	});
     });
 }
@@ -599,145 +578,17 @@ function loadPersistencyFilter(json) {
 	    if (selectedPersistency === e.target.value) return;
 
 	    let prev = labels.find(item => item.getAttribute("data-val") === selectedPersistency); 
-	    console.log("prev", prev);
 	    prev.classList.add("border-gray-700", "text-gray-100", "hover:bg-gray-800");
 	    prev.classList.remove("bg-sky-500", "text-gray-950", "border-sky-500");
 
 	    selectedPersistency = e.target.value;
 	    let current = labels.find(item => item.getAttribute("data-val") === e.target.value); 
-	    console.log("current", current);
 	    current.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
 	    current.classList.remove("border-gray-700", "text-gray-100", "hover:bg-gray-800");
 
-	    loadTable();
-	    renderChart();
+	    const data = sessionStorage.getItem("data");
+	    loadTable(data);
+	    renderChart(data);
 	});
-    });
-}
-
-const metadataSection = document.querySelector("#metadata");
-const metadataTable = document.querySelector("#metadata-table > tbody");
-const editMetadataBtn = document.querySelector("#edit-metadata");
-const confirmEditBtn = document.querySelector("#metadata-confirm");
-const cancelEditBtn = document.querySelector("#metadata-cancel");
-editMetadataBtn.addEventListener("click", () => {
-    document.body.style.overflow = 'hidden';
-
-    metadataSection.classList.add("fixed");
-    metadataSection.classList.remove("hidden");
-
-    const data = sessionStorage.getItem("data");
-    const json = JSON.parse(data);
-    loadMetadataTable(json);
-})
-
-cancelEditBtn.addEventListener("click", () => {
-    document.body.style.overflow = '';
-    metadataSection.classList.add("hidden");
-    metadataSection.classList.remove("fixed");
-});
-
-function loadMetadataTable(json) {
-    const rows = [...new Map(
-	json.map(item => {
-	    const obj = {
-		project: item.project,
-		protocol: item.protocol,
-		language: item.language,
-		consistency: item.consistency,
-		persistency: item.persistency,
-	    };
-	    const key = JSON.stringify(obj); // Serialize the object as key
-	    return [key, obj];
-	})
-    ).values()];
-
-    while (metadataTable.firstChild) metadataTable.removeChild(metadataTable.lastChild);
-    rows.forEach((row, id) => {
-	console.log(row);
-	const tr = document.createElement("tr");
-	tr.classList.add("text-gray-100", "flex", "gap-5", "text-base", "text-left", "py-2", "px-4", "hover:duration-100");
-
-	const project = document.createElement("td");
-	project.classList.add("flex-2");
-	project.textContent = row.project;
-
-	const protocol = document.createElement("td");
-	protocol.classList.add("flex-1");
-	protocol.textContent = row.protocol;
-
-	const language = document.createElement("td");
-	language.classList.add("flex-1");
-	const languageInput = document.createElement("input");
-	languageInput.setAttribute("type", "text");
-	languageInput.setAttribute("name", `language-${id}`);
-	languageInput.setAttribute("value", row.language);
-	languageInput.classList.add("w-full", "bg-gray-900", "border", "border-gray-700", "rounded-lg", "px-3", "py-1", "text-sm", "focus:outline-none", "focus-visible:ring-2", "focus-visible:ring-gray-700");
-	languageInput.addEventListener("input", (e) => {
-	    row.language = e.target.value;
-	});
-	language.appendChild(languageInput);
-
-	const consistency = document.createElement("td");
-	consistency.classList.add("flex-2");
-	const consistencyInput = document.createElement("input");
-	consistencyInput.setAttribute("type", "text");
-	consistencyInput.setAttribute("name", `consistency-${id}`);
-	consistencyInput.setAttribute("value", row.consistency);
-	consistencyInput.classList.add("w-full", "bg-gray-900", "border", "border-gray-700", "rounded-lg", "px-3", "py-1", "text-sm", "focus:outline-none", "focus-visible:ring-2", "focus-visible:ring-gray-700");
-	consistencyInput.addEventListener("input", (e) => {
-	    row.consistency = e.target.value;
-	});
-	consistency.appendChild(consistencyInput);
-
-	const persistency = document.createElement("td");
-	persistency.classList.add("flex-1");
-	const persistencyInput = document.createElement("input");
-	persistencyInput.setAttribute("type", "text");
-	persistencyInput.setAttribute("name", `persistency-${id}`);
-	persistencyInput.setAttribute("value", row.persistency);
-	persistencyInput.classList.add("w-full", "bg-gray-900", "border", "border-gray-700", "rounded-lg", "px-3", "py-1", "text-sm", "focus:outline-none", "focus-visible:ring-2", "focus-visible:ring-gray-700");
-	persistencyInput.addEventListener("input", (e) => {
-	    row.persistency = e.target.value;
-	});
-	persistency.appendChild(persistencyInput);
-
-	tr.append(project, protocol, language, consistency, persistency);
-	metadataTable.appendChild(tr);
-    });
-
-    confirmEditBtn.addEventListener("click", () => {
-	const newJson = json.map(item => {
-	    const row = rows.find(row => row.project === item.project && row.protocol === item.protocol);
-	    if (row) {
-		item.language = row.language;
-		item.consistency = row.consistency;
-		item.persistency = row.persistency;
-	    }
-
-	    return item;
-	});
-
-	sessionStorage.setItem("data", JSON.stringify(newJson));
-
-	// Download
-	const blob = new Blob([JSON.stringify(newJson, null, 2)], { type: "application/json" });
-	const url = URL.createObjectURL(blob);
-
-	const a = Object.assign(document.createElement("a"), {
-	    href: url,
-	    download: "data.json"
-	});
-
-	a.click();
-	URL.revokeObjectURL(url);
-
-	// Close table
-	document.body.style.overflow = '';
-	metadataSection.classList.add("hidden");
-	metadataSection.classList.remove("fixed");
-
-	loadFilters();
-	loadTable();
     });
 }
