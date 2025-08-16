@@ -4,32 +4,32 @@
     "protocol": "paxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1441,
-        "Throughput(ops/sec)": 693.9625260235947
-      },
       "READ": {
-        "Operations": 945,
-        "AverageLatency(us)": 1368.6497354497355,
-        "MinLatency(us)": 703,
-        "MaxLatency(us)": 39871,
-        "50thPercentileLatency(us)": 1240,
-        "95thPercentileLatency(us)": 1911,
-        "99thPercentileLatency(us)": 2847,
-        "Return=OK": 945
+        "Operations": 938,
+        "AverageLatency(us)": 1352.3496801705758,
+        "MinLatency(us)": 575,
+        "MaxLatency(us)": 47615,
+        "50thPercentileLatency(us)": 1260,
+        "95thPercentileLatency(us)": 1981,
+        "99thPercentileLatency(us)": 2537,
+        "Return=OK": 938
       },
       "UPDATE": {
-        "Operations": 55,
-        "AverageLatency(us)": 1394.3454545454545,
-        "MinLatency(us)": 984,
-        "MaxLatency(us)": 2891,
-        "50thPercentileLatency(us)": 1307,
-        "95thPercentileLatency(us)": 2297,
-        "99thPercentileLatency(us)": 2891,
-        "Return=OK": 55
+        "Operations": 62,
+        "AverageLatency(us)": 1374.0483870967741,
+        "MinLatency(us)": 820,
+        "MaxLatency(us)": 3089,
+        "50thPercentileLatency(us)": 1242,
+        "95thPercentileLatency(us)": 1990,
+        "99thPercentileLatency(us)": 3089,
+        "Return=OK": 62
+      },
+      "OVERALL": {
+        "RunTime(ms)": 1430,
+        "Throughput(ops/sec)": 699.3006993006993
       }
     }
   },
@@ -38,8 +38,8 @@
     "protocol": "paxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1645,
@@ -72,8 +72,8 @@
     "protocol": "epaxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1635,
@@ -106,8 +106,8 @@
     "protocol": "epaxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1767,
@@ -140,8 +140,8 @@
     "protocol": "sdpaxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1670,
@@ -174,8 +174,8 @@
     "protocol": "sdpaxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1886,
@@ -208,8 +208,8 @@
     "protocol": "wpaxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1562,
@@ -242,8 +242,8 @@
     "protocol": "wpaxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1677,
@@ -276,8 +276,8 @@
     "protocol": "abd",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1662,
@@ -310,8 +310,8 @@
     "protocol": "abd",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1645,
@@ -344,8 +344,8 @@
     "protocol": "vpaxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1463,
@@ -378,8 +378,8 @@
     "protocol": "vpaxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1616,
@@ -412,8 +412,8 @@
     "protocol": "wankeeper",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 1924,
@@ -446,8 +446,8 @@
     "protocol": "wankeeper",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "OVERALL": {
         "RunTime(ms)": 2007,
@@ -480,8 +480,8 @@
     "protocol": "dynamo",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Eventual",
+    "persistency": "In-Memory",
     "result": {
       "UPDATE": {
         "Operations": 45,
@@ -514,8 +514,8 @@
     "protocol": "dynamo",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Eventual",
+    "persistency": "In-Memory",
     "result": {
       "UPDATE": {
         "Operations": 440,
@@ -548,8 +548,8 @@
     "protocol": "m2paxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "UPDATE": {
         "Operations": 45,
@@ -582,8 +582,8 @@
     "protocol": "m2paxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "UPDATE": {
         "Operations": 486,
@@ -616,8 +616,8 @@
     "protocol": "hpaxos",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "UPDATE": {
         "Operations": 47,
@@ -650,8 +650,8 @@
     "protocol": "hpaxos",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "In-Memory",
     "result": {
       "UPDATE": {
         "Operations": 503,
@@ -684,8 +684,8 @@
     "protocol": "raft",
     "language": "Go",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "On-Disk",
     "result": {
       "UPDATE": {
         "Operations": 50,
@@ -718,8 +718,8 @@
     "protocol": "raft",
     "language": "Go",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability",
+    "persistency": "On-Disk",
     "result": {
       "UPDATE": {
         "Operations": 511,
@@ -749,11 +749,11 @@
   },
   {
     "project": "apache.zookeeper",
-    "protocol": "Primary Backup",
+    "protocol": "Zab",
     "language": "Java",
     "workload": "read-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability + Primary Integrity",
+    "persistency": "On-Disk",
     "result": {
       "UPDATE": {
         "Operations": 44,
@@ -783,11 +783,11 @@
   },
   {
     "project": "apache.zookeeper",
-    "protocol": "Primary Backup",
+    "protocol": "Zab",
     "language": "Java",
     "workload": "update-heavy",
-    "consistency": "",
-    "persistency": "",
+    "consistency": "Linearizability + Primary Integrity",
+    "persistency": "On-Disk",
     "result": {
       "UPDATE": {
         "Operations": 510,
