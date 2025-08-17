@@ -33,7 +33,7 @@ def main(run_ycsb) -> None:
             case 1:
                 stop_zk(ZK_BIN)
             case 2:
-                run_ycsb({"name": "Zab", "language": "Java"}, "zookeeper")
+                run_ycsb({"name": "zab", "language": "Java"}, "zookeeper")
 
 
 def start_zk(path) -> None:

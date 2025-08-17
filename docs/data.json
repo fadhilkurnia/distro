@@ -749,7 +749,7 @@
   },
   {
     "project": "apache.zookeeper",
-    "protocol": "Zab",
+    "protocol": "zab",
     "language": "Java",
     "workload": "read-heavy",
     "consistency": "Linearizability + Primary Integrity",
@@ -783,7 +783,7 @@
   },
   {
     "project": "apache.zookeeper",
-    "protocol": "Zab",
+    "protocol": "zab",
     "language": "Java",
     "workload": "update-heavy",
     "consistency": "Linearizability + Primary Integrity",
@@ -814,5 +814,73 @@
         "Return=OK": 490
       }
     }
+  },
+  {
+    "project": "tikv.tikv",
+    "protocol": "raft",
+    "language": "Rust",
+    "workload": "read-heavy",
+    "result": {
+      "READ": {
+        "Operations": 944,
+        "AverageLatency(us)": 2052.6324152542375,
+        "MinLatency(us)": 1090,
+        "MaxLatency(us)": 97727,
+        "50thPercentileLatency(us)": 1714,
+        "95thPercentileLatency(us)": 3405,
+        "99thPercentileLatency(us)": 5235,
+        "Return=OK": 944
+      },
+      "OVERALL": {
+        "RunTime(ms)": 2916,
+        "Throughput(ops/sec)": 342.9355281207133
+      },
+      "UPDATE": {
+        "Operations": 56,
+        "AverageLatency(us)": 4962.428571428572,
+        "MinLatency(us)": 3070,
+        "MaxLatency(us)": 16943,
+        "50thPercentileLatency(us)": 4211,
+        "95thPercentileLatency(us)": 7515,
+        "99thPercentileLatency(us)": 16943,
+        "Return=OK": 56
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "On-Disk"
+  },
+  {
+    "project": "tikv.tikv",
+    "protocol": "raft",
+    "language": "Rust",
+    "workload": "update-heavy",
+    "result": {
+      "READ": {
+        "Operations": 475,
+        "AverageLatency(us)": 2430.265263157895,
+        "MinLatency(us)": 1084,
+        "MaxLatency(us)": 9383,
+        "50thPercentileLatency(us)": 2075,
+        "95thPercentileLatency(us)": 4703,
+        "99thPercentileLatency(us)": 8783,
+        "Return=OK": 475
+      },
+      "OVERALL": {
+        "RunTime(ms)": 4858,
+        "Throughput(ops/sec)": 205.8460271716756
+      },
+      "UPDATE": {
+        "Operations": 525,
+        "AverageLatency(us)": 5480.262857142857,
+        "MinLatency(us)": 2924,
+        "MaxLatency(us)": 111359,
+        "50thPercentileLatency(us)": 4659,
+        "95thPercentileLatency(us)": 9623,
+        "99thPercentileLatency(us)": 14231,
+        "Return=OK": 525
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "On-Disk"
   }
 ]
