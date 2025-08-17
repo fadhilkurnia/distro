@@ -58,7 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	    const renamedData = JSON.stringify(renamed);
 	    sessionStorage.setItem("data", renamedData);
 
-
 	    loadWorkloadSelect(renamedData);
 	    loadMetricSelect(renamedData);
 	    loadFilters(renamedData);
