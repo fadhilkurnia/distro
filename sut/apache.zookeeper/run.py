@@ -13,7 +13,7 @@ OPTIONS = [{"num": 0, "text": "Start Zookeeper"},
            {"num": 2, "text": "Run Benchmark"}]
 
 
-def main(run_ycsb) -> None:
+def main(run_ycsb, nodes, ssh) -> None:
     """
     Main function called by the root main.py script.
     Gives user a choice to start/stop instances
@@ -36,7 +36,7 @@ def main(run_ycsb) -> None:
                 run_ycsb({"name": "zab", "language": "Java"}, "zookeeper")
 
 
-def start_zk(path) -> None:
+def start_zk(path, protocol, nodes, ssh, port_map) -> None:
     """
     Runs the instances with the specified protocol in different
     threads concurrently. Currently only supports local startup.

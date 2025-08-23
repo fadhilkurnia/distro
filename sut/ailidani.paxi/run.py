@@ -2,6 +2,8 @@ from pathlib import Path
 import subprocess
 import threading
 import os
+import json
+import signal
 
 from src.utils import helper
 
@@ -28,27 +30,7 @@ PROTOCOLS = [{"num": 1, "text": "paxos"},
              {"num": 14, "text": "hpaxos"}]
 
 
-# Shared list to store job info
-jobs = []
-
-
-def run_command(cmd) -> None:
-    """
-    Runs a command in a new subprocess which will be tracked inside jobs list.
-
-    :param cmd: Command line arguments
-    :type cmd: str[]
-    """
-    proc = subprocess.Popen(cmd)
-    jobs.append({
-        'cmd': cmd,
-        'process': proc,
-        'thread': threading.current_thread()
-    })
-    proc.wait()
-
-
-def main(run_ycsb) -> None:
+def main(run_ycsb, nodes, ssh) -> None:
     """
     Main function called by the root main.py script.
     Gives user a choice to start/stop paxi instances
@@ -59,6 +41,7 @@ def main(run_ycsb) -> None:
     :type run_ycsb: Callable[dict[str, str], str]
     """
     selected_protocol = None
+    port_map = map_ip_port(nodes)
     while True:
         val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
         print()
@@ -70,14 +53,18 @@ def main(run_ycsb) -> None:
                     "name": PROTOCOLS[prot_num-1]["text"],
                     "language": "Go",
                 }
-                start_paxi(PAXI_BIN, selected_protocol)
+                start_paxi(PAXI_BIN, selected_protocol, nodes, ssh, port_map)
             case 1:
-                stop_paxi()
+                stop_paxi(PAXI_BIN, nodes, ssh)
             case 2:
-                run_ycsb(selected_protocol, "paxi")
+                endpoints = [f"{ip}:{port}"
+                             for ip, port in port_map["public"].items()]
+                print("endpoint list:", endpoints)
+                print("selected protocol:", selected_protocol)
+                run_ycsb(selected_protocol, "paxi", endpoints, "rest.endpoint")
 
 
-def start_paxi(path, protocol) -> None:
+def start_paxi(path, protocol, nodes, ssh, port_map):
     """
     Runs the paxi instances with the specified protocol in different
     threads concurrently. Currently only supports local startup.
@@ -87,42 +74,113 @@ def start_paxi(path, protocol) -> None:
     :param protocol: Protocol data that is being started.
     :type protocol: dict[str, str]
     """
+    print("Paxi nodes:", nodes)
+    print("Paxi ssh:", ssh)
+
+    # Create custom config.json file
+    with open(CURR_DIR / "template.json", 'r') as file:
+        data = json.load(file)
+
+    for i, node in enumerate(nodes):
+        id = f"1.{i+1}"
+        public_ip = node["public"]
+        private_ip = node["private"]
+        public_port = port_map['public'][public_ip]
+        private_port = port_map['private'][private_ip]
+
+        data["address"][id] = f"tcp://{private_ip}:{private_port}"
+        data["http_address"][id] = f"http://{public_ip}:{public_port}"
+
+    config = CURR_DIR / "run_config.json"
+    with open(config, "w") as f:
+        json.dump(data, f, indent=2)
+
     server = path / "server"
-    config = CURR_DIR / "config.json"
+    for i, node in enumerate(nodes):
+        if node["private"] == "127.0.0.1" and node["public"] == "127.0.0.1":
+            run_cmd = f"nohup {server.resolve()} -id 1.{i+1} -algorithm={protocol['name']} -config {config} > /dev/null 2>&1 &"
+        else:
+            user = ssh["username"]
+            host = node["public"]
+            remote_dir = f"/home/{user}/paxi"
+            remote_server = f"{remote_dir}/server"
+            remote_config = f"{remote_dir}/run_config.json"
 
-    commands = [
-        [server, "-id", "1.1", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "1.2", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "1.3", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "2.1", f"-algorithm={protocol['name']}", "-config", config],
-        [server, "-id", "2.2", f"-algorithm={protocol['name']}", "-config", config],
-    ]
+            copy_cmd = ["rsync", "-avz", "-e", f"ssh -i {ssh['key']}",
+                        str(config.resolve()), str(server.resolve()),
+                        f'{user}@{host}:{remote_dir}/']
+            run_cmd = (
+                f"ssh -i {ssh['key']} {user}@{host} "
+                f"'nohup {remote_server} -id 1.{i+1} -algorithm={protocol['name']} "
+                f"-config {remote_config} > /dev/null 2>&1 &'"
+            )
 
-    # Start each command in its own thread
-    for cmd in commands:
-        print(f"Starting: {' '.join(map(str, cmd))}")
-        t = threading.Thread(target=run_command, args=(cmd,))
-        t.start()
+            print("Running command:", " ".join(copy_cmd))
+            subprocess.run(copy_cmd, check=True)
+
+        print("Running command:", run_cmd)
+        subprocess.run(run_cmd, check=True, shell=True)
+
     print(f"Paxi {protocol['name']} instances successfully started")
 
 
-def stop_paxi() -> None:
+def stop_paxi(path, nodes, ssh) -> None:
     """
     Terminates all running instances of paxi that are still recorded inside
     the jobs list, then removes all the logfiles created by the instances.
     """
-    for job in jobs:
-        proc = job['process']
-        if proc.poll() is None:  # Still running
-            print(f"Terminating: {' '.join(map(str, job['cmd']))}")
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                print(f"Force killing: {' '.join(map(str, job['cmd']))}")
-                proc.kill()
+    server = path / "server"
+    for i, node in enumerate(nodes):
+        user = ssh["username"]
 
-    os.system("rm server.*")
+        if node["private"] == "127.0.0.1" and node["public"] == "127.0.0.1":
+            cmd = (
+                f"pids=$(ps aux | grep '{server}' | grep -v grep | awk '{{print $2}}'); "
+                    f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+            )
+            print("Running command:", cmd)
+            subprocess.run(cmd, shell=True)
+            os.system("rm server.*.log")
+        else:
+            host = node["public"]
+            remote_dir = f"/home/{user}/paxi"
+            remote_server = f"{remote_dir}/server"
+
+            remote_command = (
+                f"pids=$(ps aux | grep '{remote_server}' | grep -v grep | awk '{{print $2}}'); "
+                    f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+                    f"rm /home/{user}/server.*.log;"
+                    f"rm {remote_dir}/run_config.json;"
+            )
+
+            cmd = ["ssh", "-i", str(ssh["key"]), f"{user}@{host}",
+                   remote_command]
+            print("Running command:", " ".join(cmd))
+            subprocess.run(cmd)
+
+    config = CURR_DIR / "run_config.json"
+    os.system(f"rm {config.resolve()}")
+
+
+def map_ip_port(nodes):
+    port = {"private": {}, "public": {}}
+    for node in nodes:
+        public_ip = node["public"]
+        private_ip = node["private"]
+
+        if (public_ip not in port["public"]
+                or port["public"][public_ip] is None):
+            port["public"][public_ip] = 3000
+        else:
+            port["public"][public_ip] += 1
+
+        if (private_ip not in port["private"]
+                or port["private"][private_ip] is None):
+            port["private"][private_ip] = 2000
+        else:
+            port["private"][private_ip] += 1
+
+    return port
 
 
 if __name__ == "__main__":

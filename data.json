@@ -1,1 +1,70 @@
-[]
+[
+  {
+    "project": "ailidani.paxi",
+    "protocol": "paxos",
+    "language": "Go",
+    "workload": "read-heavy",
+    "result": {
+      "OVERALL": {
+        "RunTime(ms)": 319404,
+        "Throughput(ops/sec)": 3.130831173059824
+      },
+      "READ": {
+        "Operations": 952,
+        "AverageLatency(us)": 319125.5798319328,
+        "MinLatency(us)": 246912,
+        "MaxLatency(us)": 1268735,
+        "50thPercentileLatency(us)": 305919,
+        "95thPercentileLatency(us)": 509439,
+        "99thPercentileLatency(us)": 650239,
+        "Return=OK": 952
+      },
+      "UPDATE": {
+        "Operations": 48,
+        "AverageLatency(us)": 321096.0,
+        "MinLatency(us)": 254208,
+        "MaxLatency(us)": 656895,
+        "50thPercentileLatency(us)": 306943,
+        "95thPercentileLatency(us)": 590335,
+        "99thPercentileLatency(us)": 656895,
+        "Return=OK": 48
+      }
+    },
+    "consistency": "",
+    "persistency": ""
+  },
+  {
+    "project": "ailidani.paxi",
+    "protocol": "paxos",
+    "language": "Go",
+    "workload": "update-heavy",
+    "result": {
+      "OVERALL": {
+        "RunTime(ms)": 390374,
+        "Throughput(ops/sec)": 2.561646011260996
+      },
+      "READ": {
+        "Operations": 502,
+        "AverageLatency(us)": 392461.1314741036,
+        "MinLatency(us)": 245888,
+        "MaxLatency(us)": 1070079,
+        "50thPercentileLatency(us)": 494335,
+        "95thPercentileLatency(us)": 541183,
+        "99thPercentileLatency(us)": 559103,
+        "Return=OK": 502
+      },
+      "UPDATE": {
+        "Operations": 498,
+        "AverageLatency(us)": 387910.6827309237,
+        "MinLatency(us)": 246400,
+        "MaxLatency(us)": 1515519,
+        "50thPercentileLatency(us)": 276991,
+        "95thPercentileLatency(us)": 546303,
+        "99thPercentileLatency(us)": 563711,
+        "Return=OK": 498
+      }
+    },
+    "consistency": "",
+    "persistency": ""
+  }
+]

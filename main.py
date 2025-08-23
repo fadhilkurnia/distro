@@ -3,23 +3,28 @@ import importlib.util
 import sys
 import subprocess
 import json
+import os
+from dotenv import load_dotenv
 
 from src.utils import helper
 
+load_dotenv()
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = Path("./bin/ycsb")
 YCSB_WORKLOAD_DIR = Path("./workloads")
 WORKLOADS = ["read-heavy", "update-heavy"]
-DATA = "data.local.json"
-
+DATA = os.getenv("OUTPUT_FILE", "data.local.json")
 selected_project = None
 
 
-def main() -> None:
+def main(nodes, ssh_key) -> None:
     """
     List out all directories in sut/ for user to pick.
     The chosen directory will have its run.py script called
     to setup the protocol instance before running YCSB benchmark.
+
+    :param nodes: List of node IP
+    :type nodes: dict[str, str, str, str, str]
     """
     global selected_project
     systems_under_test = Path("./sut")
@@ -40,10 +45,10 @@ def main() -> None:
     spec.loader.exec_module(module)
 
     print(module)
-    module.main(run_ycsb)
+    module.main(run_ycsb, nodes, ssh_key)
 
 
-def run_ycsb(protocol, interface) -> None:
+def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
     """
     Give user options to pick a workload, then runs that workload
     onto the specified protocol. The YCSB output is then parsed and
@@ -54,6 +59,8 @@ def run_ycsb(protocol, interface) -> None:
     :type protocol: dict[str, str, str, str, str]
     :param interface: YCSB interface name for the protocol
     :type interface: str
+    :param addr_list: List of addresses (ip & port) for all endpoints
+    :type addr_list: dict[str, str, str, str, str]
     """
     global selected_project
     options = [{"num": i, "text": name}
@@ -62,18 +69,27 @@ def run_ycsb(protocol, interface) -> None:
 
     workload_path = YCSB_WORKLOAD_DIR / WORKLOADS[num-1]
 
+    print("YCSB endpoint list:", addr_list)
     subprocess.run(
-        [YCSB_BIN, "load", interface, "-P", workload_path],
+        [YCSB_BIN, "load", interface, "-P", workload_path, "-p",
+         f"{endpoint_name}=http://{addr_list[0]}"],
         cwd=YCSB_DIR)
 
-    result = subprocess.run(
-        [YCSB_BIN, "run", interface, "-P", workload_path],
+    process = subprocess.Popen(
+        [YCSB_BIN, "run", interface, "-P", workload_path, "-p",
+         f"{endpoint_name}=http://{addr_list[0]}"],
         cwd=YCSB_DIR,
         stdout=subprocess.PIPE,
-        stderr=None,
-        text=True)
+        stderr=subprocess.STDOUT,  # optional: merge stderr into stdout
+        text=True,
+    )
 
-    parsed = parse_ycsb_output(result.stdout.splitlines())
+    result = []
+    for line in process.stdout:
+        print(line, end='')  # Print to terminal
+        result.append(line)
+
+    parsed = parse_ycsb_output(result)
     print(json.dumps(parsed, indent=2))
 
     keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
@@ -155,4 +171,19 @@ def parse_ycsb_output(lines) -> dict[str]:
 
 
 if __name__ == "__main__":
-    main()
+    num_of_nodes = int(os.getenv("NUM_OF_NODES"))
+    '''
+    nodes = {f"node{i}": os.getenv(f"NODE{i}_IP")
+             for i in range(1, num_of_nodes+1)}
+    '''
+    ssh_key = Path.cwd() / os.getenv("SSH_KEY")
+    username = os.getenv("REMOTE_USERNAME")
+    ssh = {"key": ssh_key, "username": username}
+
+    nodes = [{"private": os.getenv(f"PRIVATE_IP{i}"),
+             "public": os.getenv(f"PUBLIC_IP{i}")}
+             for i in range(1, num_of_nodes+1)]
+
+    print("SSH:", ssh)
+    print("Addresses:", nodes)
+    main(nodes, ssh)
