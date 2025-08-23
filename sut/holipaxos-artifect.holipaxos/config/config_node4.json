@@ -1,0 +1,22 @@
+{
+    "threadpool_size": 64,
+    "commit_interval": 300,
+    "peers": [
+      "0.0.0.0:10000",
+      "0.0.0.0:11000",
+      "0.0.0.0:12000",
+      "0.0.0.0:13000",
+      "0.0.0.0:14000"
+    ],
+    "store": "rocksdb",
+    "db_path": "/tmp/presistent_node4",
+    "election_limit": 3000,
+    "common_limit": 5000,
+    "threshold": 5,
+    "churn_penalty_factor": 2,
+    "window_size": 15,
+    "queue_size": 8,
+    "up_threshold": 3000.0,
+    "down_threshold": 30000.0,
+    "snapshot_interval": 500000000
+}
