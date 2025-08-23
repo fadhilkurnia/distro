@@ -57,7 +57,7 @@ def main(run_ycsb, nodes, ssh) -> None:
             case 1:
                 stop_paxi(PAXI_BIN, nodes, ssh)
             case 2:
-                endpoints = [f"{ip}:{port}"
+                endpoints = [f"http://{ip}:{port}"
                              for ip, port in port_map["public"].items()]
                 print("endpoint list:", endpoints)
                 print("selected protocol:", selected_protocol)
@@ -184,7 +184,7 @@ def map_ip_port(nodes):
 
 
 if __name__ == "__main__":
-    main()
+    raise RuntimeError("This script is meant to be imported, not run directly")
 
 
 def hello():

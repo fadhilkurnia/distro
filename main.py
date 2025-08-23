@@ -72,12 +72,12 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
     print("YCSB endpoint list:", addr_list)
     subprocess.run(
         [YCSB_BIN, "load", interface, "-P", workload_path, "-p",
-         f"{endpoint_name}=http://{addr_list[0]}"],
+         f"{endpoint_name}={addr_list[0]}"],
         cwd=YCSB_DIR)
 
     process = subprocess.Popen(
         [YCSB_BIN, "run", interface, "-P", workload_path, "-p",
-         f"{endpoint_name}=http://{addr_list[0]}"],
+         f"{endpoint_name}={addr_list[0]}"],
         cwd=YCSB_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,  # optional: merge stderr into stdout

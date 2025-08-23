@@ -66,5 +66,73 @@
     },
     "consistency": "",
     "persistency": ""
+  },
+  {
+    "project": "apache.zookeeper",
+    "protocol": "zab",
+    "language": "Java",
+    "workload": "read-heavy",
+    "result": {
+      "UPDATE": {
+        "Operations": 52,
+        "AverageLatency(us)": 497476.92307692306,
+        "MinLatency(us)": 495616,
+        "MaxLatency(us)": 511999,
+        "50thPercentileLatency(us)": 496895,
+        "95thPercentileLatency(us)": 500223,
+        "99thPercentileLatency(us)": 511999,
+        "Return=OK": 52
+      },
+      "READ": {
+        "Operations": 948,
+        "AverageLatency(us)": 247733.13080168777,
+        "MinLatency(us)": 245888,
+        "MaxLatency(us)": 848895,
+        "50thPercentileLatency(us)": 247039,
+        "95thPercentileLatency(us)": 248319,
+        "99thPercentileLatency(us)": 249855,
+        "Return=OK": 948
+      },
+      "OVERALL": {
+        "RunTime(ms)": 261291,
+        "Throughput(ops/sec)": 3.8271505715849377
+      }
+    },
+    "consistency": "",
+    "persistency": ""
+  },
+  {
+    "project": "apache.zookeeper",
+    "protocol": "zab",
+    "language": "Java",
+    "workload": "update-heavy",
+    "result": {
+      "UPDATE": {
+        "Operations": 478,
+        "AverageLatency(us)": 519241.90794979077,
+        "MinLatency(us)": 513536,
+        "MaxLatency(us)": 1143807,
+        "50thPercentileLatency(us)": 516863,
+        "95thPercentileLatency(us)": 519167,
+        "99thPercentileLatency(us)": 525823,
+        "Return=OK": 478
+      },
+      "READ": {
+        "Operations": 522,
+        "AverageLatency(us)": 258048.36781609195,
+        "MinLatency(us)": 255744,
+        "MaxLatency(us)": 731647,
+        "50thPercentileLatency(us)": 257023,
+        "95thPercentileLatency(us)": 258175,
+        "99thPercentileLatency(us)": 262911,
+        "Return=OK": 522
+      },
+      "OVERALL": {
+        "RunTime(ms)": 383524,
+        "Throughput(ops/sec)": 2.6073987547063546
+      }
+    },
+    "consistency": "",
+    "persistency": ""
   }
 ]
