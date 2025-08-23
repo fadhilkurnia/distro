@@ -1,2 +1,5 @@
 __pycache__
 *.py[cod]
+sut/holipaxos-artifect.holipaxos/bin/holipaxos_replicant
+sut/holipaxos-artifect.holipaxos/bin/multipaxos_replicant
+sut/holipaxos-artifect.holipaxos/bin/omni_replicant
