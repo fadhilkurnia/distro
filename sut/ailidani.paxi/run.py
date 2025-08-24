@@ -130,8 +130,8 @@ def stop_paxi(path, nodes, ssh) -> None:
     the jobs list, then removes all the logfiles created by the instances.
     """
     server = path / "server"
+    user = ssh["username"]
     for i, node in enumerate(nodes):
-        user = ssh["username"]
 
         if node["private"] == "127.0.0.1" and node["public"] == "127.0.0.1":
             cmd = (

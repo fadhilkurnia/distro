@@ -134,5 +134,73 @@
     },
     "consistency": "",
     "persistency": ""
+  },
+  {
+    "project": "otoolep.hraftd",
+    "protocol": "raft",
+    "language": "Go",
+    "workload": "read-heavy",
+    "result": {
+      "UPDATE": {
+        "Operations": 47,
+        "AverageLatency(us)": 256980.4255319149,
+        "MinLatency(us)": 254592,
+        "MaxLatency(us)": 264959,
+        "50thPercentileLatency(us)": 256127,
+        "95thPercentileLatency(us)": 263679,
+        "99thPercentileLatency(us)": 264959,
+        "Return=OK": 47
+      },
+      "READ": {
+        "Operations": 953,
+        "AverageLatency(us)": 256578.41762854144,
+        "MinLatency(us)": 251648,
+        "MaxLatency(us)": 722943,
+        "50thPercentileLatency(us)": 252799,
+        "95thPercentileLatency(us)": 259455,
+        "99thPercentileLatency(us)": 268799,
+        "Return=OK": 953
+      },
+      "OVERALL": {
+        "RunTime(ms)": 256777,
+        "Throughput(ops/sec)": 3.8944297970612634
+      }
+    },
+    "consistency": "",
+    "persistency": ""
+  },
+  {
+    "project": "otoolep.hraftd",
+    "protocol": "raft",
+    "language": "Go",
+    "workload": "update-heavy",
+    "result": {
+      "UPDATE": {
+        "Operations": 482,
+        "AverageLatency(us)": 258718.27385892117,
+        "MinLatency(us)": 256128,
+        "MaxLatency(us)": 569855,
+        "50thPercentileLatency(us)": 257663,
+        "95thPercentileLatency(us)": 260735,
+        "99thPercentileLatency(us)": 263167,
+        "Return=OK": 482
+      },
+      "READ": {
+        "Operations": 518,
+        "AverageLatency(us)": 254996.6332046332,
+        "MinLatency(us)": 253952,
+        "MaxLatency(us)": 264447,
+        "50thPercentileLatency(us)": 254847,
+        "95thPercentileLatency(us)": 256255,
+        "99thPercentileLatency(us)": 258175,
+        "Return=OK": 518
+      },
+      "OVERALL": {
+        "RunTime(ms)": 256953,
+        "Throughput(ops/sec)": 3.8917623067253544
+      }
+    },
+    "consistency": "",
+    "persistency": ""
   }
 ]
