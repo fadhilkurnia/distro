@@ -39,6 +39,7 @@ def main(run_ycsb, nodes, ssh):
 
 def start_hraftd_cluster(nodes, ssh):
     user = ssh["username"]
+    join = None
     for i, node in enumerate(nodes):
         if node["client_ip"] == "127.0.0.1" and node["peer_ip"] == "127.0.0.1":
             haddr = f"{node["peer_ip"]}:{node["client_port"]}"
@@ -48,7 +49,7 @@ def start_hraftd_cluster(nodes, ssh):
 
             run_cmd = (
                 f"nohup {HRAFTD_BIN.resolve()} -id node{i+1} -haddr {haddr} "
-                f"-raddr {raddr} {local_dir} > /dev/null 2>&1 &"
+                f"-raddr {raddr} {"" if join is None else join} {local_dir} > /dev/null 2>&1 &"
             )
         else:
             host = node["client_ip"]
@@ -74,11 +75,14 @@ def start_hraftd_cluster(nodes, ssh):
             run_cmd = (
                 f"ssh -i {ssh['key']} {user}@{host} "
                 f"'nohup {remote_hraftd} -id node{i+1} -haddr {haddr} "
-                f"-raddr {raddr} {remote_dir} > /dev/null 2>&1 &'"
+                f"-raddr {raddr} {"" if join is None else join} {remote_dir} > /dev/null 2>&1 &'"
             )
 
         print("Running command:", run_cmd)
         subprocess.run(run_cmd, check=True, shell=True)
+
+        if join is None:
+            join = f"-join {node["peer_ip"]}:{node["client_port"]}"
     print("hraftd cluster successfully started")
 
 

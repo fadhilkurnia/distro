@@ -141,29 +141,29 @@
     "language": "Go",
     "workload": "read-heavy",
     "result": {
-      "UPDATE": {
-        "Operations": 47,
-        "AverageLatency(us)": 256980.4255319149,
-        "MinLatency(us)": 254592,
-        "MaxLatency(us)": 264959,
-        "50thPercentileLatency(us)": 256127,
-        "95thPercentileLatency(us)": 263679,
-        "99thPercentileLatency(us)": 264959,
-        "Return=OK": 47
-      },
       "READ": {
-        "Operations": 953,
-        "AverageLatency(us)": 256578.41762854144,
-        "MinLatency(us)": 251648,
-        "MaxLatency(us)": 722943,
-        "50thPercentileLatency(us)": 252799,
-        "95thPercentileLatency(us)": 259455,
-        "99thPercentileLatency(us)": 268799,
-        "Return=OK": 953
+        "Operations": 954,
+        "AverageLatency(us)": 247949.88679245283,
+        "MinLatency(us)": 245248,
+        "MaxLatency(us)": 705023,
+        "50thPercentileLatency(us)": 246655,
+        "95thPercentileLatency(us)": 248191,
+        "99thPercentileLatency(us)": 249727,
+        "Return=OK": 954
+      },
+      "UPDATE": {
+        "Operations": 46,
+        "AverageLatency(us)": 253915.8260869565,
+        "MinLatency(us)": 251136,
+        "MaxLatency(us)": 260095,
+        "50thPercentileLatency(us)": 253055,
+        "95thPercentileLatency(us)": 258303,
+        "99thPercentileLatency(us)": 260095,
+        "Return=OK": 46
       },
       "OVERALL": {
-        "RunTime(ms)": 256777,
-        "Throughput(ops/sec)": 3.8944297970612634
+        "RunTime(ms)": 248366,
+        "Throughput(ops/sec)": 4.0263160013850525
       }
     },
     "consistency": "",
@@ -175,29 +175,29 @@
     "language": "Go",
     "workload": "update-heavy",
     "result": {
-      "UPDATE": {
-        "Operations": 482,
-        "AverageLatency(us)": 258718.27385892117,
-        "MinLatency(us)": 256128,
-        "MaxLatency(us)": 569855,
-        "50thPercentileLatency(us)": 257663,
-        "95thPercentileLatency(us)": 260735,
-        "99thPercentileLatency(us)": 263167,
-        "Return=OK": 482
-      },
       "READ": {
-        "Operations": 518,
-        "AverageLatency(us)": 254996.6332046332,
-        "MinLatency(us)": 253952,
-        "MaxLatency(us)": 264447,
-        "50thPercentileLatency(us)": 254847,
-        "95thPercentileLatency(us)": 256255,
-        "99thPercentileLatency(us)": 258175,
-        "Return=OK": 518
+        "Operations": 502,
+        "AverageLatency(us)": 257821.06772908368,
+        "MinLatency(us)": 256128,
+        "MaxLatency(us)": 548351,
+        "50thPercentileLatency(us)": 257151,
+        "95thPercentileLatency(us)": 258431,
+        "99thPercentileLatency(us)": 259327,
+        "Return=OK": 502
+      },
+      "UPDATE": {
+        "Operations": 498,
+        "AverageLatency(us)": 263781.7831325301,
+        "MinLatency(us)": 260864,
+        "MaxLatency(us)": 271359,
+        "50thPercentileLatency(us)": 263167,
+        "95thPercentileLatency(us)": 268543,
+        "99thPercentileLatency(us)": 269567,
+        "Return=OK": 498
       },
       "OVERALL": {
-        "RunTime(ms)": 256953,
-        "Throughput(ops/sec)": 3.8917623067253544
+        "RunTime(ms)": 260957,
+        "Throughput(ops/sec)": 3.8320489582574906
       }
     },
     "consistency": "",
