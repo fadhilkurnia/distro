@@ -210,7 +210,7 @@ def map_ip_port(nodes):
 
 
 if __name__ == "__main__":
-    main()
+    raise RuntimeError("This script is meant to be imported, not run directly")
 
 
 def hello():

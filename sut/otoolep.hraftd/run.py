@@ -88,7 +88,6 @@ def start_hraftd_cluster(nodes, ssh):
 
 def stop_hraftd_cluster(nodes, ssh):
     user = ssh["username"]
-    remote_hraftd = f"/home/{user}/hraftd/hraftd/hraftd"
 
     for i, node in enumerate(nodes):
         if node["client_ip"] == "127.0.0.1" and node["peer_ip"] == "127.0.0.1":
@@ -103,6 +102,7 @@ def stop_hraftd_cluster(nodes, ssh):
             os.system(f"rm -rf {local_dir.resolve()}")
         else:
             host = node["client_ip"]
+            remote_hraftd = f"/home/{user}/hraftd/hraftd/hraftd"
             remote_dir = f"/home/{user}/hraftd/node{i+1}"
 
             remote_command = (

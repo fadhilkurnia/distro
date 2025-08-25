@@ -202,5 +202,73 @@
     },
     "consistency": "",
     "persistency": ""
+  },
+  {
+    "project": "etcd-io.etcd",
+    "protocol": "raft",
+    "language": "Go",
+    "workload": "read-heavy",
+    "result": {
+      "UPDATE": {
+        "Operations": 45,
+        "AverageLatency(us)": 612596.6222222223,
+        "MinLatency(us)": 533504,
+        "MaxLatency(us)": 750079,
+        "50thPercentileLatency(us)": 611327,
+        "95thPercentileLatency(us)": 717823,
+        "99thPercentileLatency(us)": 750079,
+        "Return=OK": 45
+      },
+      "OVERALL": {
+        "RunTime(ms)": 321190,
+        "Throughput(ops/sec)": 3.1134219620785206
+      },
+      "READ": {
+        "Operations": 955,
+        "AverageLatency(us)": 306243.4178010471,
+        "MinLatency(us)": 263680,
+        "MaxLatency(us)": 1610751,
+        "50thPercentileLatency(us)": 305663,
+        "95thPercentileLatency(us)": 374527,
+        "99thPercentileLatency(us)": 414719,
+        "Return=OK": 955
+      }
+    },
+    "consistency": "",
+    "persistency": ""
+  },
+  {
+    "project": "etcd-io.etcd",
+    "protocol": "raft",
+    "language": "Go",
+    "workload": "update-heavy",
+    "result": {
+      "UPDATE": {
+        "Operations": 487,
+        "AverageLatency(us)": 676538.611909651,
+        "MinLatency(us)": 551936,
+        "MaxLatency(us)": 1642495,
+        "50thPercentileLatency(us)": 643583,
+        "95thPercentileLatency(us)": 818687,
+        "99thPercentileLatency(us)": 1128447,
+        "Return=OK": 487
+      },
+      "OVERALL": {
+        "RunTime(ms)": 503131,
+        "Throughput(ops/sec)": 1.987553937244972
+      },
+      "READ": {
+        "Operations": 513,
+        "AverageLatency(us)": 337155.99220272904,
+        "MinLatency(us)": 274688,
+        "MaxLatency(us)": 1334271,
+        "50thPercentileLatency(us)": 312831,
+        "95thPercentileLatency(us)": 415487,
+        "99thPercentileLatency(us)": 609279,
+        "Return=OK": 513
+      }
+    },
+    "consistency": "",
+    "persistency": ""
   }
 ]
