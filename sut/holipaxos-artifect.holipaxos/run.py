@@ -109,6 +109,8 @@ def main(run_ycsb) -> None:
                 selected_protocol = {
                     "name": protocol_name,
                     "language": "Go" if protocol_name != "omnipaxos" else "Rust",
+                    "consistency": "Linearizability",
+                    "persistency": "On-Disk"
                 }
                 start_holipaxos_cluster(protocol_name)
             case 1:

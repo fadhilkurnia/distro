@@ -89,6 +89,8 @@ def run_ycsb(protocol, interface) -> None:
                 and item["workload"] == workload_path.name):
             already_exists = True
             item["result"] = result
+            item["consistency"] = protocol.get("consistency", "")
+            item["persistency"] = protocol.get("persistency", "")
 
     if not already_exists:
         data.append({

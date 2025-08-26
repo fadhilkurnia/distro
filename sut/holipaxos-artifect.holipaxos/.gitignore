@@ -1,0 +1,4 @@
+logs
+bin/holipaxos_replicant
+bin/multipaxos_replicant
+bin/omni_replicant
