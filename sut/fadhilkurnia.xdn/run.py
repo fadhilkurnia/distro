@@ -75,7 +75,7 @@ def run_command(cmd) -> None:
     proc.wait()
 
 
-def main(run_ycsb, nodes) -> None:
+def main(run_ycsb, nodes, ssh) -> None:
     """
     Main function called by the root main.py script.
     Gives user a choice to start/stop instances
