@@ -2,7 +2,7 @@
 name: restkv
 components:
    - restkv:
-        image: restkv:1
+        image: michael2718/restkv:1
         stateful: true
         entry: true
         port: 8080

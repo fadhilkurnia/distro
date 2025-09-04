@@ -1,274 +1,37 @@
 [
   {
-    "project": "ailidani.paxi",
-    "protocol": "paxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 319404,
-        "Throughput(ops/sec)": 3.130831173059824
-      },
-      "READ": {
-        "Operations": 952,
-        "AverageLatency(us)": 319125.5798319328,
-        "MinLatency(us)": 246912,
-        "MaxLatency(us)": 1268735,
-        "50thPercentileLatency(us)": 305919,
-        "95thPercentileLatency(us)": 509439,
-        "99thPercentileLatency(us)": 650239,
-        "Return=OK": 952
-      },
-      "UPDATE": {
-        "Operations": 48,
-        "AverageLatency(us)": 321096.0,
-        "MinLatency(us)": 254208,
-        "MaxLatency(us)": 656895,
-        "50thPercentileLatency(us)": 306943,
-        "95thPercentileLatency(us)": 590335,
-        "99thPercentileLatency(us)": 656895,
-        "Return=OK": 48
-      }
-    },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "paxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 390374,
-        "Throughput(ops/sec)": 2.561646011260996
-      },
-      "READ": {
-        "Operations": 502,
-        "AverageLatency(us)": 392461.1314741036,
-        "MinLatency(us)": 245888,
-        "MaxLatency(us)": 1070079,
-        "50thPercentileLatency(us)": 494335,
-        "95thPercentileLatency(us)": 541183,
-        "99thPercentileLatency(us)": 559103,
-        "Return=OK": 502
-      },
-      "UPDATE": {
-        "Operations": 498,
-        "AverageLatency(us)": 387910.6827309237,
-        "MinLatency(us)": 246400,
-        "MaxLatency(us)": 1515519,
-        "50thPercentileLatency(us)": 276991,
-        "95thPercentileLatency(us)": 546303,
-        "99thPercentileLatency(us)": 563711,
-        "Return=OK": 498
-      }
-    },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "apache.zookeeper",
-    "protocol": "zab",
+    "project": "fadhilkurnia.xdn",
+    "protocol": "xdn",
     "language": "Java",
     "workload": "read-heavy",
     "result": {
-      "UPDATE": {
-        "Operations": 52,
-        "AverageLatency(us)": 497476.92307692306,
-        "MinLatency(us)": 495616,
-        "MaxLatency(us)": 511999,
-        "50thPercentileLatency(us)": 496895,
-        "95thPercentileLatency(us)": 500223,
-        "99thPercentileLatency(us)": 511999,
-        "Return=OK": 52
-      },
       "READ": {
-        "Operations": 948,
-        "AverageLatency(us)": 247733.13080168777,
-        "MinLatency(us)": 245888,
-        "MaxLatency(us)": 848895,
-        "50thPercentileLatency(us)": 247039,
-        "95thPercentileLatency(us)": 248319,
-        "99thPercentileLatency(us)": 249855,
-        "Return=OK": 948
+        "Operations": 944,
+        "AverageLatency(us)": 7835.8516949152545,
+        "MinLatency(us)": 3316,
+        "MaxLatency(us)": 93887,
+        "50thPercentileLatency(us)": 7299,
+        "95thPercentileLatency(us)": 11591,
+        "99thPercentileLatency(us)": 14647,
+        "Return=OK": 944,
+        "Return=ERROR": 2
       },
       "OVERALL": {
-        "RunTime(ms)": 261291,
-        "Throughput(ops/sec)": 3.8271505715849377
-      }
-    },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "apache.zookeeper",
-    "protocol": "zab",
-    "language": "Java",
-    "workload": "update-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 478,
-        "AverageLatency(us)": 519241.90794979077,
-        "MinLatency(us)": 513536,
-        "MaxLatency(us)": 1143807,
-        "50thPercentileLatency(us)": 516863,
-        "95thPercentileLatency(us)": 519167,
-        "99thPercentileLatency(us)": 525823,
-        "Return=OK": 478
-      },
-      "READ": {
-        "Operations": 522,
-        "AverageLatency(us)": 258048.36781609195,
-        "MinLatency(us)": 255744,
-        "MaxLatency(us)": 731647,
-        "50thPercentileLatency(us)": 257023,
-        "95thPercentileLatency(us)": 258175,
-        "99thPercentileLatency(us)": 262911,
-        "Return=OK": 522
-      },
-      "OVERALL": {
-        "RunTime(ms)": 383524,
-        "Throughput(ops/sec)": 2.6073987547063546
-      }
-    },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "otoolep.hraftd",
-    "protocol": "raft",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "READ": {
-        "Operations": 954,
-        "AverageLatency(us)": 247949.88679245283,
-        "MinLatency(us)": 245248,
-        "MaxLatency(us)": 705023,
-        "50thPercentileLatency(us)": 246655,
-        "95thPercentileLatency(us)": 248191,
-        "99thPercentileLatency(us)": 249727,
-        "Return=OK": 954
+        "RunTime(ms)": 14350,
+        "Throughput(ops/sec)": 69.68641114982579
       },
       "UPDATE": {
-        "Operations": 46,
-        "AverageLatency(us)": 253915.8260869565,
-        "MinLatency(us)": 251136,
-        "MaxLatency(us)": 260095,
-        "50thPercentileLatency(us)": 253055,
-        "95thPercentileLatency(us)": 258303,
-        "99thPercentileLatency(us)": 260095,
-        "Return=OK": 46
-      },
-      "OVERALL": {
-        "RunTime(ms)": 248366,
-        "Throughput(ops/sec)": 4.0263160013850525
+        "Operations": 54,
+        "AverageLatency(us)": 16247.185185185184,
+        "MinLatency(us)": 11560,
+        "MaxLatency(us)": 59231,
+        "50thPercentileLatency(us)": 14799,
+        "95thPercentileLatency(us)": 21199,
+        "99thPercentileLatency(us)": 59231,
+        "Return=OK": 54
       }
     },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "otoolep.hraftd",
-    "protocol": "raft",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "READ": {
-        "Operations": 502,
-        "AverageLatency(us)": 257821.06772908368,
-        "MinLatency(us)": 256128,
-        "MaxLatency(us)": 548351,
-        "50thPercentileLatency(us)": 257151,
-        "95thPercentileLatency(us)": 258431,
-        "99thPercentileLatency(us)": 259327,
-        "Return=OK": 502
-      },
-      "UPDATE": {
-        "Operations": 498,
-        "AverageLatency(us)": 263781.7831325301,
-        "MinLatency(us)": 260864,
-        "MaxLatency(us)": 271359,
-        "50thPercentileLatency(us)": 263167,
-        "95thPercentileLatency(us)": 268543,
-        "99thPercentileLatency(us)": 269567,
-        "Return=OK": 498
-      },
-      "OVERALL": {
-        "RunTime(ms)": 260957,
-        "Throughput(ops/sec)": 3.8320489582574906
-      }
-    },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "etcd-io.etcd",
-    "protocol": "raft",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 45,
-        "AverageLatency(us)": 612596.6222222223,
-        "MinLatency(us)": 533504,
-        "MaxLatency(us)": 750079,
-        "50thPercentileLatency(us)": 611327,
-        "95thPercentileLatency(us)": 717823,
-        "99thPercentileLatency(us)": 750079,
-        "Return=OK": 45
-      },
-      "OVERALL": {
-        "RunTime(ms)": 321190,
-        "Throughput(ops/sec)": 3.1134219620785206
-      },
-      "READ": {
-        "Operations": 955,
-        "AverageLatency(us)": 306243.4178010471,
-        "MinLatency(us)": 263680,
-        "MaxLatency(us)": 1610751,
-        "50thPercentileLatency(us)": 305663,
-        "95thPercentileLatency(us)": 374527,
-        "99thPercentileLatency(us)": 414719,
-        "Return=OK": 955
-      }
-    },
-    "consistency": "",
-    "persistency": ""
-  },
-  {
-    "project": "etcd-io.etcd",
-    "protocol": "raft",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 487,
-        "AverageLatency(us)": 676538.611909651,
-        "MinLatency(us)": 551936,
-        "MaxLatency(us)": 1642495,
-        "50thPercentileLatency(us)": 643583,
-        "95thPercentileLatency(us)": 818687,
-        "99thPercentileLatency(us)": 1128447,
-        "Return=OK": 487
-      },
-      "OVERALL": {
-        "RunTime(ms)": 503131,
-        "Throughput(ops/sec)": 1.987553937244972
-      },
-      "READ": {
-        "Operations": 513,
-        "AverageLatency(us)": 337155.99220272904,
-        "MinLatency(us)": 274688,
-        "MaxLatency(us)": 1334271,
-        "50thPercentileLatency(us)": 312831,
-        "95thPercentileLatency(us)": 415487,
-        "99thPercentileLatency(us)": 609279,
-        "Return=OK": 513
-      }
-    },
-    "consistency": "",
-    "persistency": ""
+    "consistency": "Linearizability + Primary Integrity",
+    "persistency": "On-Disk"
   }
 ]

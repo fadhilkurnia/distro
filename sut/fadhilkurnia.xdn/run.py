@@ -3,10 +3,12 @@ import subprocess
 import threading
 import os
 import re
+import time
 
 from src.utils import helper
 
 CURR_DIR = Path("./sut/fadhilkurnia.xdn")
+ROOT_PATH = Path(".")
 XDN_BIN = CURR_DIR / "xdn" / "bin"
 #START_CONFIG = CURR_DIR / "xdn" / "eval" / "static" / "gigapaxos.xdn.3way.local.properties"
 TEMPLATE_CONFIG = CURR_DIR / "xdn" / "conf" / "template.properties"
@@ -87,42 +89,33 @@ def main(run_ycsb, nodes, ssh) -> None:
     :param nodes: List of node IP
     :type nodes: dict[str, str, str, str, str]
     """
-    duplicate_count = {}
-    custom_ips = {}
-    for index, (k, v) in enumerate(nodes.items()):
-        if v not in duplicate_count or duplicate_count[v] is None:
-            duplicate_count[v] = 0
-        else:
-            duplicate_count[v] += 1
+    node_data = map_ip_port(nodes)
+    print("XDN IP-Port Map:")
+    for item in node_data:
+        print(item)
 
-        custom_ips[f"active.AR{index}"] = f"{v}:200{duplicate_count[v]}"
-        if index == 0:
-            custom_ips["reconfigurator.RC0"] = f"{v}:3000"
-
-    print("Node IP Adresses:")
-    for k, v in custom_ips.items():
-        print(f"{k} = {v}")
-
-    config = generate_config(TEMPLATE_CONFIG, custom_ips)
+    config = None
     while True:
         val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
         print()
 
         match val:
             case 0:
-                start_xdn(XDN_BIN, config)
+                start(XDN_BIN, node_data, ssh)
             case 1:
-                stop_xdn(XDN_BIN, config)
+                stop(XDN_BIN, node_data, ssh)
             case 2:
+                endpoints = [f"http://{node["public_ip"]}:{node["client_port"]}" for node in node_data]
+                print("endpoint list:", endpoints)
                 run_ycsb({
                     "name": "xdn",
                     "language": "Java",
                     "consistency": "Linearizability + Primary Integrity",
                     "persistency": "On-Disk"
-                }, "xdn")
+                }, "xdn", endpoints, "xdn.restkv.endpoint", ssh)
 
 
-def start_xdn(path, config) -> None:
+def start(path, nodes, ssh) -> None:
     """
     Runs the XDN instances with the specified protocol in different
     threads concurrently. Currently only supports local startup.
@@ -132,31 +125,237 @@ def start_xdn(path, config) -> None:
     :param config: Path to config file to run XDN startup script
     :type config: Path
     """
-    start_script = path / "gpServer.sh"
+    config = []
+    user = ssh["username"]
+    with open(CURR_DIR / "template.properties", 'r') as file:
+        for line in file:
+            config.append(line.strip())
 
-    cmd_xdn = [start_script, f"-DgigapaxosConfig={config}", "start", "all"]
-    watcher = TriggerWatcher(cmd_xdn)
-    watcher.start()
+        config.append(f"DEFAULT_NUM_REPLICAS={len(nodes)}")
 
-    watcher.wait_for("HttpReconfigurator ready on")
-    print("XDN has finished initialzing. Now starting restkv service...")
+        for i, node in enumerate(nodes):
+            config.append(f"active.AR{i}={node["private_ip"]}:{node["port"]}")
 
-    yaml_path = CURR_DIR / "restkv.yaml"
+        reconf = nodes[0]
+        config.append(f"reconfigurator.RC0={reconf["private_ip"]}:{reconf["port"] + 1000}")
+
+        if nodes[0]["private_ip"] == "127.0.0.1" and nodes[0]["public_ip"] == "127.0.0.1":
+            config.append(f"SSH_KEY_PATH={ROOT_PATH.resolve()}/{ssh["filename"]}")
+        else:
+            config.append(f"SSH_KEY_PATH=/home/{user}/fadhilkurnia.xdn/{ssh["filename"]}")
+
+    print("config:")
+    for line in config:
+        print(line)
+
+    config_path = CURR_DIR / "config.properties"
+    with open(config_path, "w") as f:
+        for line in config:
+            f.write(f"{line}\n")
+
+    for i, node in enumerate(nodes):
+        if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
+            jar_paths_str = subprocess.check_output(
+                ['find', 'jars', '-name', '*.jar'],
+                cwd=f"{CURR_DIR.resolve()}/xdn",
+                text=True,
+                stderr=subprocess.PIPE
+            ).strip()
+            classpath_jars = jar_paths_str.replace('\n', ':')
+
+            run_cmd = (
+                f"cd {CURR_DIR}/xdn; "
+                "nohup java -DgigapaxosConfig=../config.properties -ea "
+                "-Djavax.net.ssl.keyStorePassword=qwerty "
+                "-Djavax.net.ssl.trustStorePassword=qwerty "
+                "-Djavax.net.ssl.keyStore=conf/keyStore.jks "
+                "-Djavax.net.ssl.trustStore=conf/trustStore.jks "
+                "-Djava.util.logging.config.file=conf/logging.properties "
+                "-Dlog4j.configuration=conf/log4j.properties "
+                "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
+                f"-cp 'build/classes:{classpath_jars}' "
+                f"edu.umass.cs.reconfiguration.ReconfigurableNode AR{i} "
+                f"> node_{i}.log 2>&1 &"
+            )
+
+            print("Running command:", run_cmd)
+            subprocess.run(run_cmd, check=True, shell=True)
+        else:
+            host = node["public_ip"]
+            build_dir = CURR_DIR / "xdn" / "build"
+            jar_dir = CURR_DIR / "xdn" / "jars"
+            conf_dir = CURR_DIR / "xdn" / "conf"
+            remote_base = f"/home/{user}/fadhilkurnia.xdn"
+
+            rsync_cmd1 = (
+                f"rsync --force -zaLP "
+                f"--rsync-path=\"mkdir -p {remote_base}/conf && rsync\" "
+                f"-e \"ssh -i {ssh['key']}\" "
+                f"{build_dir.resolve()} {jar_dir.resolve()} {conf_dir.resolve()} "
+                f"{config_path.resolve()} {ssh["key"].resolve()} {user}@{host}:{remote_base}"
+            )
+
+            print("Running command:", rsync_cmd1)
+            subprocess.run(rsync_cmd1, check=True, shell=True)
+
+            fuselog_apply = CURR_DIR / "fuse_rust" / "target" / "release" / "fuselog_apply"
+            fuselog_core = CURR_DIR / "fuse_rust" / "target" / "release" / "fuselog_core"
+
+            rsync_cmd2 = (
+                f"rsync --force -zaLP "
+                f"-e \"ssh -i {ssh['key']}\" "
+                f"{fuselog_core.resolve()} "
+                "--rsync-path=\"sudo rsync\" "
+                f"{user}@{host}:/usr/local/bin/fuselog"
+            )
+            print("Running command:", rsync_cmd2)
+            subprocess.run(rsync_cmd2, check=True, shell=True)
+
+            rsync_cmd3 = (
+                f"rsync --force -zaLP "
+                f"-e \"ssh -i {ssh['key']}\" "
+                f"{fuselog_apply.resolve()} "
+                "--rsync-path=\"sudo rsync\" "
+                f"{user}@{host}:/usr/local/bin/fuselog-apply"
+            )
+            print("Running command:", rsync_cmd3)
+            subprocess.run(rsync_cmd3, check=True, shell=True)
+
+            run_cmd = (
+                f"ssh -i {ssh['key']} {user}@{host} "
+                f"\"cd /home/{user}/fadhilkurnia.xdn; "
+                "nohup java -DgigapaxosConfig=config.properties -ea "
+                "-Djavax.net.ssl.keyStorePassword=qwerty "
+                "-Djavax.net.ssl.trustStorePassword=qwerty "
+                "-Djavax.net.ssl.keyStore=conf/keyStore.jks "
+                "-Djavax.net.ssl.trustStore=conf/trustStore.jks "
+                "-Djava.util.logging.config.file=conf/logging.properties "
+                "-Dlog4j.configuration=conf/log4j.properties "
+                "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
+                "-cp \\\"build/classes:\\$(echo jars/*.jar | tr ' ' ':')\\\" "
+                f"edu.umass.cs.reconfiguration.ReconfigurableNode AR{i} "
+                f"> node_{i}.log 2>&1 &\""
+            )
+
+            print("Running command:", run_cmd)
+            subprocess.run(run_cmd, check=True, shell=True)
+
+    # Reconfigurator
+    if nodes[0]["private_ip"] == "127.0.0.1" and nodes[0]["public_ip"] == "127.0.0.1":
+        # Starts reconfigurator instance (local)
+        jar_paths_str = subprocess.check_output(
+            ['find', 'jars', '-name', '*.jar'],
+            cwd=f"{CURR_DIR.resolve()}/xdn",
+            text=True,
+            stderr=subprocess.PIPE
+        ).strip()
+        classpath_jars = jar_paths_str.replace('\n', ':')
+
+        run_cmd = (
+            f"cd {CURR_DIR}/xdn; "
+            "nohup java -DgigapaxosConfig=../config.properties -ea "
+            "-Djavax.net.ssl.keyStorePassword=qwerty "
+            "-Djavax.net.ssl.trustStorePassword=qwerty "
+            "-Djavax.net.ssl.keyStore=conf/keyStore.jks "
+            "-Djavax.net.ssl.trustStore=conf/trustStore.jks "
+            "-Djava.util.logging.config.file=conf/logging.properties "
+            "-Dlog4j.configuration=conf/log4j.properties "
+            "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
+            f"-cp 'build/classes:{classpath_jars}' "
+            f"edu.umass.cs.reconfiguration.ReconfigurableNode RC0 "
+            f"> reconf_{i}.log 2>&1 &"
+        )
+        print("Running command:", run_cmd)
+        subprocess.run(run_cmd, check=True, shell=True)
+    else:
+        # Starts reconfigurator instance (remote use ssh)
+        run_cmd = (
+            f"ssh -i {ssh['key']} {user}@{nodes[0]["public_ip"]} "
+            f"\"cd /home/{user}/fadhilkurnia.xdn; "
+            "nohup java -DgigapaxosConfig=config.properties -ea "
+            "-Djavax.net.ssl.keyStorePassword=qwerty "
+            "-Djavax.net.ssl.trustStorePassword=qwerty "
+            "-Djavax.net.ssl.keyStore=conf/keyStore.jks "
+            "-Djavax.net.ssl.trustStore=conf/trustStore.jks "
+            "-Djava.util.logging.config.file=conf/logging.properties "
+            "-Dlog4j.configuration=conf/log4j.properties "
+            "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
+            "-cp \\\"build/classes:\\$(echo jars/*.jar | tr ' ' ':')\\\" "
+            f"edu.umass.cs.reconfiguration.ReconfigurableNode RC0 "
+            f"> reconf_{i}.log 2>&1 &\""
+        )
+        print("Running command:", run_cmd)
+        subprocess.run(run_cmd, check=True, shell=True)
+
+    time.sleep(15)
+
+    # Launch restkv in XDN
+    env = os.environ.copy()
+    env["XDN_CONTROL_PLANE"] = nodes[0]["public_ip"]
+    yaml_path = CURR_DIR / "restkv-nd.yaml"
     cmd_service = ["xdn", "launch", "restkv", f"--file={yaml_path}"]
-    subprocess.run(cmd_service, text=True)
+    subprocess.run(cmd_service, text=True, env=env)
 
-    watcher.wait_for("non-deterministic service initialization complete")
     print("restkv service has started in XDN")
 
 
-def stop_xdn(bin_path, config) -> None:
+def stop(bin_path, nodes, ssh) -> None:
     """
     Terminates all running instances of paxi that are still recorded inside
     the jobs list, then removes all the logfiles created by the instances.
     """
+    user = ssh["username"]
+
+    if nodes[0]["private_ip"] == "127.0.0.1" and nodes[0]["public_ip"] == "127.0.0.1":
+        cmd = (
+            f"pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
+            f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+
+            f"container_ids=$(docker ps -a -q --filter 'name=c0.e0.restkv.ar*.xdn.io'); "
+            f"if [ -n \"$container_ids\" ]; then "
+            f"  echo \"Stopping and removing containers: $container_ids\"; "
+            f"  docker stop $container_ids; "
+            f"  docker rm -f $container_ids; "
+            f"fi; "
+
+            f"docker network prune --force; "
+
+            f"for mountpoint in $(find /tmp/xdn/state/fuselog/ -type d -name 'ar*' | xargs -I{{}} echo {{}}/mnt/restkv/e0); do "
+            f"  echo \"Unmounting $mountpoint\"; fusermount -u $mountpoint || true; done; "
+
+            f"rm -rf /tmp/xdn /tmp/gigapaxos;"
+        )
+
+        print("Running command:", cmd)
+        subprocess.run(cmd, check=True, shell=True)
+        config = CURR_DIR / "xdn"
+        os.system(f"rm -rf {config.resolve()}/node_*.log {config.resolve()}/reconf_*.log")
+
+    else:
+        for i, node in enumerate(nodes):
+            host = node["public_ip"]
+            
+            remote_command = (
+                f"pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
+                f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+                f"docker remove -f c0.e0.restkv.ar{i}.xdn.io; "
+                f"docker network prune --force; "
+                f"fusermount -u /tmp/xdn/state/fuselog/ar{i}/mnt/restkv/e0; "
+                f"rm -rf /tmp/xdn /tmp/gigapaxos;"
+            )
+
+            cmd = ["ssh", "-i", str(ssh["key"]), f"{user}@{host}",
+                   remote_command]
+            print("Running command:", " ".join(cmd))
+            subprocess.run(cmd)
+
+    print("xdn removal & cleanup completed")
+
+    return
+    ########
     start_script = bin_path / "gpServer.sh"
 
-    cmd_xdn = [start_script, f"-DgigapaxosConfig={config}", "forceclear", "all"]
+    cmd_xdn = [start_script, "-DgigapaxosConfig=123123", "forceclear", "all"]
     subprocess.run(cmd_xdn, text=True)
 
     subprocess.run(["docker", "network", "prune", "--force"], text=True)
@@ -165,7 +364,6 @@ def stop_xdn(bin_path, config) -> None:
     os.system("rm -rf /tmp/gigapaxos")
     os.system("rm -rf /tmp/xdn")
     os.system("rm -rf ./output ./derby.log")
-    os.system(f"rm -rf {config}")
     print("XDN has stopped")
 
 
@@ -205,6 +403,29 @@ def generate_config(ori_config, new_ips):
         f.writelines(modified_lines)
 
     return custom_property
+
+
+def map_ip_port(nodes):
+    data = []
+    ip_map = {}
+    for node in nodes:
+        public_ip = node["public"]
+        private_ip = node["private"]
+
+        # Check duplicate machine using only public IP address)
+        if (public_ip not in ip_map
+                or ip_map[public_ip] is None):
+            ip_map[public_ip] = 2000
+            ip_map["client_port"] = 2300
+        else:
+            ip_map[public_ip] += 1
+            ip_map["client_port"] += 1
+
+        data.append({"public_ip": public_ip,
+                     "private_ip": private_ip,
+                     "port": ip_map[public_ip],
+                     "client_port": ip_map["client_port"]})
+    return data
 
 
 def hello():

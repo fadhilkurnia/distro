@@ -4,17 +4,19 @@ import sys
 import subprocess
 import json
 import os
+import shlex
 from dotenv import load_dotenv
 
 from src.utils import helper
 
 load_dotenv()
 YCSB_DIR = Path("./src/ycsb")
-YCSB_BIN = Path("./bin/ycsb")
+YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
 YCSB_WORKLOAD_DIR = Path("./workloads")
 WORKLOADS = ["read-heavy", "update-heavy"]
 DATA = os.getenv("OUTPUT_FILE", "data.local.json")
 selected_project = None
+client_ip = None
 
 
 def main(nodes, ssh_key) -> None:
@@ -48,7 +50,7 @@ def main(nodes, ssh_key) -> None:
     module.main(run_ycsb, nodes, ssh_key)
 
 
-def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
+def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
     """
     Give user options to pick a workload, then runs that workload
     onto the specified protocol. The YCSB output is then parsed and
@@ -67,29 +69,77 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
                for i, name in enumerate(WORKLOADS, start=1)]
     num = helper.get_option(1, len(options), options)
 
-    workload_path = YCSB_WORKLOAD_DIR / WORKLOADS[num-1]
+    # rsync YCSB client files
+    if client_ip == "127.0.0.1" and client_ip == "127.0.0.1":
+        workload_path = YCSB_WORKLOAD_DIR / WORKLOADS[num-1]
 
-    print("YCSB endpoint list:", addr_list)
-    subprocess.run(
-        [YCSB_BIN, "load", interface, "-P", workload_path, "-p",
-         f"{endpoint_name}={addr_list[0]}"],
-        cwd=YCSB_DIR)
+        print("YCSB endpoint list:", addr_list)
+        subprocess.run(
+            [YCSB_BIN.resolve(), "load", interface, "-P", workload_path, "-p",
+             f"{endpoint_name}={addr_list[0]}"],
+            cwd=YCSB_DIR)
 
-    process = subprocess.Popen(
-        [YCSB_BIN, "run", interface, "-P", workload_path, "-p",
-         f"{endpoint_name}={addr_list[0]}"],
-        cwd=YCSB_DIR,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,  # optional: merge stderr into stdout
-        text=True,
-    )
+        process = subprocess.Popen(
+            [YCSB_BIN.resolve(), "run", interface, "-P", workload_path, "-p",
+             f"{endpoint_name}={addr_list[0]}"],
+            cwd=YCSB_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    else:
+        user = ssh["username"]
+        local_dir = YCSB_DIR
+        remote_dir = f"/home/{user}/ycsb"
+        remote_bin = f"{remote_dir}/bin/ycsb"
+        workload_path = f"{remote_dir}/workloads/{WORKLOADS[num-1]}"
 
-    result = []
-    for line in process.stdout:
-        print(line, end='')  # Print to terminal
-        result.append(line)
+        copy_cmd = (
+            f"rsync -avz -e 'ssh -i {ssh['key']}' "
+            f"{str(local_dir.resolve())}/ "
+            f"{user}@{client_ip}:{remote_dir}/"
+        )
 
-    parsed = parse_ycsb_output(result)
+        print("Running command:", copy_cmd)
+        subprocess.run(copy_cmd, check=True, shell=True)
+
+        remote_run = (
+            f"cd {shlex.quote(remote_dir)}; "
+            f"mvn clean package -pl {shlex.quote(interface)} -am; "
+            f"{shlex.quote(remote_bin)} load {shlex.quote(interface)} "
+            f"-P {shlex.quote(workload_path)} -p {shlex.quote(endpoint_name)}={shlex.quote(addr_list[0])} > /dev/null; "
+            f"{shlex.quote(remote_bin)} run {shlex.quote(interface)} "
+            f"-P {shlex.quote(workload_path)} -p {shlex.quote(endpoint_name)}={shlex.quote(addr_list[0])}; "
+        )
+
+        run_cmd = [
+            "ssh",
+            "-i", str(ssh['key']),
+            f"{user}@{client_ip}",
+            "bash -c",
+            shlex.quote(remote_run)
+        ]
+
+        # Load & run YCSB
+        print("Running command:", " ".join(run_cmd))
+        process = subprocess.Popen(
+            run_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Redirect stderr to stdout for a single output stream
+            text=True,
+        )
+
+        live_output = []
+        for line in process.stdout:
+            print(line, end='')
+            live_output.append(line)
+
+        return_code = process.wait()
+
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, process.args, output="".join(live_output))
+
+    parsed = parse_ycsb_output(live_output)
     print(json.dumps(parsed, indent=2))
 
     keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
@@ -102,7 +152,7 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
     for item in data:
         if (item["project"] == selected_project.name
                 and item["protocol"] == protocol["name"]
-                and item["workload"] == workload_path.name):
+                and item["workload"] == WORKLOADS[num-1]):
             already_exists = True
             item["result"] = result
 
@@ -111,7 +161,7 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
             "project": selected_project.name,
             "protocol": protocol['name'],
             "language": protocol.get("language", ""),
-            "workload": workload_path.name,
+            "workload": WORKLOADS[num-1],
             "result": result,
             "consistency": protocol.get("consistency", ""),
             "persistency": protocol.get("persistency", ""),
@@ -119,7 +169,7 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name) -> None:
 
     with open(DATA, "w") as f:
         json.dump(data, f, indent=2)
-    print(f"{workload_path.name} result has been inserted into {DATA}.")
+    print(f"{WORKLOADS[num-1]} result has been inserted into {DATA}.")
 
 
 def parse_ycsb_output(lines) -> dict[str]:
@@ -176,9 +226,12 @@ if __name__ == "__main__":
     nodes = {f"node{i}": os.getenv(f"NODE{i}_IP")
              for i in range(1, num_of_nodes+1)}
     '''
-    ssh_key = Path.cwd() / os.getenv("SSH_KEY")
+    filename = os.getenv("SSH_KEY")
+    ssh_key = Path.cwd() / filename
     username = os.getenv("REMOTE_USERNAME")
-    ssh = {"key": ssh_key, "username": username}
+    client_ip = os.getenv("CLIENT_IP")
+
+    ssh = {"key": ssh_key, "username": username, "filename": filename}
 
     nodes = [{"private": os.getenv(f"PRIVATE_IP{i}"),
              "public": os.getenv(f"PUBLIC_IP{i}")}
