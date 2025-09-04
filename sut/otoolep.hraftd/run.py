@@ -34,7 +34,12 @@ def main(run_ycsb, nodes, ssh):
             case 2:
                 endpoints = [f"http://{node["client_ip"]}:{node["client_port"]}" for node in node_data]
                 print("endpoint list:", endpoints)
-                run_ycsb({"name": "raft", "language": "Go"}, "hraftd", endpoints, "hraftd.hosts")
+                run_ycsb({
+                    "name": "raft", 
+                    "language": "Go",
+                    "consistency": "Linearizability",
+                    "persistency": "In-Memory"
+                }, "hraftd", endpoints, "hraftd.hosts", ssh)
 
 
 def start_hraftd_cluster(nodes, ssh):

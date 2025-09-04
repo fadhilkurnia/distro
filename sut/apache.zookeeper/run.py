@@ -40,7 +40,12 @@ def main(run_ycsb, nodes, ssh) -> None:
             case 2:
                 endpoints = [f"{node["public_ip"]}:{node["client"]}" for node in node_data]
                 print("endpoint list:", endpoints)
-                run_ycsb({"name": "zab", "language": "Java"}, "zookeeper", endpoints, "zookeeper.connectString")
+                run_ycsb({
+                    "name": "zab", 
+                    "language": "Java",
+                    "consistency": "Linearizability + Primary Integrity",
+                    "persistency": "On-Disk"
+                }, "zookeeper", endpoints, "zookeeper.connectString", ssh)
 
 
 def start_zk(path, node_data, ssh) -> None:

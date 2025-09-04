@@ -14,20 +14,20 @@ OPTIONS = [{"num": 0, "text": "Start Paxi"},
            {"num": 1, "text": "Stop Paxi"},
            {"num": 2, "text": "Run Benchmark"}]
 
-PROTOCOLS = [{"num": 1, "text": "paxos"},
-             {"num": 2, "text": "epaxos"},
-             {"num": 3, "text": "sdpaxos"},
-             {"num": 4, "text": "wpaxos"},
-             {"num": 5, "text": "abd"},
-             {"num": 6, "text": "chain"},
-             {"num": 7, "text": "vpaxos"},
-             {"num": 8, "text": "wankeeper"},
-             {"num": 9, "text": "kpaxos"},
-             {"num": 10, "text": "paxos_groups"},
-             {"num": 11, "text": "dynamo"},
-             {"num": 12, "text": "blockchain"},
-             {"num": 13, "text": "m2paxos"},
-             {"num": 14, "text": "hpaxos"}]
+PROTOCOLS = [{"num": 1, "text": "paxos", "consistency": "Linearizability"},
+             {"num": 2, "text": "epaxos", "consistency": "Linearizability"},
+             {"num": 3, "text": "sdpaxos", "consistency": "Linearizability"},
+             {"num": 4, "text": "wpaxos", "consistency": "Linearizability"},
+             {"num": 5, "text": "abd", "consistency": "Linearizability"},
+             {"num": 6, "text": "chain", "consistency": "Linearizability"},
+             {"num": 7, "text": "vpaxos", "consistency": "Linearizability"},
+             {"num": 8, "text": "wankeeper", "consistency": "Linearizability"},
+             {"num": 9, "text": "kpaxos", "consistency": "Linearizability"},
+             {"num": 10, "text": "paxos_groups", "consistency": "Linearizability"},
+             {"num": 11, "text": "dynamo", "consistency": "Eventual"},
+             {"num": 12, "text": "blockchain", "consistency": "Linearizability"},
+             {"num": 13, "text": "m2paxos", "consistency": "Linearizability"},
+             {"num": 14, "text": "hpaxos", "consistency": "Linearizability"}]
 
 
 def main(run_ycsb, nodes, ssh) -> None:
@@ -42,17 +42,20 @@ def main(run_ycsb, nodes, ssh) -> None:
     """
     selected_protocol = None
     port_map = map_ip_port(nodes)
+    prot_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
+    selected_protocol = {
+        "name": PROTOCOLS[prot_num-1]["text"],
+        "language": "Go",
+        "consistency": PROTOCOLS[prot_num-1]["consistency"],
+        "persistency": "In-Memory"
+    }
+
     while True:
         val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
         print()
 
         match val:
             case 0:
-                prot_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
-                selected_protocol = {
-                    "name": PROTOCOLS[prot_num-1]["text"],
-                    "language": "Go",
-                }
                 start_paxi(PAXI_BIN, selected_protocol, nodes, ssh, port_map)
             case 1:
                 stop_paxi(PAXI_BIN, nodes, ssh)
@@ -61,7 +64,8 @@ def main(run_ycsb, nodes, ssh) -> None:
                              for ip, port in port_map["public"].items()]
                 print("endpoint list:", endpoints)
                 print("selected protocol:", selected_protocol)
-                run_ycsb(selected_protocol, "paxi", endpoints, "rest.endpoint")
+                run_ycsb(selected_protocol, "paxi", endpoints,
+                         "rest.endpoint", ssh)
 
 
 def start_paxi(path, protocol, nodes, ssh, port_map):
