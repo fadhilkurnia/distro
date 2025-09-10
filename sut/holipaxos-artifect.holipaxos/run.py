@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import subprocess
 import threading
 import os
@@ -16,319 +17,168 @@ OPTIONS = [{"num": 0, "text": "Start HoliPaxos cluster"},
            {"num": 1, "text": "Stop HoliPaxos cluster"},
            {"num": 2, "text": "Run Benchmark"}]
 
-PROTOCOLS = [{"num": 1, "text": "holipaxos"},
-             {"num": 2, "text": "multipaxos"},
-             {"num": 3, "text": "omnipaxos"}]
+PROTOCOLS = [{"num": 1, "text": "holipaxos", "language": "Go", "binary": "holipaxos_replicant"},
+             {"num": 2, "text": "multipaxos", "language": "Go", "binary": "multipaxos_replicant"},
+             {"num": 3, "text": "omnipaxos", "language": "Rust", "binary": "omni_replicant"}]
 
-PROTOCOL_CONFIGS = {
-    "holipaxos": {
-        "binary": "holipaxos_replicant",
-        "args_format": "posix",  # -id, -c, -d
-        "env": None
-    },
-    "multipaxos": {
-        "binary": "multipaxos_replicant",
-        "args_format": "posix",  # -id, -c, -d
-        "env": None
-    },
-    "omnipaxos": {
-        "binary": "omni_replicant",
-        "args_format": "gnu",    # --id, --config-path
-        "env": None
-    }
-}
-
-NODES = [0, 1, 2, 3, 4]
-
-# Shared list to store job info
-jobs = []
+PERSISTENCY = [{"num": 1, "text": "In-Memory"},
+               {"num": 2, "text": "On-Disk"}]
 
 
-def run_command(cmd, env=None, log_file=None) -> None:
-    """
-    :param cmd: Command line arguments
-    :type cmd: str[]
-    :param env: Environment variables
-    :type env: dict
-    :param log_file: Path to log file for stdout/stderr redirection
-    :type log_file: str
-    """
-    proc_env = os.environ.copy()
-    if env:
-        proc_env.update(env)
-    
-    # Redirect stdout and stderr to log file if provided
-    log_handle = None
-    if log_file:
-        log_handle = open(log_file, 'w')
-        proc = subprocess.Popen(cmd, env=proc_env, stdout=log_handle, stderr=subprocess.STDOUT)
-    else:
-        proc = subprocess.Popen(cmd, env=proc_env)
-    
-    jobs.append({
-        'cmd': cmd,
-        'process': proc,
-        'log_file': log_handle,
-        'thread': threading.current_thread()
-    })
-
-
-def build_command(protocol_name, node_id):
-    """
-    :param protocol_name: Name of the protocol (holipaxos, multipaxos, omnipaxos)
-    :type protocol_name: str
-    :param node_id: Node ID (0-4)
-    :type node_id: int
-    :return: Command array and environment variables
-    :rtype: tuple[list[str], dict]
-    """
-    config = PROTOCOL_CONFIGS[protocol_name]
-    binary_path = BIN_DIR / config["binary"]
-    config_file = CONFIG_DIR / f"config_node{node_id}.json"
-    
-    if config["args_format"] == "posix":
-        # holipaxos and multipaxos: -id X -c config -d
-        cmd = [str(binary_path), "-id", str(node_id), "-c", str(config_file), "-d"]
-    else: 
-        # omnipaxos: --id X --config-path config
-        cmd = [str(binary_path), "--id", str(node_id), "--config-path", str(config_file)]
-    
-    return cmd, config["env"]
-
-
-def is_remote_mode(nodes):
-    """Check if any node requires remote deployment"""
-    if not nodes:
-        return False
-    return any(node.get("public") != "127.0.0.1" or node.get("private") != "127.0.0.1" 
-               for node in nodes)
-
-
-def setup_remote_files(protocol_name, nodes, ssh):
-    """Check if files exist on remote nodes and copy if needed"""
-    user = ssh["username"]
-    config = PROTOCOL_CONFIGS[protocol_name]
-    replicant_binary = BIN_DIR / config["binary"]
-    config_file = CONFIG_DIR / "config.json"
-    
-    for i, node in enumerate(nodes):
-        public_ip = node["public"]
-        private_ip = node["private"]
-        
-        if private_ip == "127.0.0.1" and public_ip == "127.0.0.1":
-            continue
-            
-        host = public_ip
-        remote_dir = f"/home/{user}/holipaxos"
-        remote_replicant = f"{remote_dir}/{config['binary']}"
-        remote_config = f"{remote_dir}/config.json"
-        
-        check_cmd = (
-            f"ssh -i {ssh['key']} {user}@{host} "
-            f"'if [ ! -f {remote_replicant} ] || [ ! -f {remote_config} ]; then "
-            f"mkdir -p {remote_dir}; echo \"missing\"; "
-            f"else echo \"exists\"; fi'"
-        )
-        
-        print(f"Checking files on node {i}: {host}")
-        print("Running command:", check_cmd)
-        result = subprocess.run(check_cmd, check=True, shell=True, capture_output=True, text=True)
-        
-        if "missing" in result.stdout:
-            copy_cmd = ["rsync", "-avz", "-e", f"ssh -i {ssh['key']}",
-                        str(replicant_binary.resolve()), str(config_file.resolve()),
-                        f'{user}@{host}:{remote_dir}/']
-            
-            print(f"Copying files to node {i}: {host}")
-            print("Running command:", " ".join(copy_cmd))
-            subprocess.run(copy_cmd, check=True)
-        else:
-            print(f"Files already exist on node {i}: {host}, skipping copy")
-    
-    print("File setup completed for all remote nodes")
-
-
-def main(run_ycsb, nodes=None, ssh=None) -> None:
+def main(run_ycsb, nodes, ssh) -> None:
     selected_protocol = None
+    protocol_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
+    persistency_num = helper.get_option(1, len(PERSISTENCY), PERSISTENCY)
+
+    selected_protocol = {
+        "name": PROTOCOLS[protocol_num-1]["text"],
+        "language": PROTOCOLS[protocol_num-1]["language"],
+        "consistency": "Linearizability",
+        "persistency": PERSISTENCY[persistency_num-1]["text"],
+        "binary": PROTOCOLS[protocol_num-1]["binary"],
+    }
+
+    port_map = map_ip_port(nodes)
+
     while True:
         val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
         print()
 
         match val:
             case 0:
-                prot_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
-                protocol_name = PROTOCOLS[prot_num-1]["text"]
-                selected_protocol = {
-                    "name": protocol_name,
-                    "language": "Go" if protocol_name != "omnipaxos" else "Rust",
-                }
-                start_holipaxos_cluster(protocol_name, nodes, ssh)
+                start(selected_protocol, ssh, port_map)
             case 1:
-                stop_holipaxos_cluster(nodes, ssh)
+                stop(selected_protocol, ssh, port_map)
             case 2:
-                if selected_protocol:
-                    if is_remote_mode(nodes) and nodes:
-                        endpoints = []
-                        for i, node in enumerate(nodes):
-                            if node["public"] != "127.0.0.1":
-                                client_port = 2200 + (i * 10) + 1
-                                endpoints.append(f"{node['public']}:{client_port}")
-                        
-                        if endpoints:
-                            print("Remote benchmark endpoints:", endpoints)
-                            combined = ",".join(endpoints)
-                            print("Combined endpoints:", combined)
-                            run_ycsb(selected_protocol, "holipaxos", [combined], "holipaxos.hosts")
-                        else:
-                            print("No remote nodes available for benchmarking")
-                    else:
-                        endpoints = [f"127.0.0.1:{10000 + node_id * 1000 + 1}" for node_id in NODES]
-                        print("Local benchmark endpoints:", endpoints)
-                        run_ycsb(selected_protocol, "holipaxos", endpoints, "holipaxos.hosts")
-                else:
-                    print("Please start a cluster first")
+                endpoints = [f"{node["private_ip"]}:{node["client_port"]}"
+                             for node in port_map]
+                print("endpoint list:", endpoints)
+                print("selected protocol:", selected_protocol)
+
+                run_ycsb(selected_protocol, "holipaxos", [",".join(endpoints)],
+                         "holipaxos.hosts", ssh)
 
 
-def start_remote_instances(protocol_name, nodes, ssh):
-    """Start holipaxos instances on remote nodes"""
-    user = ssh["username"]
-    config = PROTOCOL_CONFIGS[protocol_name]
-    
-    for i, node in enumerate(nodes):
-        public_ip = node["public"]
-        private_ip = node["private"]
-        
-        # Skip local nodes
-        if private_ip == "127.0.0.1" and public_ip == "127.0.0.1":
-            continue
-            
-        host = public_ip
-        remote_dir = f"/home/{user}/holipaxos"
-        remote_replicant = f"{remote_dir}/{config['binary']}"
-        remote_config = f"{remote_dir}/config.json"
-        
-        # Build command args based on protocol format
-        if config["args_format"] == "posix":
-            # holipaxos and multipaxos: -id X -c config -d
-            args = f"-id {i} -c {remote_config} -d"
+def start(protocol, ssh, ip_port_map):
+    config_path = generate_config(ip_port_map, protocol["persistency"])
+
+    binary_path = BIN_DIR / protocol["binary"]
+    for i, node in enumerate(ip_port_map):
+        if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
+            if protocol["name"] == "omnipaxos":
+                run_cmd = f"nohup {binary_path.resolve()} --id {i} --config-path {config_path.resolve()} > /dev/null 2>&1 &"
+            else:
+                run_cmd = f"nohup {binary_path.resolve()} -id {i} -c {config_path.resolve()} -d > /dev/null 2>&1 &"
         else:
-            # omnipaxos: --id X --config-path config
-            args = f"--id {i} --config-path {remote_config}"
-            
-        run_cmd = (
-            f"ssh -i {ssh['key']} {user}@{host} "
-            f"'nohup {remote_replicant} {args} > /dev/null 2>&1 &'"
-        )
-        
-        print(f"Starting holipaxos instance on node {i}: {host}")
+            user = ssh["username"]
+            host = node["public_ip"]
+            remote_dir = f"/home/{user}/holipaxos"
+            remote_binary = f"{remote_dir}/{protocol["binary"]}"
+            remote_config = f"{remote_dir}/run_config.json"
+
+            copy_cmd = ["rsync", "-avz", "-e", f"ssh -i {ssh['key']}",
+                        str(config_path.resolve()), str(binary_path.resolve()),
+                        f'{user}@{host}:{remote_dir}/']
+
+            if protocol["name"] == "omnipaxos":
+                run_cmd = (
+                    f"ssh -i {ssh['key']} {user}@{host} "
+                    f"'nohup {remote_binary} --id {i} "
+                    f"--config-path {remote_config} > /dev/null 2>&1 &'"
+                )
+            else:
+                run_cmd = (
+                    f"ssh -i {ssh['key']} {user}@{host} "
+                    f"'nohup {remote_binary} -id {i} "
+                    f"-c {remote_config} > /dev/null 2>&1 &'"
+                )
+
+            print("Running command:", " ".join(copy_cmd))
+            subprocess.run(copy_cmd, check=True)
+
         print("Running command:", run_cmd)
         subprocess.run(run_cmd, check=True, shell=True)
-    
-    print("All remote holipaxos instances started successfully")
 
 
-def start_holipaxos_cluster(protocol_name, nodes=None, ssh=None) -> None:
-    if is_remote_mode(nodes) and nodes and ssh:
-        print(f"Remote mode detected. Setting up and starting holipaxos instances...")
-        stop_holipaxos_cluster(nodes, ssh, protocol_name)
-        setup_remote_files(protocol_name, nodes, ssh)
-        start_remote_instances(protocol_name, nodes, ssh)
-        print(f"Remote deployment completed for {protocol_name}")
-        return
-    
-    LOG_DIR.mkdir(exist_ok=True)
-    
-    stop_holipaxos_cluster()
-    
-    print(f"Starting {protocol_name} cluster with {len(NODES)} nodes...")
-    
-    for node_id in NODES:
-        cmd, env = build_command(protocol_name, node_id)
-        consensus_port = 10000 + node_id * 1000
-        client_port = consensus_port + 1
-        log_file = LOG_DIR / f"node_{node_id}.log"
-        
-        print(f"Starting Node {node_id}: consensus=localhost:{consensus_port}, client=localhost:{client_port}")
-        print(f"Command: {' '.join(cmd)}")
-        
-        t = threading.Thread(target=run_command, args=(cmd, env, str(log_file)))
-        t.start()
-        time.sleep(1) 
-    
-    print(f"{protocol_name} cluster started successfully")
-
-
-def stop_remote_instances(protocol_name, nodes, ssh):
-    """Stop holipaxos instances on remote nodes"""
+def stop(protocol, ssh, ip_port_map):
     user = ssh["username"]
-    
-    if protocol_name is None:
-        binaries_to_kill = [config["binary"] for config in PROTOCOL_CONFIGS.values()]
-    else:
-        binaries_to_kill = [PROTOCOL_CONFIGS[protocol_name]["binary"]]
-    
-    for i, node in enumerate(nodes):
+    for i, node in enumerate(ip_port_map):
+        if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
+            binary_path = BIN_DIR / protocol["binary"]
+            cmd = (
+                f"pids=$(ps aux | grep '{binary_path.resolve()}' | grep -v grep | awk '{{print $2}}'); "
+                    f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+            )
+            print("Running command:", cmd)
+            subprocess.run(cmd, shell=True)
+        else:
+            host = node["public_ip"]
+            remote_dir = f"/home/{user}/holipaxos"
+            remote_binary = f"{remote_dir}/{protocol["binary"]}"
+            remote_config = f"{remote_dir}/run_config.json"
+
+            remote_command = (
+                f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); "
+                    f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+                    f"rm {remote_config};"
+            )
+
+            cmd = ["ssh", "-i", str(ssh["key"]), f"{user}@{host}",
+                   remote_command]
+            print("Running command:", " ".join(cmd))
+            subprocess.run(cmd)
+
+    config = CURR_DIR / "run_config.json"
+    os.system(f"rm {config.resolve()}")
+
+
+def generate_config(port_map, persistency):
+    # Create custom config.json file
+    with open(CURR_DIR / "template.json", 'r') as file:
+        data = json.load(file)
+
+        for node in port_map:
+            data["peers"].append(f"{node["private_ip"]}:{node["peer_port"]}")
+
+            if persistency == "In-Memory":
+                data["store"] = "mem"
+            elif persistency == "On-Disk":
+                data["store"] = "rocksdb"
+            else:
+                raise RuntimeError(f"{persistency} persistency is not supported.")
+
+    config = CURR_DIR / "run_config.json"
+    with open(config, "w") as f:
+        json.dump(data, f, indent=2)
+
+    print("run_config.json has been generated.")
+    return config
+
+
+def map_ip_port(nodes):
+    data = []
+    ip_map = {}
+    for node in nodes:
         public_ip = node["public"]
         private_ip = node["private"]
-        
-        if private_ip == "127.0.0.1" and public_ip == "127.0.0.1":
-            continue
-            
-        host = public_ip
-        remote_dir = f"/home/{user}/holipaxos"
-        
-        kill_commands = []
-        for binary in binaries_to_kill:
-            remote_binary = f"{remote_dir}/{binary}"
-            kill_commands.append(f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); for pid in $pids; do echo \"Killing {binary} $pid\"; kill -9 $pid; done;")
-        
-        remote_command = " ".join(kill_commands) + " rm -rf /tmp/presistent_node*;"
-        
-        cmd = ["ssh", "-i", str(ssh["key"]), f"{user}@{host}", remote_command]
-        print(f"Stopping holipaxos on node {i}: {host}")
-        print("Running command:", " ".join(cmd))
-        subprocess.run(cmd)
-    
-    print("All remote holipaxos instances stopped")
 
+        # Check duplicate machine using only public IP address)
+        if (public_ip not in ip_map
+                or ip_map[public_ip] is None):
+            ip_map[public_ip] = 2000
+        else:
+            ip_map[public_ip] += 1
 
-def stop_holipaxos_cluster(nodes=None, ssh=None, protocol_name=None) -> None:
-    print("Stopping cluster...")
-    
-    if is_remote_mode(nodes) and nodes and ssh:
-        stop_remote_instances(protocol_name, nodes, ssh)
-        return
-    
-    for job in jobs:
-        proc = job['process']
-        if proc.poll() is None: 
-            print(f"Terminating: {' '.join(map(str, job['cmd']))}")
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                print(f"Force killing: {' '.join(map(str, job['cmd']))}")
-                proc.kill()
-        
-        # Close log file handle if it exists
-        if job.get('log_file'):
-            job['log_file'].close()
-    
-    jobs.clear()
-    
-    for node_id in NODES:
-        data_dir = Path(f"/tmp/presistent_node{node_id}")
-        if data_dir.exists():
-            shutil.rmtree(data_dir)
-    
-    print("Cluster stopped and data directories cleaned")
+        data.append({"public_ip": public_ip,
+                     "private_ip": private_ip,
+                     "peer_port": ip_map[public_ip],
+                     "client_port": ip_map[public_ip] + 1})
+
+    return data
 
 
 if __name__ == "__main__":
-    def mock_run_ycsb(protocol, interface):
-        print(f"Would run YCSB with protocol: {protocol}, interface: {interface}")
-    
-    main(mock_run_ycsb)
+    raise RuntimeError("This script is meant to be imported, not run directly")
 
 
 def hello():

@@ -98,8 +98,8 @@
         "Return=OK": 952
       }
     },
-    "consistency": "",
-    "persistency": ""
+    "consistency": "Linearizability",
+    "persistency": "In-Memory"
   },
   {
     "project": "ailidani.paxi",
@@ -742,6 +742,210 @@
         "95thPercentileLatency(us)": 2385,
         "99thPercentileLatency(us)": 3717,
         "Return=OK": 514
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "In-Memory"
+  },
+  {
+    "project": "holipaxos-artifect.holipaxos",
+    "protocol": "holipaxos",
+    "language": "Go",
+    "workload": "read-heavy",
+    "result": {
+      "READ": {
+        "Operations": 955,
+        "AverageLatency(us)": 1143.4376963350785,
+        "MinLatency(us)": 631,
+        "MaxLatency(us)": 4863,
+        "50thPercentileLatency(us)": 1004,
+        "95thPercentileLatency(us)": 2151,
+        "99thPercentileLatency(us)": 2983,
+        "Return=OK": 955
+      },
+      "UPDATE": {
+        "Operations": 45,
+        "AverageLatency(us)": 1464.7111111111112,
+        "MinLatency(us)": 733,
+        "MaxLatency(us)": 3381,
+        "50thPercentileLatency(us)": 1292,
+        "95thPercentileLatency(us)": 2999,
+        "99thPercentileLatency(us)": 3381,
+        "Return=OK": 45
+      },
+      "OVERALL": {
+        "RunTime(ms)": 1240,
+        "Throughput(ops/sec)": 806.4516129032259
+      }
+    },
+    "consistency": "",
+    "persistency": ""
+  },
+  {
+    "project": "holipaxos-artifect.holipaxos",
+    "protocol": "holipaxos",
+    "language": "Go",
+    "workload": "update-heavy",
+    "result": {
+      "READ": {
+        "Operations": 508,
+        "AverageLatency(us)": 1155.1476377952756,
+        "MinLatency(us)": 629,
+        "MaxLatency(us)": 6863,
+        "50thPercentileLatency(us)": 981,
+        "95thPercentileLatency(us)": 2213,
+        "99thPercentileLatency(us)": 2823,
+        "Return=OK": 508
+      },
+      "UPDATE": {
+        "Operations": 492,
+        "AverageLatency(us)": 1269.6808943089432,
+        "MinLatency(us)": 677,
+        "MaxLatency(us)": 14327,
+        "50thPercentileLatency(us)": 1061,
+        "95thPercentileLatency(us)": 2355,
+        "99thPercentileLatency(us)": 3437,
+        "Return=OK": 492
+      },
+      "OVERALL": {
+        "RunTime(ms)": 1296,
+        "Throughput(ops/sec)": 771.604938271605
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "In-Memory"
+  },
+  {
+    "project": "holipaxos-artifect.holipaxos",
+    "protocol": "multipaxos",
+    "language": "Go",
+    "workload": "read-heavy",
+    "result": {
+      "OVERALL": {
+        "RunTime(ms)": 1252,
+        "Throughput(ops/sec)": 798.7220447284345
+      },
+      "UPDATE": {
+        "Operations": 42,
+        "AverageLatency(us)": 1249.2142857142858,
+        "MinLatency(us)": 757,
+        "MaxLatency(us)": 3103,
+        "50thPercentileLatency(us)": 1064,
+        "95thPercentileLatency(us)": 2231,
+        "99thPercentileLatency(us)": 3103,
+        "Return=OK": 42
+      },
+      "READ": {
+        "Operations": 958,
+        "AverageLatency(us)": 1172.340292275574,
+        "MinLatency(us)": 652,
+        "MaxLatency(us)": 3825,
+        "50thPercentileLatency(us)": 1064,
+        "95thPercentileLatency(us)": 2199,
+        "99thPercentileLatency(us)": 2937,
+        "Return=OK": 958
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "In-Memory"
+  },
+  {
+    "project": "holipaxos-artifect.holipaxos",
+    "protocol": "multipaxos",
+    "language": "Go",
+    "workload": "update-heavy",
+    "result": {
+      "OVERALL": {
+        "RunTime(ms)": 1324,
+        "Throughput(ops/sec)": 755.2870090634441
+      },
+      "UPDATE": {
+        "Operations": 500,
+        "AverageLatency(us)": 1282.73,
+        "MinLatency(us)": 664,
+        "MaxLatency(us)": 7071,
+        "50thPercentileLatency(us)": 1138,
+        "95thPercentileLatency(us)": 2443,
+        "99thPercentileLatency(us)": 3465,
+        "Return=OK": 500
+      },
+      "READ": {
+        "Operations": 500,
+        "AverageLatency(us)": 1193.318,
+        "MinLatency(us)": 654,
+        "MaxLatency(us)": 4135,
+        "50thPercentileLatency(us)": 1027,
+        "95thPercentileLatency(us)": 2419,
+        "99thPercentileLatency(us)": 3223,
+        "Return=OK": 500
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "In-Memory"
+  },
+  {
+    "project": "holipaxos-artifect.holipaxos",
+    "protocol": "omnipaxos",
+    "language": "Rust",
+    "workload": "read-heavy",
+    "result": {
+      "OVERALL": {
+        "RunTime(ms)": 7465,
+        "Throughput(ops/sec)": 133.95847287340925
+      },
+      "READ": {
+        "Operations": 955,
+        "AverageLatency(us)": 7370.575916230367,
+        "MinLatency(us)": 4656,
+        "MaxLatency(us)": 12591,
+        "50thPercentileLatency(us)": 7363,
+        "95thPercentileLatency(us)": 8791,
+        "99thPercentileLatency(us)": 9783,
+        "Return=OK": 955
+      },
+      "UPDATE": {
+        "Operations": 45,
+        "AverageLatency(us)": 7677.688888888889,
+        "MinLatency(us)": 5916,
+        "MaxLatency(us)": 10479,
+        "50thPercentileLatency(us)": 7487,
+        "95thPercentileLatency(us)": 9231,
+        "99thPercentileLatency(us)": 10479,
+        "Return=OK": 45
+      }
+    },
+    "consistency": "Linearizability",
+    "persistency": "In-Memory"
+  },
+  {
+    "project": "holipaxos-artifect.holipaxos",
+    "protocol": "omnipaxos",
+    "language": "Rust",
+    "workload": "update-heavy",
+    "result": {
+      "OVERALL": {
+        "RunTime(ms)": 7482,
+        "Throughput(ops/sec)": 133.65410318096767
+      },
+      "READ": {
+        "Operations": 462,
+        "AverageLatency(us)": 7359.316017316018,
+        "MinLatency(us)": 5176,
+        "MaxLatency(us)": 11655,
+        "50thPercentileLatency(us)": 7347,
+        "95thPercentileLatency(us)": 8727,
+        "99thPercentileLatency(us)": 9575,
+        "Return=OK": 462
+      },
+      "UPDATE": {
+        "Operations": 538,
+        "AverageLatency(us)": 7403.996282527881,
+        "MinLatency(us)": 5196,
+        "MaxLatency(us)": 12471,
+        "50thPercentileLatency(us)": 7375,
+        "95thPercentileLatency(us)": 9127,
+        "99thPercentileLatency(us)": 10223,
+        "Return=OK": 538
       }
     },
     "consistency": "Linearizability",

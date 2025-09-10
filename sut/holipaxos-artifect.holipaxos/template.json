@@ -1,11 +1,7 @@
 {
     "threadpool_size": 64,
     "commit_interval": 300,
-    "peers": [
-      "172.31.26.155:2200",
-      "172.31.16.36:2210",
-      "172.31.31.7:2220"
-    ],
+    "peers": [],
     "store": "mem",
     "db_path": "/tmp/testdb",
     "election_limit": 3000,

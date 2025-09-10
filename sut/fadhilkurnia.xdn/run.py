@@ -351,21 +351,6 @@ def stop(bin_path, nodes, ssh) -> None:
 
     print("xdn removal & cleanup completed")
 
-    return
-    ########
-    start_script = bin_path / "gpServer.sh"
-
-    cmd_xdn = [start_script, "-DgigapaxosConfig=123123", "forceclear", "all"]
-    subprocess.run(cmd_xdn, text=True)
-
-    subprocess.run(["docker", "network", "prune", "--force"], text=True)
-
-    os.system("fusermount -u /tmp/xdn/state/fuselog/ar0/mnt/restkv/e0")
-    os.system("rm -rf /tmp/gigapaxos")
-    os.system("rm -rf /tmp/xdn")
-    os.system("rm -rf ./output ./derby.log")
-    print("XDN has stopped")
-
 
 if __name__ == "__main__":
     main()
