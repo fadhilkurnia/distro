@@ -13,7 +13,17 @@ load_dotenv()
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
 YCSB_WORKLOAD_DIR = Path("./workloads")
-WORKLOADS = ["read-heavy", "update-heavy"]
+WORKLOADS = [
+    {
+        "num": 1,
+        "text": "read-heavy",
+        "type": "single-client",
+    }, {
+        "num": 2,
+        "text": "update-heavy",
+        "type": "single-client",
+    }
+]
 DATA = os.getenv("OUTPUT_FILE", "data.local.json")
 selected_project = None
 client_ip = None
@@ -65,13 +75,11 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
     :type addr_list: dict[str, str, str, str, str]
     """
     global selected_project
-    options = [{"num": i, "text": name}
-               for i, name in enumerate(WORKLOADS, start=1)]
-    num = helper.get_option(1, len(options), options)
+    num = helper.get_option(1, len(WORKLOADS), WORKLOADS)
 
     # rsync YCSB client files
     if client_ip == "127.0.0.1" and client_ip == "127.0.0.1":
-        workload_path = YCSB_WORKLOAD_DIR / WORKLOADS[num-1]
+        workload_path = YCSB_WORKLOAD_DIR / WORKLOADS[num-1]["text"]
 
         print("YCSB endpoint list:", addr_list)
         subprocess.run(
@@ -92,7 +100,7 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
         local_dir = YCSB_DIR
         remote_dir = f"/home/{user}/ycsb"
         remote_bin = f"{remote_dir}/bin/ycsb"
-        workload_path = f"{remote_dir}/workloads/{WORKLOADS[num-1]}"
+        workload_path = f"{remote_dir}/workloads/{WORKLOADS[num-1]["text"]}"
 
         copy_cmd = (
             f"rsync -avz -e 'ssh -i {ssh['key']}' "
@@ -144,15 +152,96 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
 
     keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
     result = {k: parsed[k] for k in keep_keys if k in parsed}
+    insert_ycsb_output(selected_project.name, protocol, WORKLOADS[num-1], result)
 
+
+def insert_ycsb_output(project_name, protocol, workload, result):
     with open(DATA, "r") as f:
         data = json.load(f)
 
+    workload_data = {
+        "name": workload["text"],
+        "type": workload["type"],
+        "num_of_nodes": int(os.getenv("NUM_OF_NODES")),
+        "result": result
+    }
+
+    protocol_data = {
+        "name": protocol["name"],
+        "language": protocol.get("language", ""),
+        "consistency": protocol.get("consistency", ""),
+        "persistency": protocol.get("persistency", ""),
+        "commit": protocol.get("commit", ""),
+        "workloads": [workload_data]
+    }
+
+    project_data = {
+        "project": project_name,
+        "repo": protocol.get("repo", ""),
+        "protocols": [protocol_data]
+    }
+
+    # Check if project already exists
+    selected_project = next((p for p in data
+                             if p["project"] == project_name
+                             and p["repo"] == protocol.get("repo", "")
+                             ), None)
+    if selected_project is None:
+        print(f"{project_name} doesn't exist. Adding new project")
+        data.append(project_data)
+        write_to_json(data, project_name, protocol, workload)
+        return
+
+    # Check if protocol already exists
+    protocols = selected_project["protocols"]
+    selected_protocol = next((p for p in protocols
+                              if p["name"] == protocol["name"]
+                              and p["language"] == protocol.get("language", "")
+                              and p["consistency"] == protocol.get("consistency", "")
+                              and p["persistency"] == protocol.get("persistency", "")
+                              and p["commit"] == protocol.get("commit", "")
+                              ), None)
+    if selected_protocol is None:
+        print(f"{protocol["name"]} doesn't exist. Adding new protocol")
+        protocols.append(protocol_data)
+        write_to_json(data, project_name, protocol, workload)
+        return
+
+    # Check if workload already exists
+    workloads = selected_protocol["workloads"]
+    selected_workload = next((w for w in workloads
+                              if w["name"] == workload["text"]
+                              and w["type"] == workload["type"]
+                              ), None)
+    if selected_workload is None:
+        print(f"{workload["text"]} doesn't exist. Adding new workload")
+        workloads.append(workload_data)
+        write_to_json(data, project_name, protocol, workload)
+        return
+
+    # Workload already exists
+    print(f"{workload["text"]} already exist. Adding overriding result")
+    selected_workload["result"] = result
+    write_to_json(data, project_name, protocol, workload)
+
+
+def write_to_json(data, project_name, protocol, workload):
+    with open(DATA, "w") as f:
+        json.dump(data, f, indent=2)
+
+    output = (
+        f"{workload["type"]} {workload["text"]} benchmark for "
+        f"{project_name}:{protocol["name"]} ({protocol.get("commit", "")}) "
+        f"has been added to {DATA}."
+    )
+    print(output)
+
+    '''
     already_exists = False
     for item in data:
         if (item["project"] == selected_project.name
-                and item["protocol"] == protocol["name"]
-                and item["workload"] == WORKLOADS[num-1]):
+            and item["protocol"] == protocol["name"]
+                and item["workload"] == ):
             already_exists = True
             item["result"] = result
 
@@ -166,10 +255,7 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
             "consistency": protocol.get("consistency", ""),
             "persistency": protocol.get("persistency", ""),
         })
-
-    with open(DATA, "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"{WORKLOADS[num-1]} result has been inserted into {DATA}.")
+        '''
 
 
 def parse_ycsb_output(lines) -> dict[str]:

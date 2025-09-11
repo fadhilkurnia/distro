@@ -7,6 +7,8 @@ from src.utils import helper
 
 CURR_DIR = Path("./sut/etcd-io.etcd")
 ETCDCTL = CURR_DIR / "bin" / "etcdctl"
+REPO = "https://github.com/etcd-io/etcd"
+COMMIT_HASH = "5400cdc39b829ee5dadacb77002256cf86357da1"
 
 OPTIONS = [{"num": 0, "text": "Start etcd cluster"},
            {"num": 1, "text": "Stop etcd cluster"},
@@ -29,9 +31,16 @@ def main(run_ycsb, nodes, ssh):
             case 1:
                 stop_etcd_cluster(node_data, ssh)
             case 2:
-                endpoints = [f"http://{node["public_ip"]}:{node["client_port"]}" for node in node_data]
+                endpoints = [f"http://{node["private_ip"]}:{node["client_port"]}" for node in node_data]
                 print("endpoint list:", endpoints)
-                run_ycsb({"name": "raft", "language": "Go"}, "etcd", endpoints, "etcd.endpoints")
+                run_ycsb({
+                    "name": "raft",
+                    "language": "Go",
+                    "consistency": "Linearizability",
+                    "persistency": "On-Disk",
+                    "repo": REPO,
+                    "commit": COMMIT_HASH,
+                }, "etcd", endpoints, "etcd.endpoints", ssh)
 
 
 def start_etcd_cluster(nodes, ssh):

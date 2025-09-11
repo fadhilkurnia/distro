@@ -1,954 +1,1103 @@
 [
   {
     "project": "fadhilkurnia.xdn",
-    "protocol": "xdn",
-    "language": "Java",
-    "workload": "read-heavy",
-    "result": {
-      "READ": {
-        "Operations": 946,
-        "AverageLatency(us)": 6811.120507399577,
-        "MinLatency(us)": 3020,
-        "MaxLatency(us)": 30943,
-        "50thPercentileLatency(us)": 6507,
-        "95thPercentileLatency(us)": 9199,
-        "99thPercentileLatency(us)": 13023,
-        "Return=OK": 946
-      },
-      "OVERALL": {
-        "RunTime(ms)": 7299,
-        "Throughput(ops/sec)": 137.00506918755994
-      },
-      "UPDATE": {
-        "Operations": 54,
-        "AverageLatency(us)": 14881.481481481482,
-        "MinLatency(us)": 9840,
-        "MaxLatency(us)": 54527,
-        "50thPercentileLatency(us)": 14319,
-        "95thPercentileLatency(us)": 17775,
-        "99thPercentileLatency(us)": 54527,
-        "Return=OK": 54
+    "repo": "https://github.com/ThePlatypus-Person/xdn",
+    "protocols": [
+      {
+        "name": "xdn",
+        "language": "Java",
+        "consistency": "Linearizability + Primary Integrity",
+        "persistency": "On-Disk",
+        "commit": "fbd416c60403fbaeddddf6909ff28d0d0abe9542",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "READ": {
+                "Operations": 946,
+                "AverageLatency(us)": 6811.120507399577,
+                "MinLatency(us)": 3020,
+                "MaxLatency(us)": 30943,
+                "50thPercentileLatency(us)": 6507,
+                "95thPercentileLatency(us)": 9199,
+                "99thPercentileLatency(us)": 13023,
+                "Return=OK": 946
+              },
+              "OVERALL": {
+                "RunTime(ms)": 7299,
+                "Throughput(ops/sec)": 137.00506918755994
+              },
+              "UPDATE": {
+                "Operations": 54,
+                "AverageLatency(us)": 14881.481481481482,
+                "MinLatency(us)": 9840,
+                "MaxLatency(us)": 54527,
+                "50thPercentileLatency(us)": 14319,
+                "95thPercentileLatency(us)": 17775,
+                "99thPercentileLatency(us)": 54527,
+                "Return=OK": 54
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "READ": {
+                "Operations": 511,
+                "AverageLatency(us)": 7738.142857142857,
+                "MinLatency(us)": 3354,
+                "MaxLatency(us)": 18655,
+                "50thPercentileLatency(us)": 7455,
+                "95thPercentileLatency(us)": 10879,
+                "99thPercentileLatency(us)": 15343,
+                "Return=OK": 511
+              },
+              "OVERALL": {
+                "RunTime(ms)": 11567,
+                "Throughput(ops/sec)": 86.45283997579321
+              },
+              "UPDATE": {
+                "Operations": 489,
+                "AverageLatency(us)": 15401.856850715747,
+                "MinLatency(us)": 10464,
+                "MaxLatency(us)": 72383,
+                "50thPercentileLatency(us)": 15063,
+                "95thPercentileLatency(us)": 18671,
+                "99thPercentileLatency(us)": 20911,
+                "Return=OK": 489
+              }
+            }
+          }
+        ]
       }
-    },
-    "consistency": "Linearizability + Primary Integrity",
-    "persistency": "On-Disk"
-  },
-  {
-    "project": "fadhilkurnia.xdn",
-    "protocol": "xdn",
-    "language": "Java",
-    "workload": "update-heavy",
-    "result": {
-      "READ": {
-        "Operations": 511,
-        "AverageLatency(us)": 7738.142857142857,
-        "MinLatency(us)": 3354,
-        "MaxLatency(us)": 18655,
-        "50thPercentileLatency(us)": 7455,
-        "95thPercentileLatency(us)": 10879,
-        "99thPercentileLatency(us)": 15343,
-        "Return=OK": 511
-      },
-      "OVERALL": {
-        "RunTime(ms)": 11567,
-        "Throughput(ops/sec)": 86.45283997579321
-      },
-      "UPDATE": {
-        "Operations": 489,
-        "AverageLatency(us)": 15401.856850715747,
-        "MinLatency(us)": 10464,
-        "MaxLatency(us)": 72383,
-        "50thPercentileLatency(us)": 15063,
-        "95thPercentileLatency(us)": 18671,
-        "99thPercentileLatency(us)": 20911,
-        "Return=OK": 489
-      }
-    },
-    "consistency": "Linearizability + Primary Integrity",
-    "persistency": "On-Disk"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "paxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1929,
-        "Throughput(ops/sec)": 518.4033177812338
-      },
-      "UPDATE": {
-        "Operations": 48,
-        "AverageLatency(us)": 2139.2708333333335,
-        "MinLatency(us)": 987,
-        "MaxLatency(us)": 9343,
-        "50thPercentileLatency(us)": 1696,
-        "95thPercentileLatency(us)": 3887,
-        "99thPercentileLatency(us)": 9343,
-        "Return=OK": 48
-      },
-      "READ": {
-        "Operations": 952,
-        "AverageLatency(us)": 1841.1123949579833,
-        "MinLatency(us)": 748,
-        "MaxLatency(us)": 54911,
-        "50thPercentileLatency(us)": 1530,
-        "95thPercentileLatency(us)": 3485,
-        "99thPercentileLatency(us)": 4847,
-        "Return=OK": 952
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    ]
   },
   {
     "project": "ailidani.paxi",
-    "protocol": "paxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 2261,
-        "Throughput(ops/sec)": 442.2821760283061
+    "repo": "http://github.com/ailidani/paxi",
+    "protocols": [
+      {
+        "name": "paxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1929,
+                "Throughput(ops/sec)": 518.4033177812338
+              },
+              "UPDATE": {
+                "Operations": 48,
+                "AverageLatency(us)": 2139.2708333333335,
+                "MinLatency(us)": 987,
+                "MaxLatency(us)": 9343,
+                "50thPercentileLatency(us)": 1696,
+                "95thPercentileLatency(us)": 3887,
+                "99thPercentileLatency(us)": 9343,
+                "Return=OK": 48
+              },
+              "READ": {
+                "Operations": 952,
+                "AverageLatency(us)": 1841.1123949579833,
+                "MinLatency(us)": 748,
+                "MaxLatency(us)": 54911,
+                "50thPercentileLatency(us)": 1530,
+                "95thPercentileLatency(us)": 3485,
+                "99thPercentileLatency(us)": 4847,
+                "Return=OK": 952
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 2261,
+                "Throughput(ops/sec)": 442.2821760283061
+              },
+              "UPDATE": {
+                "Operations": 496,
+                "AverageLatency(us)": 2327.9032258064517,
+                "MinLatency(us)": 855,
+                "MaxLatency(us)": 56799,
+                "50thPercentileLatency(us)": 1930,
+                "95thPercentileLatency(us)": 4471,
+                "99thPercentileLatency(us)": 6007,
+                "Return=OK": 496
+              },
+              "READ": {
+                "Operations": 504,
+                "AverageLatency(us)": 2057.4265873015875,
+                "MinLatency(us)": 721,
+                "MaxLatency(us)": 7351,
+                "50thPercentileLatency(us)": 1864,
+                "95thPercentileLatency(us)": 3841,
+                "99thPercentileLatency(us)": 5339,
+                "Return=OK": 504
+              }
+            }
+          }
+        ]
       },
-      "UPDATE": {
-        "Operations": 496,
-        "AverageLatency(us)": 2327.9032258064517,
-        "MinLatency(us)": 855,
-        "MaxLatency(us)": 56799,
-        "50thPercentileLatency(us)": 1930,
-        "95thPercentileLatency(us)": 4471,
-        "99thPercentileLatency(us)": 6007,
-        "Return=OK": 496
+      {
+        "name": "epaxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 51,
+                "AverageLatency(us)": 2049.0,
+                "MinLatency(us)": 1000,
+                "MaxLatency(us)": 4647,
+                "50thPercentileLatency(us)": 1761,
+                "95thPercentileLatency(us)": 3563,
+                "99thPercentileLatency(us)": 4647,
+                "Return=OK": 51
+              },
+              "OVERALL": {
+                "RunTime(ms)": 1973,
+                "Throughput(ops/sec)": 506.84237202230105
+              },
+              "READ": {
+                "Operations": 949,
+                "AverageLatency(us)": 1896.8292939936775,
+                "MinLatency(us)": 747,
+                "MaxLatency(us)": 52511,
+                "50thPercentileLatency(us)": 1607,
+                "95thPercentileLatency(us)": 3763,
+                "99thPercentileLatency(us)": 5027,
+                "Return=OK": 949
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 496,
+                "AverageLatency(us)": 2298.5443548387098,
+                "MinLatency(us)": 920,
+                "MaxLatency(us)": 8047,
+                "50thPercentileLatency(us)": 2040,
+                "95thPercentileLatency(us)": 4339,
+                "99thPercentileLatency(us)": 6091,
+                "Return=OK": 496
+              },
+              "OVERALL": {
+                "RunTime(ms)": 2335,
+                "Throughput(ops/sec)": 428.2655246252677
+              },
+              "READ": {
+                "Operations": 504,
+                "AverageLatency(us)": 2221.6666666666665,
+                "MinLatency(us)": 875,
+                "MaxLatency(us)": 51743,
+                "50thPercentileLatency(us)": 1905,
+                "95thPercentileLatency(us)": 3919,
+                "99thPercentileLatency(us)": 5595,
+                "Return=OK": 504
+              }
+            }
+          }
+        ]
       },
-      "READ": {
-        "Operations": 504,
-        "AverageLatency(us)": 2057.4265873015875,
-        "MinLatency(us)": 721,
-        "MaxLatency(us)": 7351,
-        "50thPercentileLatency(us)": 1864,
-        "95thPercentileLatency(us)": 3841,
-        "99thPercentileLatency(us)": 5339,
-        "Return=OK": 504
+      {
+        "name": "sdpaxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 41,
+                "AverageLatency(us)": 3053.048780487805,
+                "MinLatency(us)": 1240,
+                "MaxLatency(us)": 7259,
+                "50thPercentileLatency(us)": 2847,
+                "95thPercentileLatency(us)": 5327,
+                "99thPercentileLatency(us)": 7259,
+                "Return=OK": 41
+              },
+              "READ": {
+                "Operations": 959,
+                "AverageLatency(us)": 2868.6465067778936,
+                "MinLatency(us)": 921,
+                "MaxLatency(us)": 50783,
+                "50thPercentileLatency(us)": 2697,
+                "95thPercentileLatency(us)": 4539,
+                "99thPercentileLatency(us)": 5667,
+                "Return=OK": 959
+              },
+              "OVERALL": {
+                "RunTime(ms)": 2940,
+                "Throughput(ops/sec)": 340.13605442176873
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 475,
+                "AverageLatency(us)": 3393.1663157894736,
+                "MinLatency(us)": 1104,
+                "MaxLatency(us)": 11103,
+                "50thPercentileLatency(us)": 3319,
+                "95thPercentileLatency(us)": 5351,
+                "99thPercentileLatency(us)": 6623,
+                "Return=OK": 475
+              },
+              "READ": {
+                "Operations": 525,
+                "AverageLatency(us)": 3305.4704761904763,
+                "MinLatency(us)": 924,
+                "MaxLatency(us)": 62303,
+                "50thPercentileLatency(us)": 3117,
+                "95thPercentileLatency(us)": 5319,
+                "99thPercentileLatency(us)": 6955,
+                "Return=OK": 525
+              },
+              "OVERALL": {
+                "RunTime(ms)": 3423,
+                "Throughput(ops/sec)": 292.141396435875
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "wpaxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 56,
+                "AverageLatency(us)": 2138.1964285714284,
+                "MinLatency(us)": 1015,
+                "MaxLatency(us)": 7643,
+                "50thPercentileLatency(us)": 1840,
+                "95thPercentileLatency(us)": 3281,
+                "99thPercentileLatency(us)": 7643,
+                "Return=OK": 56
+              },
+              "READ": {
+                "Operations": 944,
+                "AverageLatency(us)": 2104.861228813559,
+                "MinLatency(us)": 819,
+                "MaxLatency(us)": 53375,
+                "50thPercentileLatency(us)": 1840,
+                "95thPercentileLatency(us)": 3885,
+                "99thPercentileLatency(us)": 4867,
+                "Return=OK": 944
+              },
+              "OVERALL": {
+                "RunTime(ms)": 2166,
+                "Throughput(ops/sec)": 461.6805170821791
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 516,
+                "AverageLatency(us)": 2634.3953488372094,
+                "MinLatency(us)": 983,
+                "MaxLatency(us)": 57087,
+                "50thPercentileLatency(us)": 2333,
+                "95thPercentileLatency(us)": 4747,
+                "99thPercentileLatency(us)": 6307,
+                "Return=OK": 516
+              },
+              "READ": {
+                "Operations": 484,
+                "AverageLatency(us)": 2335.0371900826444,
+                "MinLatency(us)": 837,
+                "MaxLatency(us)": 8247,
+                "50thPercentileLatency(us)": 2099,
+                "95thPercentileLatency(us)": 4407,
+                "99thPercentileLatency(us)": 5763,
+                "Return=OK": 484
+              },
+              "OVERALL": {
+                "RunTime(ms)": 2557,
+                "Throughput(ops/sec)": 391.08330074305826
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "abd",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 2203,
+                "Throughput(ops/sec)": 453.92646391284615
+              },
+              "READ": {
+                "Operations": 954,
+                "AverageLatency(us)": 2138.4014675052413,
+                "MinLatency(us)": 975,
+                "MaxLatency(us)": 55391,
+                "50thPercentileLatency(us)": 1789,
+                "95thPercentileLatency(us)": 3885,
+                "99thPercentileLatency(us)": 4907,
+                "Return=OK": 954
+              },
+              "UPDATE": {
+                "Operations": 46,
+                "AverageLatency(us)": 2113.1739130434785,
+                "MinLatency(us)": 1260,
+                "MaxLatency(us)": 4415,
+                "50thPercentileLatency(us)": 1909,
+                "95thPercentileLatency(us)": 3919,
+                "99thPercentileLatency(us)": 4415,
+                "Return=OK": 46
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 2299,
+                "Throughput(ops/sec)": 434.97172683775557
+              },
+              "READ": {
+                "Operations": 504,
+                "AverageLatency(us)": 2258.248015873016,
+                "MinLatency(us)": 998,
+                "MaxLatency(us)": 54431,
+                "50thPercentileLatency(us)": 1895,
+                "95thPercentileLatency(us)": 3889,
+                "99thPercentileLatency(us)": 5871,
+                "Return=OK": 504
+              },
+              "UPDATE": {
+                "Operations": 496,
+                "AverageLatency(us)": 2176.7721774193546,
+                "MinLatency(us)": 1049,
+                "MaxLatency(us)": 6071,
+                "50thPercentileLatency(us)": 1942,
+                "95thPercentileLatency(us)": 4045,
+                "99thPercentileLatency(us)": 5323,
+                "Return=OK": 496
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "m2paxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 2037,
+                "Throughput(ops/sec)": 490.9180166912126
+              },
+              "READ": {
+                "Operations": 964,
+                "AverageLatency(us)": 1965.8039419087138,
+                "MinLatency(us)": 792,
+                "MaxLatency(us)": 63743,
+                "50thPercentileLatency(us)": 1656,
+                "95thPercentileLatency(us)": 3631,
+                "99thPercentileLatency(us)": 5259,
+                "Return=OK": 964
+              },
+              "UPDATE": {
+                "Operations": 36,
+                "AverageLatency(us)": 2158.3611111111113,
+                "MinLatency(us)": 1030,
+                "MaxLatency(us)": 4483,
+                "50thPercentileLatency(us)": 1845,
+                "95thPercentileLatency(us)": 4435,
+                "99thPercentileLatency(us)": 4483,
+                "Return=OK": 36
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 2437,
+                "Throughput(ops/sec)": 410.3405826836274
+              },
+              "READ": {
+                "Operations": 486,
+                "AverageLatency(us)": 2167.3539094650205,
+                "MinLatency(us)": 801,
+                "MaxLatency(us)": 6655,
+                "50thPercentileLatency(us)": 1943,
+                "95thPercentileLatency(us)": 4203,
+                "99thPercentileLatency(us)": 5515,
+                "Return=OK": 486
+              },
+              "UPDATE": {
+                "Operations": 514,
+                "AverageLatency(us)": 2553.2003891050585,
+                "MinLatency(us)": 864,
+                "MaxLatency(us)": 54655,
+                "50thPercentileLatency(us)": 2175,
+                "95thPercentileLatency(us)": 4627,
+                "99thPercentileLatency(us)": 7343,
+                "Return=OK": 514
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "dynamo",
+        "language": "Go",
+        "consistency": "Eventual",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1491,
+                "Throughput(ops/sec)": 670.690811535882
+              },
+              "UPDATE": {
+                "Operations": 61,
+                "AverageLatency(us)": 2392.409836065574,
+                "MinLatency(us)": 1106,
+                "MaxLatency(us)": 5251,
+                "50thPercentileLatency(us)": 2323,
+                "95thPercentileLatency(us)": 4263,
+                "99thPercentileLatency(us)": 5251,
+                "Return=OK": 61
+              },
+              "READ": {
+                "Operations": 939,
+                "AverageLatency(us)": 1360.85303514377,
+                "MinLatency(us)": 395,
+                "MaxLatency(us)": 53983,
+                "50thPercentileLatency(us)": 1059,
+                "95thPercentileLatency(us)": 2907,
+                "99thPercentileLatency(us)": 4251,
+                "Return=OK": 939
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 2205,
+                "Throughput(ops/sec)": 453.51473922902494
+              },
+              "UPDATE": {
+                "Operations": 514,
+                "AverageLatency(us)": 2571.9396887159533,
+                "MinLatency(us)": 957,
+                "MaxLatency(us)": 54527,
+                "50thPercentileLatency(us)": 2225,
+                "95thPercentileLatency(us)": 4559,
+                "99thPercentileLatency(us)": 6047,
+                "Return=OK": 514
+              },
+              "READ": {
+                "Operations": 486,
+                "AverageLatency(us)": 1670.9115226337449,
+                "MinLatency(us)": 430,
+                "MaxLatency(us)": 5579,
+                "50thPercentileLatency(us)": 1445,
+                "95thPercentileLatency(us)": 3507,
+                "99thPercentileLatency(us)": 5003,
+                "Return=OK": 486
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "hpaxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 47,
+                "AverageLatency(us)": 2380.276595744681,
+                "MinLatency(us)": 1012,
+                "MaxLatency(us)": 5831,
+                "50thPercentileLatency(us)": 1866,
+                "95thPercentileLatency(us)": 4723,
+                "99thPercentileLatency(us)": 5831,
+                "Return=OK": 47
+              },
+              "READ": {
+                "Operations": 953,
+                "AverageLatency(us)": 1950.1301154249738,
+                "MinLatency(us)": 794,
+                "MaxLatency(us)": 50431,
+                "50thPercentileLatency(us)": 1683,
+                "95thPercentileLatency(us)": 3561,
+                "99thPercentileLatency(us)": 4767,
+                "Return=OK": 953
+              },
+              "OVERALL": {
+                "RunTime(ms)": 2031,
+                "Throughput(ops/sec)": 492.36829148202855
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 479,
+                "AverageLatency(us)": 2633.231732776618,
+                "MinLatency(us)": 910,
+                "MaxLatency(us)": 51135,
+                "50thPercentileLatency(us)": 2343,
+                "95thPercentileLatency(us)": 4483,
+                "99thPercentileLatency(us)": 6983,
+                "Return=OK": 479
+              },
+              "READ": {
+                "Operations": 521,
+                "AverageLatency(us)": 2301.7024952015354,
+                "MinLatency(us)": 842,
+                "MaxLatency(us)": 7723,
+                "50thPercentileLatency(us)": 2055,
+                "95thPercentileLatency(us)": 4195,
+                "99thPercentileLatency(us)": 5799,
+                "Return=OK": 521
+              },
+              "OVERALL": {
+                "RunTime(ms)": 2529,
+                "Throughput(ops/sec)": 395.41320680110715
+              }
+            }
+          }
+        ]
       }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "epaxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 51,
-        "AverageLatency(us)": 2049.0,
-        "MinLatency(us)": 1000,
-        "MaxLatency(us)": 4647,
-        "50thPercentileLatency(us)": 1761,
-        "95thPercentileLatency(us)": 3563,
-        "99thPercentileLatency(us)": 4647,
-        "Return=OK": 51
-      },
-      "OVERALL": {
-        "RunTime(ms)": 1973,
-        "Throughput(ops/sec)": 506.84237202230105
-      },
-      "READ": {
-        "Operations": 949,
-        "AverageLatency(us)": 1896.8292939936775,
-        "MinLatency(us)": 747,
-        "MaxLatency(us)": 52511,
-        "50thPercentileLatency(us)": 1607,
-        "95thPercentileLatency(us)": 3763,
-        "99thPercentileLatency(us)": 5027,
-        "Return=OK": 949
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "epaxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 496,
-        "AverageLatency(us)": 2298.5443548387098,
-        "MinLatency(us)": 920,
-        "MaxLatency(us)": 8047,
-        "50thPercentileLatency(us)": 2040,
-        "95thPercentileLatency(us)": 4339,
-        "99thPercentileLatency(us)": 6091,
-        "Return=OK": 496
-      },
-      "OVERALL": {
-        "RunTime(ms)": 2335,
-        "Throughput(ops/sec)": 428.2655246252677
-      },
-      "READ": {
-        "Operations": 504,
-        "AverageLatency(us)": 2221.6666666666665,
-        "MinLatency(us)": 875,
-        "MaxLatency(us)": 51743,
-        "50thPercentileLatency(us)": 1905,
-        "95thPercentileLatency(us)": 3919,
-        "99thPercentileLatency(us)": 5595,
-        "Return=OK": 504
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "sdpaxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 41,
-        "AverageLatency(us)": 3053.048780487805,
-        "MinLatency(us)": 1240,
-        "MaxLatency(us)": 7259,
-        "50thPercentileLatency(us)": 2847,
-        "95thPercentileLatency(us)": 5327,
-        "99thPercentileLatency(us)": 7259,
-        "Return=OK": 41
-      },
-      "READ": {
-        "Operations": 959,
-        "AverageLatency(us)": 2868.6465067778936,
-        "MinLatency(us)": 921,
-        "MaxLatency(us)": 50783,
-        "50thPercentileLatency(us)": 2697,
-        "95thPercentileLatency(us)": 4539,
-        "99thPercentileLatency(us)": 5667,
-        "Return=OK": 959
-      },
-      "OVERALL": {
-        "RunTime(ms)": 2940,
-        "Throughput(ops/sec)": 340.13605442176873
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "sdpaxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 475,
-        "AverageLatency(us)": 3393.1663157894736,
-        "MinLatency(us)": 1104,
-        "MaxLatency(us)": 11103,
-        "50thPercentileLatency(us)": 3319,
-        "95thPercentileLatency(us)": 5351,
-        "99thPercentileLatency(us)": 6623,
-        "Return=OK": 475
-      },
-      "READ": {
-        "Operations": 525,
-        "AverageLatency(us)": 3305.4704761904763,
-        "MinLatency(us)": 924,
-        "MaxLatency(us)": 62303,
-        "50thPercentileLatency(us)": 3117,
-        "95thPercentileLatency(us)": 5319,
-        "99thPercentileLatency(us)": 6955,
-        "Return=OK": 525
-      },
-      "OVERALL": {
-        "RunTime(ms)": 3423,
-        "Throughput(ops/sec)": 292.141396435875
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "wpaxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 56,
-        "AverageLatency(us)": 2138.1964285714284,
-        "MinLatency(us)": 1015,
-        "MaxLatency(us)": 7643,
-        "50thPercentileLatency(us)": 1840,
-        "95thPercentileLatency(us)": 3281,
-        "99thPercentileLatency(us)": 7643,
-        "Return=OK": 56
-      },
-      "READ": {
-        "Operations": 944,
-        "AverageLatency(us)": 2104.861228813559,
-        "MinLatency(us)": 819,
-        "MaxLatency(us)": 53375,
-        "50thPercentileLatency(us)": 1840,
-        "95thPercentileLatency(us)": 3885,
-        "99thPercentileLatency(us)": 4867,
-        "Return=OK": 944
-      },
-      "OVERALL": {
-        "RunTime(ms)": 2166,
-        "Throughput(ops/sec)": 461.6805170821791
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "wpaxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 516,
-        "AverageLatency(us)": 2634.3953488372094,
-        "MinLatency(us)": 983,
-        "MaxLatency(us)": 57087,
-        "50thPercentileLatency(us)": 2333,
-        "95thPercentileLatency(us)": 4747,
-        "99thPercentileLatency(us)": 6307,
-        "Return=OK": 516
-      },
-      "READ": {
-        "Operations": 484,
-        "AverageLatency(us)": 2335.0371900826444,
-        "MinLatency(us)": 837,
-        "MaxLatency(us)": 8247,
-        "50thPercentileLatency(us)": 2099,
-        "95thPercentileLatency(us)": 4407,
-        "99thPercentileLatency(us)": 5763,
-        "Return=OK": 484
-      },
-      "OVERALL": {
-        "RunTime(ms)": 2557,
-        "Throughput(ops/sec)": 391.08330074305826
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "abd",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 2203,
-        "Throughput(ops/sec)": 453.92646391284615
-      },
-      "READ": {
-        "Operations": 954,
-        "AverageLatency(us)": 2138.4014675052413,
-        "MinLatency(us)": 975,
-        "MaxLatency(us)": 55391,
-        "50thPercentileLatency(us)": 1789,
-        "95thPercentileLatency(us)": 3885,
-        "99thPercentileLatency(us)": 4907,
-        "Return=OK": 954
-      },
-      "UPDATE": {
-        "Operations": 46,
-        "AverageLatency(us)": 2113.1739130434785,
-        "MinLatency(us)": 1260,
-        "MaxLatency(us)": 4415,
-        "50thPercentileLatency(us)": 1909,
-        "95thPercentileLatency(us)": 3919,
-        "99thPercentileLatency(us)": 4415,
-        "Return=OK": 46
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "abd",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 2299,
-        "Throughput(ops/sec)": 434.97172683775557
-      },
-      "READ": {
-        "Operations": 504,
-        "AverageLatency(us)": 2258.248015873016,
-        "MinLatency(us)": 998,
-        "MaxLatency(us)": 54431,
-        "50thPercentileLatency(us)": 1895,
-        "95thPercentileLatency(us)": 3889,
-        "99thPercentileLatency(us)": 5871,
-        "Return=OK": 504
-      },
-      "UPDATE": {
-        "Operations": 496,
-        "AverageLatency(us)": 2176.7721774193546,
-        "MinLatency(us)": 1049,
-        "MaxLatency(us)": 6071,
-        "50thPercentileLatency(us)": 1942,
-        "95thPercentileLatency(us)": 4045,
-        "99thPercentileLatency(us)": 5323,
-        "Return=OK": 496
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "m2paxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 2037,
-        "Throughput(ops/sec)": 490.9180166912126
-      },
-      "READ": {
-        "Operations": 964,
-        "AverageLatency(us)": 1965.8039419087138,
-        "MinLatency(us)": 792,
-        "MaxLatency(us)": 63743,
-        "50thPercentileLatency(us)": 1656,
-        "95thPercentileLatency(us)": 3631,
-        "99thPercentileLatency(us)": 5259,
-        "Return=OK": 964
-      },
-      "UPDATE": {
-        "Operations": 36,
-        "AverageLatency(us)": 2158.3611111111113,
-        "MinLatency(us)": 1030,
-        "MaxLatency(us)": 4483,
-        "50thPercentileLatency(us)": 1845,
-        "95thPercentileLatency(us)": 4435,
-        "99thPercentileLatency(us)": 4483,
-        "Return=OK": 36
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "m2paxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 2437,
-        "Throughput(ops/sec)": 410.3405826836274
-      },
-      "READ": {
-        "Operations": 486,
-        "AverageLatency(us)": 2167.3539094650205,
-        "MinLatency(us)": 801,
-        "MaxLatency(us)": 6655,
-        "50thPercentileLatency(us)": 1943,
-        "95thPercentileLatency(us)": 4203,
-        "99thPercentileLatency(us)": 5515,
-        "Return=OK": 486
-      },
-      "UPDATE": {
-        "Operations": 514,
-        "AverageLatency(us)": 2553.2003891050585,
-        "MinLatency(us)": 864,
-        "MaxLatency(us)": 54655,
-        "50thPercentileLatency(us)": 2175,
-        "95thPercentileLatency(us)": 4627,
-        "99thPercentileLatency(us)": 7343,
-        "Return=OK": 514
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "dynamo",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1491,
-        "Throughput(ops/sec)": 670.690811535882
-      },
-      "UPDATE": {
-        "Operations": 61,
-        "AverageLatency(us)": 2392.409836065574,
-        "MinLatency(us)": 1106,
-        "MaxLatency(us)": 5251,
-        "50thPercentileLatency(us)": 2323,
-        "95thPercentileLatency(us)": 4263,
-        "99thPercentileLatency(us)": 5251,
-        "Return=OK": 61
-      },
-      "READ": {
-        "Operations": 939,
-        "AverageLatency(us)": 1360.85303514377,
-        "MinLatency(us)": 395,
-        "MaxLatency(us)": 53983,
-        "50thPercentileLatency(us)": 1059,
-        "95thPercentileLatency(us)": 2907,
-        "99thPercentileLatency(us)": 4251,
-        "Return=OK": 939
-      }
-    },
-    "consistency": "Eventual",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "dynamo",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 2205,
-        "Throughput(ops/sec)": 453.51473922902494
-      },
-      "UPDATE": {
-        "Operations": 514,
-        "AverageLatency(us)": 2571.9396887159533,
-        "MinLatency(us)": 957,
-        "MaxLatency(us)": 54527,
-        "50thPercentileLatency(us)": 2225,
-        "95thPercentileLatency(us)": 4559,
-        "99thPercentileLatency(us)": 6047,
-        "Return=OK": 514
-      },
-      "READ": {
-        "Operations": 486,
-        "AverageLatency(us)": 1670.9115226337449,
-        "MinLatency(us)": 430,
-        "MaxLatency(us)": 5579,
-        "50thPercentileLatency(us)": 1445,
-        "95thPercentileLatency(us)": 3507,
-        "99thPercentileLatency(us)": 5003,
-        "Return=OK": 486
-      }
-    },
-    "consistency": "Eventual",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "hpaxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 47,
-        "AverageLatency(us)": 2380.276595744681,
-        "MinLatency(us)": 1012,
-        "MaxLatency(us)": 5831,
-        "50thPercentileLatency(us)": 1866,
-        "95thPercentileLatency(us)": 4723,
-        "99thPercentileLatency(us)": 5831,
-        "Return=OK": 47
-      },
-      "READ": {
-        "Operations": 953,
-        "AverageLatency(us)": 1950.1301154249738,
-        "MinLatency(us)": 794,
-        "MaxLatency(us)": 50431,
-        "50thPercentileLatency(us)": 1683,
-        "95thPercentileLatency(us)": 3561,
-        "99thPercentileLatency(us)": 4767,
-        "Return=OK": 953
-      },
-      "OVERALL": {
-        "RunTime(ms)": 2031,
-        "Throughput(ops/sec)": 492.36829148202855
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "ailidani.paxi",
-    "protocol": "hpaxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "UPDATE": {
-        "Operations": 479,
-        "AverageLatency(us)": 2633.231732776618,
-        "MinLatency(us)": 910,
-        "MaxLatency(us)": 51135,
-        "50thPercentileLatency(us)": 2343,
-        "95thPercentileLatency(us)": 4483,
-        "99thPercentileLatency(us)": 6983,
-        "Return=OK": 479
-      },
-      "READ": {
-        "Operations": 521,
-        "AverageLatency(us)": 2301.7024952015354,
-        "MinLatency(us)": 842,
-        "MaxLatency(us)": 7723,
-        "50thPercentileLatency(us)": 2055,
-        "95thPercentileLatency(us)": 4195,
-        "99thPercentileLatency(us)": 5799,
-        "Return=OK": 521
-      },
-      "OVERALL": {
-        "RunTime(ms)": 2529,
-        "Throughput(ops/sec)": 395.41320680110715
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    ]
   },
   {
     "project": "apache.zookeeper",
-    "protocol": "zab",
-    "language": "Java",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1606,
-        "Throughput(ops/sec)": 622.66500622665
-      },
-      "UPDATE": {
-        "Operations": 42,
-        "AverageLatency(us)": 5271.928571428572,
-        "MinLatency(us)": 3032,
-        "MaxLatency(us)": 15775,
-        "50thPercentileLatency(us)": 4975,
-        "95thPercentileLatency(us)": 7367,
-        "99thPercentileLatency(us)": 15775,
-        "Return=OK": 42
-      },
-      "READ": {
-        "Operations": 958,
-        "AverageLatency(us)": 1186.829853862213,
-        "MinLatency(us)": 479,
-        "MaxLatency(us)": 56927,
-        "50thPercentileLatency(us)": 902,
-        "95thPercentileLatency(us)": 2459,
-        "99thPercentileLatency(us)": 3967,
-        "Return=OK": 958
+    "repo": "http://github.com/apache/zookeeper",
+    "protocols": [
+      {
+        "name": "zab",
+        "language": "Java",
+        "consistency": "Linearizability + Primary Integrity",
+        "persistency": "On-Disk",
+        "commit": "7291e9f08434caf448595098788bc32dc668caf2",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1606,
+                "Throughput(ops/sec)": 622.66500622665
+              },
+              "UPDATE": {
+                "Operations": 42,
+                "AverageLatency(us)": 5271.928571428572,
+                "MinLatency(us)": 3032,
+                "MaxLatency(us)": 15775,
+                "50thPercentileLatency(us)": 4975,
+                "95thPercentileLatency(us)": 7367,
+                "99thPercentileLatency(us)": 15775,
+                "Return=OK": 42
+              },
+              "READ": {
+                "Operations": 958,
+                "AverageLatency(us)": 1186.829853862213,
+                "MinLatency(us)": 479,
+                "MaxLatency(us)": 56927,
+                "50thPercentileLatency(us)": 902,
+                "95thPercentileLatency(us)": 2459,
+                "99thPercentileLatency(us)": 3967,
+                "Return=OK": 958
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 3168,
+                "Throughput(ops/sec)": 315.65656565656565
+              },
+              "UPDATE": {
+                "Operations": 519,
+                "AverageLatency(us)": 4569.921001926782,
+                "MinLatency(us)": 2540,
+                "MaxLatency(us)": 11583,
+                "50thPercentileLatency(us)": 4299,
+                "95thPercentileLatency(us)": 7047,
+                "99thPercentileLatency(us)": 8423,
+                "Return=OK": 519
+              },
+              "READ": {
+                "Operations": 481,
+                "AverageLatency(us)": 1119.4532224532225,
+                "MinLatency(us)": 515,
+                "MaxLatency(us)": 53983,
+                "50thPercentileLatency(us)": 887,
+                "95thPercentileLatency(us)": 2018,
+                "99thPercentileLatency(us)": 2769,
+                "Return=OK": 481
+              }
+            }
+          }
+        ]
       }
-    },
-    "consistency": "Linearizability + Primary Integrity",
-    "persistency": "On-Disk"
-  },
-  {
-    "project": "apache.zookeeper",
-    "protocol": "zab",
-    "language": "Java",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 3168,
-        "Throughput(ops/sec)": 315.65656565656565
-      },
-      "UPDATE": {
-        "Operations": 519,
-        "AverageLatency(us)": 4569.921001926782,
-        "MinLatency(us)": 2540,
-        "MaxLatency(us)": 11583,
-        "50thPercentileLatency(us)": 4299,
-        "95thPercentileLatency(us)": 7047,
-        "99thPercentileLatency(us)": 8423,
-        "Return=OK": 519
-      },
-      "READ": {
-        "Operations": 481,
-        "AverageLatency(us)": 1119.4532224532225,
-        "MinLatency(us)": 515,
-        "MaxLatency(us)": 53983,
-        "50thPercentileLatency(us)": 887,
-        "95thPercentileLatency(us)": 2018,
-        "99thPercentileLatency(us)": 2769,
-        "Return=OK": 481
-      }
-    },
-    "consistency": "Linearizability + Primary Integrity",
-    "persistency": "On-Disk"
-  },
-  {
-    "project": "otoolep.hraftd",
-    "protocol": "raft",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1452,
-        "Throughput(ops/sec)": 688.7052341597796
-      },
-      "UPDATE": {
-        "Operations": 53,
-        "AverageLatency(us)": 7480.11320754717,
-        "MinLatency(us)": 5116,
-        "MaxLatency(us)": 13063,
-        "50thPercentileLatency(us)": 6583,
-        "95thPercentileLatency(us)": 12815,
-        "99thPercentileLatency(us)": 13063,
-        "Return=OK": 53
-      },
-      "READ": {
-        "Operations": 947,
-        "AverageLatency(us)": 1037.6810982048573,
-        "MinLatency(us)": 391,
-        "MaxLatency(us)": 31967,
-        "50thPercentileLatency(us)": 827,
-        "95thPercentileLatency(us)": 2263,
-        "99thPercentileLatency(us)": 3139,
-        "Return=OK": 947
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    ]
   },
   {
     "project": "otoolep.hraftd",
-    "protocol": "raft",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 4321,
-        "Throughput(ops/sec)": 231.42791020597085
-      },
-      "UPDATE": {
-        "Operations": 486,
-        "AverageLatency(us)": 7464.419753086419,
-        "MinLatency(us)": 5096,
-        "MaxLatency(us)": 15823,
-        "50thPercentileLatency(us)": 6743,
-        "95thPercentileLatency(us)": 11983,
-        "99thPercentileLatency(us)": 12815,
-        "Return=OK": 486
-      },
-      "READ": {
-        "Operations": 514,
-        "AverageLatency(us)": 1196.6945525291828,
-        "MinLatency(us)": 480,
-        "MaxLatency(us)": 31311,
-        "50thPercentileLatency(us)": 974,
-        "95thPercentileLatency(us)": 2385,
-        "99thPercentileLatency(us)": 3717,
-        "Return=OK": 514
+    "repo": "http://github.com/otoolep/hraftd",
+    "protocols": [
+      {
+        "name": "raft",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1452,
+                "Throughput(ops/sec)": 688.7052341597796
+              },
+              "UPDATE": {
+                "Operations": 53,
+                "AverageLatency(us)": 7480.11320754717,
+                "MinLatency(us)": 5116,
+                "MaxLatency(us)": 13063,
+                "50thPercentileLatency(us)": 6583,
+                "95thPercentileLatency(us)": 12815,
+                "99thPercentileLatency(us)": 13063,
+                "Return=OK": 53
+              },
+              "READ": {
+                "Operations": 947,
+                "AverageLatency(us)": 1037.6810982048573,
+                "MinLatency(us)": 391,
+                "MaxLatency(us)": 31967,
+                "50thPercentileLatency(us)": 827,
+                "95thPercentileLatency(us)": 2263,
+                "99thPercentileLatency(us)": 3139,
+                "Return=OK": 947
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 4321,
+                "Throughput(ops/sec)": 231.42791020597085
+              },
+              "UPDATE": {
+                "Operations": 486,
+                "AverageLatency(us)": 7464.419753086419,
+                "MinLatency(us)": 5096,
+                "MaxLatency(us)": 15823,
+                "50thPercentileLatency(us)": 6743,
+                "95thPercentileLatency(us)": 11983,
+                "99thPercentileLatency(us)": 12815,
+                "Return=OK": 486
+              },
+              "READ": {
+                "Operations": 514,
+                "AverageLatency(us)": 1196.6945525291828,
+                "MinLatency(us)": 480,
+                "MaxLatency(us)": 31311,
+                "50thPercentileLatency(us)": 974,
+                "95thPercentileLatency(us)": 2385,
+                "99thPercentileLatency(us)": 3717,
+                "Return=OK": 514
+              }
+            }
+          }
+        ]
       }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    ]
   },
   {
-    "project": "holipaxos-artifect.holipaxos",
-    "protocol": "holipaxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "READ": {
-        "Operations": 955,
-        "AverageLatency(us)": 1143.4376963350785,
-        "MinLatency(us)": 631,
-        "MaxLatency(us)": 4863,
-        "50thPercentileLatency(us)": 1004,
-        "95thPercentileLatency(us)": 2151,
-        "99thPercentileLatency(us)": 2983,
-        "Return=OK": 955
+    "project": "Zhiying12.holipaxos-artifect",
+    "repo": "http://github.com/PanjiSri/holipaxos-artifect",
+    "protocols": [
+      {
+        "name": "holipaxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "READ": {
+                "Operations": 955,
+                "AverageLatency(us)": 1143.4376963350785,
+                "MinLatency(us)": 631,
+                "MaxLatency(us)": 4863,
+                "50thPercentileLatency(us)": 1004,
+                "95thPercentileLatency(us)": 2151,
+                "99thPercentileLatency(us)": 2983,
+                "Return=OK": 955
+              },
+              "UPDATE": {
+                "Operations": 45,
+                "AverageLatency(us)": 1464.7111111111112,
+                "MinLatency(us)": 733,
+                "MaxLatency(us)": 3381,
+                "50thPercentileLatency(us)": 1292,
+                "95thPercentileLatency(us)": 2999,
+                "99thPercentileLatency(us)": 3381,
+                "Return=OK": 45
+              },
+              "OVERALL": {
+                "RunTime(ms)": 1240,
+                "Throughput(ops/sec)": 806.4516129032259
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "READ": {
+                "Operations": 508,
+                "AverageLatency(us)": 1155.1476377952756,
+                "MinLatency(us)": 629,
+                "MaxLatency(us)": 6863,
+                "50thPercentileLatency(us)": 981,
+                "95thPercentileLatency(us)": 2213,
+                "99thPercentileLatency(us)": 2823,
+                "Return=OK": 508
+              },
+              "UPDATE": {
+                "Operations": 492,
+                "AverageLatency(us)": 1269.6808943089432,
+                "MinLatency(us)": 677,
+                "MaxLatency(us)": 14327,
+                "50thPercentileLatency(us)": 1061,
+                "95thPercentileLatency(us)": 2355,
+                "99thPercentileLatency(us)": 3437,
+                "Return=OK": 492
+              },
+              "OVERALL": {
+                "RunTime(ms)": 1296,
+                "Throughput(ops/sec)": 771.604938271605
+              }
+            }
+          }
+        ]
       },
-      "UPDATE": {
-        "Operations": 45,
-        "AverageLatency(us)": 1464.7111111111112,
-        "MinLatency(us)": 733,
-        "MaxLatency(us)": 3381,
-        "50thPercentileLatency(us)": 1292,
-        "95thPercentileLatency(us)": 2999,
-        "99thPercentileLatency(us)": 3381,
-        "Return=OK": 45
+      {
+        "name": "multipaxos",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1252,
+                "Throughput(ops/sec)": 798.7220447284345
+              },
+              "UPDATE": {
+                "Operations": 42,
+                "AverageLatency(us)": 1249.2142857142858,
+                "MinLatency(us)": 757,
+                "MaxLatency(us)": 3103,
+                "50thPercentileLatency(us)": 1064,
+                "95thPercentileLatency(us)": 2231,
+                "99thPercentileLatency(us)": 3103,
+                "Return=OK": 42
+              },
+              "READ": {
+                "Operations": 958,
+                "AverageLatency(us)": 1172.340292275574,
+                "MinLatency(us)": 652,
+                "MaxLatency(us)": 3825,
+                "50thPercentileLatency(us)": 1064,
+                "95thPercentileLatency(us)": 2199,
+                "99thPercentileLatency(us)": 2937,
+                "Return=OK": 958
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1324,
+                "Throughput(ops/sec)": 755.2870090634441
+              },
+              "UPDATE": {
+                "Operations": 500,
+                "AverageLatency(us)": 1282.73,
+                "MinLatency(us)": 664,
+                "MaxLatency(us)": 7071,
+                "50thPercentileLatency(us)": 1138,
+                "95thPercentileLatency(us)": 2443,
+                "99thPercentileLatency(us)": 3465,
+                "Return=OK": 500
+              },
+              "READ": {
+                "Operations": 500,
+                "AverageLatency(us)": 1193.318,
+                "MinLatency(us)": 654,
+                "MaxLatency(us)": 4135,
+                "50thPercentileLatency(us)": 1027,
+                "95thPercentileLatency(us)": 2419,
+                "99thPercentileLatency(us)": 3223,
+                "Return=OK": 500
+              }
+            }
+          }
+        ]
       },
-      "OVERALL": {
-        "RunTime(ms)": 1240,
-        "Throughput(ops/sec)": 806.4516129032259
+      {
+        "name": "omnipaxos",
+        "language": "Rust",
+        "consistency": "Linearizability",
+        "persistency": "In-Memory",
+        "commit": "",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 7465,
+                "Throughput(ops/sec)": 133.95847287340925
+              },
+              "READ": {
+                "Operations": 955,
+                "AverageLatency(us)": 7370.575916230367,
+                "MinLatency(us)": 4656,
+                "MaxLatency(us)": 12591,
+                "50thPercentileLatency(us)": 7363,
+                "95thPercentileLatency(us)": 8791,
+                "99thPercentileLatency(us)": 9783,
+                "Return=OK": 955
+              },
+              "UPDATE": {
+                "Operations": 45,
+                "AverageLatency(us)": 7677.688888888889,
+                "MinLatency(us)": 5916,
+                "MaxLatency(us)": 10479,
+                "50thPercentileLatency(us)": 7487,
+                "95thPercentileLatency(us)": 9231,
+                "99thPercentileLatency(us)": 10479,
+                "Return=OK": 45
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 7482,
+                "Throughput(ops/sec)": 133.65410318096767
+              },
+              "READ": {
+                "Operations": 462,
+                "AverageLatency(us)": 7359.316017316018,
+                "MinLatency(us)": 5176,
+                "MaxLatency(us)": 11655,
+                "50thPercentileLatency(us)": 7347,
+                "95thPercentileLatency(us)": 8727,
+                "99thPercentileLatency(us)": 9575,
+                "Return=OK": 462
+              },
+              "UPDATE": {
+                "Operations": 538,
+                "AverageLatency(us)": 7403.996282527881,
+                "MinLatency(us)": 5196,
+                "MaxLatency(us)": 12471,
+                "50thPercentileLatency(us)": 7375,
+                "95thPercentileLatency(us)": 9127,
+                "99thPercentileLatency(us)": 10223,
+                "Return=OK": 538
+              }
+            }
+          }
+        ]
       }
-    },
-    "consistency": "",
-    "persistency": ""
+    ]
   },
   {
-    "project": "holipaxos-artifect.holipaxos",
-    "protocol": "holipaxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "READ": {
-        "Operations": 508,
-        "AverageLatency(us)": 1155.1476377952756,
-        "MinLatency(us)": 629,
-        "MaxLatency(us)": 6863,
-        "50thPercentileLatency(us)": 981,
-        "95thPercentileLatency(us)": 2213,
-        "99thPercentileLatency(us)": 2823,
-        "Return=OK": 508
-      },
-      "UPDATE": {
-        "Operations": 492,
-        "AverageLatency(us)": 1269.6808943089432,
-        "MinLatency(us)": 677,
-        "MaxLatency(us)": 14327,
-        "50thPercentileLatency(us)": 1061,
-        "95thPercentileLatency(us)": 2355,
-        "99thPercentileLatency(us)": 3437,
-        "Return=OK": 492
-      },
-      "OVERALL": {
-        "RunTime(ms)": 1296,
-        "Throughput(ops/sec)": 771.604938271605
+    "project": "etcd-io.etcd",
+    "repo": "https://github.com/etcd-io/etcd",
+    "protocols": [
+      {
+        "name": "raft",
+        "language": "Go",
+        "consistency": "Linearizability",
+        "persistency": "On-Disk",
+        "commit": "5400cdc39b829ee5dadacb77002256cf86357da1",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 54,
+                "AverageLatency(us)": 8507.111111111111,
+                "MinLatency(us)": 4756,
+                "MaxLatency(us)": 63615,
+                "50thPercentileLatency(us)": 6763,
+                "95thPercentileLatency(us)": 15223,
+                "99thPercentileLatency(us)": 63615,
+                "Return=OK": 54
+              },
+              "OVERALL": {
+                "RunTime(ms)": 4205,
+                "Throughput(ops/sec)": 237.81212841854935
+              },
+              "READ": {
+                "Operations": 946,
+                "AverageLatency(us)": 3246.010570824524,
+                "MinLatency(us)": 1189,
+                "MaxLatency(us)": 362495,
+                "50thPercentileLatency(us)": 2567,
+                "95thPercentileLatency(us)": 5283,
+                "99thPercentileLatency(us)": 7207,
+                "Return=OK": 946
+              }
+            }
+          },
+          {
+            "name": "update-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 487,
+                "AverageLatency(us)": 7902.731006160165,
+                "MinLatency(us)": 3834,
+                "MaxLatency(us)": 429311,
+                "50thPercentileLatency(us)": 6631,
+                "95thPercentileLatency(us)": 11119,
+                "99thPercentileLatency(us)": 14431,
+                "Return=OK": 487
+              },
+              "OVERALL": {
+                "RunTime(ms)": 6023,
+                "Throughput(ops/sec)": 166.03021749958492
+              },
+              "READ": {
+                "Operations": 513,
+                "AverageLatency(us)": 2872.3274853801167,
+                "MinLatency(us)": 1186,
+                "MaxLatency(us)": 10031,
+                "50thPercentileLatency(us)": 2581,
+                "95thPercentileLatency(us)": 5547,
+                "99thPercentileLatency(us)": 6923,
+                "Return=OK": 513
+              }
+            }
+          }
+        ]
       }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "holipaxos-artifect.holipaxos",
-    "protocol": "multipaxos",
-    "language": "Go",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1252,
-        "Throughput(ops/sec)": 798.7220447284345
-      },
-      "UPDATE": {
-        "Operations": 42,
-        "AverageLatency(us)": 1249.2142857142858,
-        "MinLatency(us)": 757,
-        "MaxLatency(us)": 3103,
-        "50thPercentileLatency(us)": 1064,
-        "95thPercentileLatency(us)": 2231,
-        "99thPercentileLatency(us)": 3103,
-        "Return=OK": 42
-      },
-      "READ": {
-        "Operations": 958,
-        "AverageLatency(us)": 1172.340292275574,
-        "MinLatency(us)": 652,
-        "MaxLatency(us)": 3825,
-        "50thPercentileLatency(us)": 1064,
-        "95thPercentileLatency(us)": 2199,
-        "99thPercentileLatency(us)": 2937,
-        "Return=OK": 958
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "holipaxos-artifect.holipaxos",
-    "protocol": "multipaxos",
-    "language": "Go",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 1324,
-        "Throughput(ops/sec)": 755.2870090634441
-      },
-      "UPDATE": {
-        "Operations": 500,
-        "AverageLatency(us)": 1282.73,
-        "MinLatency(us)": 664,
-        "MaxLatency(us)": 7071,
-        "50thPercentileLatency(us)": 1138,
-        "95thPercentileLatency(us)": 2443,
-        "99thPercentileLatency(us)": 3465,
-        "Return=OK": 500
-      },
-      "READ": {
-        "Operations": 500,
-        "AverageLatency(us)": 1193.318,
-        "MinLatency(us)": 654,
-        "MaxLatency(us)": 4135,
-        "50thPercentileLatency(us)": 1027,
-        "95thPercentileLatency(us)": 2419,
-        "99thPercentileLatency(us)": 3223,
-        "Return=OK": 500
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "holipaxos-artifect.holipaxos",
-    "protocol": "omnipaxos",
-    "language": "Rust",
-    "workload": "read-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 7465,
-        "Throughput(ops/sec)": 133.95847287340925
-      },
-      "READ": {
-        "Operations": 955,
-        "AverageLatency(us)": 7370.575916230367,
-        "MinLatency(us)": 4656,
-        "MaxLatency(us)": 12591,
-        "50thPercentileLatency(us)": 7363,
-        "95thPercentileLatency(us)": 8791,
-        "99thPercentileLatency(us)": 9783,
-        "Return=OK": 955
-      },
-      "UPDATE": {
-        "Operations": 45,
-        "AverageLatency(us)": 7677.688888888889,
-        "MinLatency(us)": 5916,
-        "MaxLatency(us)": 10479,
-        "50thPercentileLatency(us)": 7487,
-        "95thPercentileLatency(us)": 9231,
-        "99thPercentileLatency(us)": 10479,
-        "Return=OK": 45
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
-  },
-  {
-    "project": "holipaxos-artifect.holipaxos",
-    "protocol": "omnipaxos",
-    "language": "Rust",
-    "workload": "update-heavy",
-    "result": {
-      "OVERALL": {
-        "RunTime(ms)": 7482,
-        "Throughput(ops/sec)": 133.65410318096767
-      },
-      "READ": {
-        "Operations": 462,
-        "AverageLatency(us)": 7359.316017316018,
-        "MinLatency(us)": 5176,
-        "MaxLatency(us)": 11655,
-        "50thPercentileLatency(us)": 7347,
-        "95thPercentileLatency(us)": 8727,
-        "99thPercentileLatency(us)": 9575,
-        "Return=OK": 462
-      },
-      "UPDATE": {
-        "Operations": 538,
-        "AverageLatency(us)": 7403.996282527881,
-        "MinLatency(us)": 5196,
-        "MaxLatency(us)": 12471,
-        "50thPercentileLatency(us)": 7375,
-        "95thPercentileLatency(us)": 9127,
-        "99thPercentileLatency(us)": 10223,
-        "Return=OK": 538
-      }
-    },
-    "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    ]
   }
 ]

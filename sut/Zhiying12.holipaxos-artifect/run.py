@@ -8,7 +8,7 @@ import shutil
 
 from src.utils import helper
 
-CURR_DIR = Path("./sut/holipaxos-artifect.holipaxos")
+CURR_DIR = Path("./sut/Zhiying12.holipaxos-artifect/")
 BIN_DIR = CURR_DIR / "bin"
 LOG_DIR = CURR_DIR / "logs"
 CONFIG_DIR = CURR_DIR / "config"

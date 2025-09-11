@@ -1,4 +1,5 @@
 import sys
+import subprocess
 
 
 def get_option(min, max, opts) -> int:
@@ -28,3 +29,19 @@ def get_option(min, max, opts) -> int:
             sys.exit()
         except ValueError:
             pass
+
+
+def get_git_commit(path):
+    cmd = f"cd {path} && git rev-parse HEAD"
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=True
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"{path} is not a git repository")
+
+    return result.stdout
