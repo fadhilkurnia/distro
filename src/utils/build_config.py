@@ -1,13 +1,15 @@
 import re
 from typing import Dict, List, Any, Optional
 
+from .dependencies import normalize_dependency_spec
+
 
 BUILD_CONFIG_SCHEMA = {
     "source": str,
     "commit_hash": str,  # Optional - if not provided, uses the latest commit
-    "build_commands": list, 
+    "build_commands": list,
     "dependencies": list,  # Optional for now
-    "remote_workdir": str # Optinal - defaults to "/home/ubuntu" if not specified
+    "remote_workdir": str  # Optional - defaults to "/home/ubuntu" if not specified
 }
 
 
@@ -51,11 +53,14 @@ def validate_build_config(config: Dict[str, Any]) -> tuple[bool, Optional[str]]:
 
     # Validate optional dependencies field
     if "dependencies" in config:
-        if not isinstance(config["dependencies"], list):
+        deps = config["dependencies"]
+        if not isinstance(deps, list):
             return False, "dependencies must be a list"
-        for i, dep in enumerate(config["dependencies"]):
-            if not isinstance(dep, str) or not dep.strip():
-                return False, f"dependencies[{i}] must be a non-empty string"
+        for index, dep in enumerate(deps):
+            try:
+                normalize_dependency_spec(dep)
+            except (TypeError, ValueError) as exc:
+                return False, f"dependencies[{index}] {exc}"
 
     return True, None
 

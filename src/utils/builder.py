@@ -1,7 +1,9 @@
 import subprocess
 import shlex
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Callable, Tuple, Optional
+
 from .build_config import validate_build_config
+from .dependencies import normalize_dependency_spec, probe_command_for
 
 
 class BuildResult:
@@ -14,6 +16,63 @@ class BuildResult:
     def __repr__(self):
         status = "SUCCESS" if self.success else "FAILURE"
         return f"BuildResult({self.node_id}: {status} - {self.message})"
+
+
+def run_local_probe(command: str) -> Tuple[bool, str]:
+    try:
+        completed = subprocess.run(
+            ["bash", "-lc", command],
+            capture_output=True,
+            text=True,
+        )
+    except Exception as exc:
+        return False, str(exc)
+
+    output = completed.stdout.strip() or completed.stderr.strip()
+    return completed.returncode == 0, output
+
+
+def run_remote_probe(command: str, host: str, user: str, key_path: str) -> Tuple[bool, str]:
+    remote_command = f"bash -lc {shlex.quote(command)}"
+    ssh_cmd = [
+        "ssh",
+        "-i",
+        str(key_path),
+        f"{user}@{host}",
+        remote_command,
+    ]
+
+    try:
+        completed = subprocess.run(ssh_cmd, capture_output=True, text=True)
+    except Exception as exc:
+        return False, str(exc)
+
+    output = completed.stdout.strip() or completed.stderr.strip()
+    return completed.returncode == 0, output
+
+
+def ensure_dependencies(node_id: str, dependencies: List[Any], probe_runner: Callable[[str], Tuple[bool, str]]) -> Optional[BuildResult]:
+    for dep in dependencies:
+        name, version = normalize_dependency_spec(dep)
+        command = probe_command_for(name)
+        if not command:
+            return BuildResult(node_id, False, f"Unknown dependency '{name}' in configuration")
+
+        success, output = probe_runner(command)
+        if success:
+            print(f"[{node_id}] dependency '{name}' satisfied via '{command}'")
+            if output:
+                for line in output.splitlines():
+                    print(f"[{node_id}]   probe output: {line}")
+            continue
+
+        version_note = f" (requested {version})" if version else ""
+        detail = f"Missing dependency '{name}'{version_note}; probe '{command}' failed"
+        if output:
+            detail = f"{detail}. Output: {output}"
+        return BuildResult(node_id, False, detail)
+
+    return None
 
 
 def build_on_nodes(build_config: Dict[str, Any], nodes: List[Dict[str, str]], ssh: Dict[str, Any], sut_dir: str = None) -> List[BuildResult]:
@@ -55,6 +114,11 @@ def execute_local_build(node_id: str, build_config: Dict[str, Any], sut_dir: str
     """
     Execute build process locally (for testing with localhost).
     """
+    dependencies = build_config.get("dependencies") or []
+    dep_failure = ensure_dependencies(node_id, dependencies, run_local_probe)
+    if dep_failure:
+        return dep_failure
+
     try:
         # e.g., sut_dir = "sut/otoolep.hraftd"
         workdir = f"./{sut_dir.strip('/')}"
@@ -92,10 +156,20 @@ def execute_remote_build(node_id: str, node: Dict[str, str], build_config: Dict[
     """
     Execute build process on a remote node via SSH.
     """
+    host = node["public"]
+    user = ssh["username"]
+    key_path = ssh["key"]
+
+    dependencies = build_config.get("dependencies") or []
+    dep_failure = ensure_dependencies(
+        node_id,
+        dependencies,
+        lambda command: run_remote_probe(command, host, user, key_path),
+    )
+    if dep_failure:
+        return dep_failure
+
     try:
-        host = node["public"]
-        user = ssh["username"]
-        key_path = ssh["key"]
         workdir = build_config.get("remote_workdir") or f"/home/{user}"
 
         print(f"[{node_id}] Starting remote build on {host} in {workdir!r}")

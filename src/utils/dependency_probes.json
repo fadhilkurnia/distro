@@ -1,0 +1,8 @@
+{
+  "maven": {
+    "probe": "mvn -v"
+  },
+  "golang": {
+    "probe": "go version"
+  }
+}
