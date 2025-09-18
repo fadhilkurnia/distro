@@ -3,7 +3,12 @@ import shlex
 from typing import Dict, List, Any, Callable, Tuple, Optional
 
 from .build_config import validate_build_config
-from .dependencies import normalize_dependency_spec, probe_command_for
+from .dependencies import (
+    normalize_dependency_spec,
+    probe_command_for,
+    extract_version,
+    version_requirement_satisfied,
+)
 
 
 class BuildResult:
@@ -59,18 +64,31 @@ def ensure_dependencies(node_id: str, dependencies: List[Any], probe_runner: Cal
             return BuildResult(node_id, False, f"Unknown dependency '{name}' in configuration")
 
         success, output = probe_runner(command)
-        if success:
-            print(f"[{node_id}] dependency '{name}' satisfied via '{command}'")
+        if not success:
+            version_note = f" (requested {version})" if version else ""
+            detail = f"Missing dependency '{name}'{version_note}; probe '{command}' failed"
             if output:
-                for line in output.splitlines():
-                    print(f"[{node_id}]   probe output: {line}")
-            continue
+                detail = f"{detail}. Output: {output}"
+            return BuildResult(node_id, False, detail)
 
-        version_note = f" (requested {version})" if version else ""
-        detail = f"Missing dependency '{name}'{version_note}; probe '{command}' failed"
+        extracted_version = extract_version(name, output) if output else None
+
+        if version and not version_requirement_satisfied(name, version, output):
+            detail = f"Dependency '{name}' requires {version}"
+            if extracted_version:
+                detail = f"{detail}, but detected {extracted_version}"
+            else:
+                detail = f"{detail}, but probe output did not contain a version"
+            if output:
+                detail = f"{detail}. Probe output: {output}"
+            return BuildResult(node_id, False, detail)
+
+        print(f"[{node_id}] dependency '{name}' satisfied via '{command}'")
+        if extracted_version:
+            print(f"[{node_id}]   detected version: {extracted_version}")
         if output:
-            detail = f"{detail}. Output: {output}"
-        return BuildResult(node_id, False, detail)
+            for line in output.splitlines():
+                print(f"[{node_id}]   probe output: {line}")
 
     return None
 

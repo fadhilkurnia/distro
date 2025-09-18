@@ -20,7 +20,9 @@ BUILD_CONFIG = {
         "go install",
         "go build"
     ],
-    "dependencies": ["golang"]
+    "dependencies": [
+        {"name": "golang", "version": ">=1.20"}
+    ]
     # remote_workdir not specified - will use default "/home/ubuntu"
 }
 

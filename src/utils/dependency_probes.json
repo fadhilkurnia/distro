@@ -1,8 +1,10 @@
 {
   "maven": {
-    "probe": "mvn -v"
+    "probe": "mvn -v",
+    "version_regex": "Apache Maven (?P<version>[0-9.]+)"
   },
   "golang": {
-    "probe": "go version"
+    "probe": "go version",
+    "version_regex": "go version go(?P<version>[0-9.]+)"
   }
 }
