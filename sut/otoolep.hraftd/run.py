@@ -6,14 +6,28 @@ import os
 import signal
 
 from src.utils import helper
+from src.utils.builder import build_on_nodes, print_build_results
 
 CURR_DIR = Path("./sut/otoolep.hraftd")
-HRAFTD_BIN = CURR_DIR / "hraftd"
+HRAFTD_BIN = CURR_DIR / "hraftd" / "hraftd"
 HRAFTD_GIT = "https://github.com/otoolep/hraftd.git"
 
-OPTIONS = [{"num": 0, "text": "Start hraftd cluster"},
-           {"num": 1, "text": "Stop hraftd cluster"},
-           {"num": 2, "text": "Run Benchmark"}]
+# Build configuration for hraftd
+BUILD_CONFIG = {
+    "source": "https://github.com/otoolep/hraftd.git",
+    # No commit_hash specified - will use latest commit as a default
+    "build_commands": [
+        "go install",
+        "go build"
+    ],
+    "dependencies": ["golang"]
+    # remote_workdir not specified - will use default "/home/ubuntu"
+}
+
+OPTIONS = [{"num": 0, "text": "Build hraftd on all nodes"},
+           {"num": 1, "text": "Start hraftd cluster"},
+           {"num": 2, "text": "Stop hraftd cluster"},
+           {"num": 3, "text": "Run Benchmark"}]
 
 
 def main(run_ycsb, nodes, ssh):
@@ -28,66 +42,90 @@ def main(run_ycsb, nodes, ssh):
 
         match val:
             case 0:
-                start_hraftd_cluster(node_data, ssh)
+                build_hraftd_cluster(nodes, ssh)
             case 1:
-                stop_hraftd_cluster(node_data, ssh)
+                start_hraftd_cluster(node_data, ssh)
             case 2:
-                endpoints = [f"http://{node["client_ip"]}:{node["client_port"]}" for node in node_data]
+                stop_hraftd_cluster(node_data, ssh)
+            case 3:
+                endpoints = [f"http://{node['client_ip']}:{node['client_port']}" for node in node_data]
                 print("endpoint list:", endpoints)
                 run_ycsb({
-                    "name": "raft", 
+                    "name": "raft",
                     "language": "Go",
                     "consistency": "Linearizability",
                     "persistency": "In-Memory"
                 }, "hraftd", endpoints, "hraftd.hosts", ssh)
 
 
+def build_hraftd_cluster(nodes, ssh):
+    """
+    Build hraftd on all protocol nodes using the build framework.
+    """
+    print("Building hraftd on all nodes...")
+
+    script_path = Path(__file__)
+    sut_dir = script_path.parent
+    project_root = Path.cwd()
+    sut_relative_path = sut_dir.relative_to(project_root)
+
+    print(f"Using SUT directory: {sut_relative_path}")
+
+    results = build_on_nodes(BUILD_CONFIG, nodes, ssh, str(sut_relative_path))
+    success = print_build_results(results)
+    
+    if not success:
+        print("Build failed on one or more nodes. Check the error output above.")
+        return False
+
+    print("hraftd built successfully on all nodes.")
+    return True
+
+
 def start_hraftd_cluster(nodes, ssh):
+    """
+    Start hraftd cluster processes on all nodes.
+    Note: Build must be completed before calling this function.
+    """
     user = ssh["username"]
     join = None
+
     for i, node in enumerate(nodes):
         if node["client_ip"] == "127.0.0.1" and node["peer_ip"] == "127.0.0.1":
-            haddr = f"{node["peer_ip"]}:{node["client_port"]}"
-            raddr = f"{node["peer_ip"]}:{node["peer_port"]}"
-            remote_dir = f"/home/{user}/hraftd/node{i+1}"
+            # Local execution
+            haddr = f"{node['peer_ip']}:{node['client_port']}"
+            raddr = f"{node['peer_ip']}:{node['peer_port']}"
             local_dir = CURR_DIR / f"node{i+1}"
 
+            join_part = "" if join is None else join
             run_cmd = (
                 f"nohup {HRAFTD_BIN.resolve()} -id node{i+1} -haddr {haddr} "
-                f"-raddr {raddr} {"" if join is None else join} {local_dir} > /dev/null 2>&1 &"
+                f"-raddr {raddr} {join_part} {local_dir} > /dev/null 2>&1 &"
             )
         else:
+            # Remote execution
             host = node["client_ip"]
+            haddr = f"{node['peer_ip']}:{node['client_port']}"
+            raddr = f"{node['peer_ip']}:{node['peer_port']}"
+            remote_workdir = BUILD_CONFIG.get("remote_workdir", f"/home/{user}")
+            repo_name = BUILD_CONFIG["source"].split("/")[-1].replace(".git", "")
+            remote_repo_dir = f"{remote_workdir.rstrip('/')}/{repo_name}"
+            remote_hraftd = f"{remote_repo_dir}/hraftd"
+            remote_dir = f"{remote_repo_dir}/node{i+1}"
 
-            build_cmd = (
-                f"ssh -i {ssh['key']} {user}@{host} "
-                f"'if [ -f ~/go/bin/hraftd ]; then "
-                f"echo \"hraftd already exists in {host}\"; "
-                f"else "
-                f"mkdir -p ~/hraftd && cd ~/hraftd && git clone {HRAFTD_GIT} "
-                f"&& cd hraftd && go install && go build; "
-                f"fi'"
-            )
-
-            print("Running command:", build_cmd)
-            subprocess.run(build_cmd, check=True, shell=True)
-
-            remote_hraftd = f"/home/{user}/hraftd/hraftd/hraftd"
-            haddr = f"{node["peer_ip"]}:{node["client_port"]}"
-            raddr = f"{node["peer_ip"]}:{node["peer_port"]}"
-            remote_dir = f"/home/{user}/hraftd/node{i+1}"
-
+            join_part = "" if join is None else join
             run_cmd = (
                 f"ssh -i {ssh['key']} {user}@{host} "
                 f"'nohup {remote_hraftd} -id node{i+1} -haddr {haddr} "
-                f"-raddr {raddr} {"" if join is None else join} {remote_dir} > /dev/null 2>&1 &'"
+                f"-raddr {raddr} {join_part} {remote_dir} > /dev/null 2>&1 &'"
             )
 
         print("Running command:", run_cmd)
         subprocess.run(run_cmd, check=True, shell=True)
 
         if join is None:
-            join = f"-join {node["peer_ip"]}:{node["client_port"]}"
+            join = f"-join {node['peer_ip']}:{node['client_port']}"
+
     print("hraftd cluster successfully started")
 
 
@@ -107,8 +145,11 @@ def stop_hraftd_cluster(nodes, ssh):
             os.system(f"rm -rf {local_dir.resolve()}")
         else:
             host = node["client_ip"]
-            remote_hraftd = f"/home/{user}/hraftd/hraftd/hraftd"
-            remote_dir = f"/home/{user}/hraftd/node{i+1}"
+            remote_workdir = BUILD_CONFIG.get("remote_workdir", f"/home/{user}")
+            repo_name = BUILD_CONFIG["source"].split("/")[-1].replace(".git", "")
+            remote_repo_dir = f"{remote_workdir.rstrip('/')}/{repo_name}"
+            remote_hraftd = f"{remote_repo_dir}/hraftd"
+            remote_dir = f"{remote_repo_dir}/node{i+1}"
 
             remote_command = (
                 f"pids=$(ps aux | grep '{remote_hraftd}' | grep -v grep | awk '{{print $2}}'); "
