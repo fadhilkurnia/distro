@@ -1,12 +1,13 @@
-from pathlib import Path
+import logging
 import importlib.util
 import sys
 import subprocess
 import json
 import os
 import shlex
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
+from pathlib import Path
 from src.utils import helper
 
 load_dotenv()
@@ -77,75 +78,20 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
     global selected_project
     num = helper.get_option(1, len(WORKLOADS), WORKLOADS)
 
-    # rsync YCSB client files
     if client_ip == "127.0.0.1" and client_ip == "127.0.0.1":
-        workload_path = YCSB_WORKLOAD_DIR / WORKLOADS[num-1]["text"]
-
-        print("YCSB endpoint list:", addr_list)
-        subprocess.run(
-            [YCSB_BIN.resolve(), "load", interface, "-P", workload_path, "-p",
-             f"{endpoint_name}={addr_list[0]}"],
-            cwd=YCSB_DIR)
-
-        process = subprocess.Popen(
-            [YCSB_BIN.resolve(), "run", interface, "-P", workload_path, "-p",
-             f"{endpoint_name}={addr_list[0]}"],
-            cwd=YCSB_DIR,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+        process = local_ycsb(WORKLOADS[num-1], addr_list, interface, endpoint_name)
     else:
-        user = ssh["username"]
-        local_dir = YCSB_DIR
-        remote_dir = f"/home/{user}/ycsb"
-        remote_bin = f"{remote_dir}/bin/ycsb"
-        workload_path = f"{remote_dir}/workloads/{WORKLOADS[num-1]["text"]}"
+        process = remote_ycsb(WORKLOADS[num-1], addr_list, interface, endpoint_name, ssh)
 
-        copy_cmd = (
-            f"rsync -avz -e 'ssh -i {ssh['key']}' "
-            f"{str(local_dir.resolve())}/ "
-            f"{user}@{client_ip}:{remote_dir}/"
-        )
+    live_output = []
+    for line in process.stdout:
+        print(line, end='')
+        live_output.append(line)
 
-        print("Running command:", copy_cmd)
-        subprocess.run(copy_cmd, check=True, shell=True)
+    return_code = process.wait()
 
-        remote_run = (
-            f"cd {shlex.quote(remote_dir)}; "
-            f"mvn clean package -pl {shlex.quote(interface)} -am; "
-            f"{shlex.quote(remote_bin)} load {shlex.quote(interface)} "
-            f"-P {shlex.quote(workload_path)} -p {shlex.quote(endpoint_name)}={shlex.quote(addr_list[0])} > /dev/null; "
-            f"{shlex.quote(remote_bin)} run {shlex.quote(interface)} "
-            f"-P {shlex.quote(workload_path)} -p {shlex.quote(endpoint_name)}={shlex.quote(addr_list[0])}; "
-        )
-
-        run_cmd = [
-            "ssh",
-            "-i", str(ssh['key']),
-            f"{user}@{client_ip}",
-            "bash -c",
-            shlex.quote(remote_run)
-        ]
-
-        # Load & run YCSB
-        print("Running command:", " ".join(run_cmd))
-        process = subprocess.Popen(
-            run_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,  # Redirect stderr to stdout for a single output stream
-            text=True,
-        )
-
-        live_output = []
-        for line in process.stdout:
-            print(line, end='')
-            live_output.append(line)
-
-        return_code = process.wait()
-
-        if return_code != 0:
-            raise subprocess.CalledProcessError(return_code, process.args, output="".join(live_output))
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, process.args, output="".join(live_output))
 
     parsed = parse_ycsb_output(live_output)
     print(json.dumps(parsed, indent=2))
@@ -153,6 +99,72 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
     keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
     result = {k: parsed[k] for k in keep_keys if k in parsed}
     insert_ycsb_output(selected_project.name, protocol, WORKLOADS[num-1], result)
+
+
+def remote_ycsb(workload, addr_list, interface, endpoint_name, ssh):
+    user = ssh["username"]
+    local_dir = YCSB_DIR
+    remote_dir = f"/home/{user}/ycsb"
+    remote_bin = f"{remote_dir}/bin/ycsb"
+    workload_path = f"{remote_dir}/workloads/{workload["text"]}"
+
+    copy_cmd = (
+        f"rsync -avz -e 'ssh -i {ssh['key']}' "
+        f"{str(local_dir.resolve())}/ "
+        f"{user}@{client_ip}:{remote_dir}/"
+    )
+
+    print("Running command:", copy_cmd)
+    subprocess.run(copy_cmd, check=True, shell=True)
+
+    remote_run = (
+        f"cd {shlex.quote(remote_dir)}; "
+        f"mvn clean package -pl {shlex.quote(interface)} -am; "
+        f"{shlex.quote(remote_bin)} load {shlex.quote(interface)} "
+        f"-P {shlex.quote(workload_path)} -p {shlex.quote(endpoint_name)}={shlex.quote(addr_list[0])} > /dev/null; "
+        f"{shlex.quote(remote_bin)} run {shlex.quote(interface)} "
+        f"-P {shlex.quote(workload_path)} -p {shlex.quote(endpoint_name)}={shlex.quote(addr_list[0])}; "
+    )
+
+    run_cmd = [
+        "ssh",
+        "-i", str(ssh['key']),
+        f"{user}@{client_ip}",
+        "bash -c",
+        shlex.quote(remote_run)
+    ]
+
+    # Load & run YCSB
+    print("Running command:", " ".join(run_cmd))
+    process = subprocess.Popen(
+        run_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    return process
+
+
+def local_ycsb(workload, addr_list, interface, endpoint_name):
+    workload_path = YCSB_WORKLOAD_DIR / workload["text"]
+
+    print("YCSB endpoint list:", addr_list)
+    subprocess.run(
+        [YCSB_BIN.resolve(), "load", interface, "-P", workload_path, "-p",
+         f"{endpoint_name}={addr_list[0]}"],
+        cwd=YCSB_DIR)
+
+    process = subprocess.Popen(
+        [YCSB_BIN.resolve(), "run", interface, "-P", workload_path, "-p",
+         f"{endpoint_name}={addr_list[0]}"],
+        cwd=YCSB_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    return process
 
 
 def insert_ycsb_output(project_name, protocol, workload, result):
@@ -212,6 +224,7 @@ def insert_ycsb_output(project_name, protocol, workload, result):
     selected_workload = next((w for w in workloads
                               if w["name"] == workload["text"]
                               and w["type"] == workload["type"]
+                              and w["num_of_nodes"] == int(os.getenv("NUM_OF_NODES"))
                               ), None)
     if selected_workload is None:
         print(f"{workload["text"]} doesn't exist. Adding new workload")
@@ -220,7 +233,7 @@ def insert_ycsb_output(project_name, protocol, workload, result):
         return
 
     # Workload already exists
-    print(f"{workload["text"]} already exist. Adding overriding result")
+    print(f"{workload["text"]} already exist. Overriding previous result")
     selected_workload["result"] = result
     write_to_json(data, project_name, protocol, workload)
 
@@ -235,27 +248,6 @@ def write_to_json(data, project_name, protocol, workload):
         f"has been added to {DATA}."
     )
     print(output)
-
-    '''
-    already_exists = False
-    for item in data:
-        if (item["project"] == selected_project.name
-            and item["protocol"] == protocol["name"]
-                and item["workload"] == ):
-            already_exists = True
-            item["result"] = result
-
-    if not already_exists:
-        data.append({
-            "project": selected_project.name,
-            "protocol": protocol['name'],
-            "language": protocol.get("language", ""),
-            "workload": WORKLOADS[num-1],
-            "result": result,
-            "consistency": protocol.get("consistency", ""),
-            "persistency": protocol.get("persistency", ""),
-        })
-        '''
 
 
 def parse_ycsb_output(lines) -> dict[str]:
@@ -307,6 +299,8 @@ def parse_ycsb_output(lines) -> dict[str]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
     num_of_nodes = int(os.getenv("NUM_OF_NODES"))
     '''
     nodes = {f"node{i}": os.getenv(f"NODE{i}_IP")

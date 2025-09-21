@@ -17,8 +17,9 @@ BUILD_CONFIG = {
     "source": "https://github.com/otoolep/hraftd.git",
     # No commit_hash specified - will use latest commit as a default
     "build_commands": [
-        "go install",
+        "cd tikv && go install",
         "go build"
+        "cd pd && go install",
     ],
     "dependencies": [
         {"name": "golang", "version": ">=1.20"}

@@ -7,6 +7,7 @@ from src.utils import helper
 
 CURR_DIR = Path("./sut/apache.zookeeper")
 ZK_BIN = CURR_DIR / "apache-zookeeper" / "bin"
+REPO = "https://github.com/apache/zookeeper"
 
 OPTIONS = [{"num": 0, "text": "Start Zookeeper"},
            {"num": 1, "text": "Stop Zookeeper"},
@@ -14,48 +15,29 @@ OPTIONS = [{"num": 0, "text": "Start Zookeeper"},
 
 
 def main(run_ycsb, nodes, ssh) -> None:
-    """
-    Main function called by the root main.py script.
-    Gives user a choice to start/stop instances
-    and to run the YCSB benchmark on the instance.
-
-    :param run_ycsb: Function to run YCSB benchmark. Takes in protocol
-                     data {name, language} and YCSB interface name as argument.
-    :type run_ycsb: Callable[dict[str, str], str]
-    """
     node_data = map_ip_port(nodes)
-    print("Zookeeper IP-Port Map:")
-    for item in node_data:
-        print(item)
-
     while True:
         val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
         print()
 
         match val:
             case 0:
-                start_zk(ZK_BIN, node_data, ssh)
+                start(ZK_BIN, node_data, ssh)
             case 1:
-                stop_zk(ZK_BIN, node_data, ssh)
+                stop(ZK_BIN, node_data, ssh)
             case 2:
                 endpoints = [f"{node["public_ip"]}:{node["client"]}" for node in node_data]
-                print("endpoint list:", endpoints)
                 run_ycsb({
-                    "name": "zab", 
+                    "name": "zab",
                     "language": "Java",
                     "consistency": "Linearizability + Primary Integrity",
-                    "persistency": "On-Disk"
+                    "persistency": "On-Disk",
+                    "commit": helper.get_commit(ZK_BIN.resolve()),
+                    "repo": REPO,
                 }, "zookeeper", endpoints, "zookeeper.connectString", ssh)
 
 
-def start_zk(path, node_data, ssh) -> None:
-    """
-    Runs the instances with the specified protocol in different
-    threads concurrently. Currently only supports local startup.
-
-    :param path: Path to bin/ directory inside the zookeeper repository.
-    :type path: Path
-    """
+def start(path, node_data, ssh) -> None:
     # Generate custom config
     template_config = []
     with open(CURR_DIR / "template.cfg", 'r') as file:
@@ -154,7 +136,7 @@ def start_zk(path, node_data, ssh) -> None:
     print("Client created /benchmark:\n", stdout)
 
 
-def stop_zk(path, node_data, ssh) -> None:
+def stop(path, node_data, ssh) -> None:
     """
     Terminates all running instances of zookeeper.
 

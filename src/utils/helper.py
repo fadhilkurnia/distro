@@ -1,8 +1,9 @@
 import sys
 import subprocess
+import json
 
 
-def get_option(min, max, opts) -> int:
+def get_option(min, max, opts, header="\nOptions:") -> int:
     """
     Print opts to stdout then gets user number input.
 
@@ -14,7 +15,7 @@ def get_option(min, max, opts) -> int:
     :type opts: { num: int, text: str }
     """
     while True:
-        print("\nOptions:")
+        print(header)
         for opt in opts:
             print(f"{opt['num']} - {opt['text']}")
 
@@ -31,7 +32,7 @@ def get_option(min, max, opts) -> int:
             pass
 
 
-def get_git_commit(path):
+def get_commit(path):
     cmd = f"cd {path} && git rev-parse HEAD"
     result = subprocess.run(
         cmd,
@@ -44,4 +45,16 @@ def get_git_commit(path):
     if result.returncode != 0:
         raise RuntimeError(f"{path} is not a git repository")
 
-    return result.stdout
+    return result.stdout.strip()
+
+
+def write_to_json(file, data, project_name, protocol_name, workload, commit):
+    with open(file, "w") as f:
+        json.dump(data, f, indent=2)
+
+    output = (
+        f"{workload["type"]} {workload["text"]} benchmark for "
+        f"{project_name}:{protocol_name} ({commit}) "
+        f"has been added to {file}."
+    )
+    print(output)

@@ -78,7 +78,7 @@
   },
   {
     "project": "ailidani.paxi",
-    "repo": "http://github.com/ailidani/paxi",
+    "repo": "https://github.com/ailidani/paxi",
     "protocols": [
       {
         "name": "paxos",
@@ -92,29 +92,29 @@
             "type": "single-client",
             "num_of_nodes": 3,
             "result": {
-              "OVERALL": {
-                "RunTime(ms)": 1929,
-                "Throughput(ops/sec)": 518.4033177812338
-              },
               "UPDATE": {
-                "Operations": 48,
-                "AverageLatency(us)": 2139.2708333333335,
-                "MinLatency(us)": 987,
-                "MaxLatency(us)": 9343,
-                "50thPercentileLatency(us)": 1696,
-                "95thPercentileLatency(us)": 3887,
-                "99thPercentileLatency(us)": 9343,
-                "Return=OK": 48
+                "Operations": 47,
+                "AverageLatency(us)": 1872.2553191489362,
+                "MinLatency(us)": 896,
+                "MaxLatency(us)": 3801,
+                "50thPercentileLatency(us)": 1773,
+                "95thPercentileLatency(us)": 3575,
+                "99thPercentileLatency(us)": 3801,
+                "Return=OK": 47
+              },
+              "OVERALL": {
+                "RunTime(ms)": 1898,
+                "Throughput(ops/sec)": 526.8703898840885
               },
               "READ": {
-                "Operations": 952,
-                "AverageLatency(us)": 1841.1123949579833,
-                "MinLatency(us)": 748,
-                "MaxLatency(us)": 54911,
-                "50thPercentileLatency(us)": 1530,
-                "95thPercentileLatency(us)": 3485,
-                "99thPercentileLatency(us)": 4847,
-                "Return=OK": 952
+                "Operations": 953,
+                "AverageLatency(us)": 1829.3557187827912,
+                "MinLatency(us)": 731,
+                "MaxLatency(us)": 55423,
+                "50thPercentileLatency(us)": 1538,
+                "95thPercentileLatency(us)": 3337,
+                "99thPercentileLatency(us)": 4595,
+                "Return=OK": 953
               }
             }
           },
@@ -652,7 +652,7 @@
   },
   {
     "project": "apache.zookeeper",
-    "repo": "http://github.com/apache/zookeeper",
+    "repo": "https://github.com/apache/zookeeper",
     "protocols": [
       {
         "name": "zab",
@@ -729,7 +729,7 @@
   },
   {
     "project": "otoolep.hraftd",
-    "repo": "http://github.com/otoolep/hraftd",
+    "repo": "https://github.com/otoolep/hraftd",
     "protocols": [
       {
         "name": "raft",
@@ -806,7 +806,7 @@
   },
   {
     "project": "Zhiying12.holipaxos-artifect",
-    "repo": "http://github.com/PanjiSri/holipaxos-artifect",
+    "repo": "https://github.com/PanjiSri/holipaxos-artifect",
     "protocols": [
       {
         "name": "holipaxos",
@@ -820,29 +820,29 @@
             "type": "single-client",
             "num_of_nodes": 3,
             "result": {
-              "READ": {
-                "Operations": 955,
-                "AverageLatency(us)": 1143.4376963350785,
-                "MinLatency(us)": 631,
-                "MaxLatency(us)": 4863,
-                "50thPercentileLatency(us)": 1004,
-                "95thPercentileLatency(us)": 2151,
-                "99thPercentileLatency(us)": 2983,
-                "Return=OK": 955
-              },
               "UPDATE": {
-                "Operations": 45,
-                "AverageLatency(us)": 1464.7111111111112,
-                "MinLatency(us)": 733,
-                "MaxLatency(us)": 3381,
-                "50thPercentileLatency(us)": 1292,
-                "95thPercentileLatency(us)": 2999,
-                "99thPercentileLatency(us)": 3381,
-                "Return=OK": 45
+                "Operations": 42,
+                "AverageLatency(us)": 1512.7857142857142,
+                "MinLatency(us)": 760,
+                "MaxLatency(us)": 3521,
+                "50thPercentileLatency(us)": 1244,
+                "95thPercentileLatency(us)": 2851,
+                "99thPercentileLatency(us)": 3521,
+                "Return=OK": 42
+              },
+              "READ": {
+                "Operations": 958,
+                "AverageLatency(us)": 1190.767223382046,
+                "MinLatency(us)": 630,
+                "MaxLatency(us)": 6679,
+                "50thPercentileLatency(us)": 1063,
+                "95thPercentileLatency(us)": 2215,
+                "99thPercentileLatency(us)": 3203,
+                "Return=OK": 958
               },
               "OVERALL": {
-                "RunTime(ms)": 1240,
-                "Throughput(ops/sec)": 806.4516129032259
+                "RunTime(ms)": 1283,
+                "Throughput(ops/sec)": 779.423226812159
               }
             }
           },
@@ -1039,29 +1039,29 @@
             "type": "single-client",
             "num_of_nodes": 3,
             "result": {
-              "UPDATE": {
-                "Operations": 54,
-                "AverageLatency(us)": 8507.111111111111,
-                "MinLatency(us)": 4756,
-                "MaxLatency(us)": 63615,
-                "50thPercentileLatency(us)": 6763,
-                "95thPercentileLatency(us)": 15223,
-                "99thPercentileLatency(us)": 63615,
-                "Return=OK": 54
-              },
               "OVERALL": {
-                "RunTime(ms)": 4205,
-                "Throughput(ops/sec)": 237.81212841854935
+                "RunTime(ms)": 4321,
+                "Throughput(ops/sec)": 231.42791020597085
               },
               "READ": {
-                "Operations": 946,
-                "AverageLatency(us)": 3246.010570824524,
-                "MinLatency(us)": 1189,
-                "MaxLatency(us)": 362495,
-                "50thPercentileLatency(us)": 2567,
-                "95thPercentileLatency(us)": 5283,
-                "99thPercentileLatency(us)": 7207,
-                "Return=OK": 946
+                "Operations": 947,
+                "AverageLatency(us)": 3287.3167898627244,
+                "MinLatency(us)": 1203,
+                "MaxLatency(us)": 359679,
+                "50thPercentileLatency(us)": 2599,
+                "95thPercentileLatency(us)": 5583,
+                "99thPercentileLatency(us)": 7327,
+                "Return=OK": 947
+              },
+              "UPDATE": {
+                "Operations": 53,
+                "AverageLatency(us)": 9161.547169811322,
+                "MinLatency(us)": 4324,
+                "MaxLatency(us)": 73663,
+                "50thPercentileLatency(us)": 7031,
+                "95thPercentileLatency(us)": 14711,
+                "99thPercentileLatency(us)": 73663,
+                "Return=OK": 53
               }
             }
           },
