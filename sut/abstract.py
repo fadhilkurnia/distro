@@ -9,6 +9,13 @@ import subprocess
 import warnings
 
 from src.utils import helper
+from src.utils.dependency import (
+    ProbeEntry,
+    run_local_probe,
+    run_remote_probe,
+    extract_version,
+    version_satisfies,
+)
 
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
@@ -29,8 +36,8 @@ class Launcher(ABC):
     ROOT_DIR = Path(".").resolve()
 
     def __init__(self, nodes, ssh, client_ip, num_of_nodes, output_file):
-        self.validate_nodes(nodes)
-        self.validate_ssh(ssh)
+        helper.validate_nodes(nodes)
+        helper.validate_ssh(ssh)
 
         self.nodes = nodes
 
@@ -78,6 +85,17 @@ class Launcher(ABC):
             raise ValueError("Project repository must be of type 'str'")
 
         self._project_repository = repository
+
+    @property
+    def repo_dir_path(self) -> str:
+        return self._repo_dir_path
+
+    @repo_dir_path.setter
+    def repo_dir_path(self, path):
+        if not isinstance(path, str):
+            raise ValueError("Path to repo directory must be of type 'str'")
+
+        self._repo_dir_path = path
 
     @property
     def selected_protocol(self):
@@ -128,11 +146,6 @@ class Launcher(ABC):
 
     @abstractmethod
     def build(self, *args, **kwargs):
-        warnings.warn(
-            f"{self.__class__.__name__}.build() is not implemented and should be overridden",
-            UserWarning,
-            stacklevel=2
-        )
         pass
 
     @abstractmethod
@@ -144,8 +157,31 @@ class Launcher(ABC):
         )
         pass
 
+    def check_dependency(self, entry: ProbeEntry, requirement: str, host=None):
+        if host is None:
+            host = "localhost"
+            success, output = run_local_probe(entry["probe"])
+        else:
+            success, output = run_remote_probe(entry["probe"], host, self.user, self.ssh_key)
+
+        if not success:
+            logging.error(f"Missing dependency '{entry["name"]}' in {host} (requires version {requirement})")
+            raise RuntimeError(output)
+
+        host_version = extract_version(output, entry["version_regex"])
+        if host_version is None:
+            logging.error(f"Unable to get version for dependency '{entry["name"]}' in {host}")
+            raise RuntimeError()
+
+        if version_satisfies(host_version, requirement):
+            logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
+            return True
+
+        logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
+        return False
+
     def ensure_repo_exists(self, dir_path, repo_url, commit=None):
-        path = self._get_repo_path_in_directory(dir_path, repo_url)
+        path = helper.get_repo_path_in_directory(dir_path, repo_url)
 
         if not path:
             logging.info(
@@ -155,9 +191,13 @@ class Launcher(ABC):
                 f"git clone {repo_url}"
             )
             self.local_run_cmd(git_clone_cmd)
-            path = self._get_repo_path_in_directory(dir_path, repo_url)
+            path = helper.get_repo_path_in_directory(dir_path, repo_url)
 
+        repo_commit = helper.get_commit(path)
+        matching_commit = False
         if commit:
+            matching_commit = repo_commit == commit
+
             logging.debug(f"Checking out commit: {commit}")
             git_reset_cmd = (
                 f"cd {path} && "
@@ -165,50 +205,7 @@ class Launcher(ABC):
             )
             self.local_run_cmd(git_reset_cmd)
 
-        return path
-
-    def _get_repo_path_in_directory(self, root_dir, repo_url):
-        if not os.path.isdir(root_dir):
-            return False
-
-        for item in os.listdir(root_dir):
-            item_path = os.path.join(root_dir, item)
-
-            if os.path.isdir(item_path):
-                if self._check_repo_exists(item_path, repo_url):
-                    logging.debug(f"Found repository '{
-                                  repo_url}' in '{item_path}'")
-                    return item_path
-
-        logging.debug(
-            f"Repository '{repo_url}' doesn't exist in '{item_path}'")
-        return False
-
-    def _check_repo_exists(self, dir_path, github_url):
-        if not os.path.isdir(dir_path):
-            return False
-
-        try:
-            result = subprocess.run(
-                "git config --get remote.origin.url",
-                cwd=dir_path,
-                check=True,
-                shell=True,
-                capture_output=True,
-                text=True
-            )
-
-            remote_url = result.stdout.strip()
-
-            if github_url.endswith('.git'):
-                github_url = github_url[:-4]
-            if remote_url.endswith('.git'):
-                remote_url = remote_url[:-4]
-
-            return github_url == remote_url
-
-        except subprocess.CalledProcessError:
-            return False
+        return path, matching_commit
 
     def _build_ycsb(self):
         local_ycsb_dir = str(YCSB_DIR.resolve())
@@ -436,47 +433,3 @@ class Launcher(ABC):
         logging.debug(f"Running: {rsync_cmd}")
         subprocess.run(rsync_cmd, check=True, shell=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    def validate_nodes(self, nodes):
-        if not isinstance(nodes, list):
-            raise TypeError("nodes must be of type list.")
-
-        if len(nodes) == 0:
-            raise ValueError("nodes is empty.")
-
-        for item in nodes:
-            if not isinstance(item, dict):
-                raise TypeError("Each item in nodes must be of type dict.")
-
-            if not ("public_ip" in item and "private_ip" in item):
-                raise KeyError(
-                    "Each dictionary in nodes must contain 'public_ip' and 'private_ip' keys.")
-
-            if not isinstance(item['public_ip'], str):
-                raise TypeError(f"node 'public_ip' must be a string, got {
-                                type(item['public_ip']).__name__}.")
-
-            if not isinstance(item['private_ip'], str):
-                raise TypeError(f"node 'private_ip' must be a string, got {
-                                type(item['private_ip']).__name__}.")
-
-    def validate_ssh(self, ssh):
-        if not isinstance(ssh, dict):
-            raise TypeError("ssh must be of type dict.")
-
-        required_keys = ['key', 'username', 'filename']
-        for k in required_keys:
-            if k not in ssh:
-                raise KeyError(f"ssh missing required key: '{k}'")
-
-        if not isinstance(ssh['key'], Path):
-            raise TypeError(f"ssh key 'key' must be of type pathlib.Path, got {
-                            type(ssh['key']).__name__} instead.")
-
-        if not isinstance(ssh['username'], str):
-            raise TypeError(f"ssh key 'username' must be of type str, got {
-                            type(ssh['username']).__name__} instead.")
-
-        if not isinstance(ssh['filename'], str):
-            raise TypeError(f"ssh key 'filename' must be of type str, got {
-                            type(ssh['filename']).__name__} instead.")

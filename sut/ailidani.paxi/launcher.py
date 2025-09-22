@@ -1,12 +1,11 @@
 import json
 import logging
-from pathlib import Path
+import os
 
 from sut.abstract import Launcher
 from src.utils import helper
+from src.utils.dependency_probes import DEPENDENCIES
 
-PAXI_DIR = Path("./sut/ailidani.paxi")
-PAXI_BIN = PAXI_DIR / "paxi" / "bin"
 REPO = "git@github.com:ailidani/paxi.git"
 COMMIT_HASH = "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd"
 
@@ -71,10 +70,9 @@ class PaxiLauncher(Launcher):
             "persistency": "In-Memory",
         }
 
-        # Build here...
-        self.build()
-
         port_map = self.map_ip_port()
+        config_path = self.generate_config(port_map)
+        self.build(config_path)
 
         while True:
             val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
@@ -82,9 +80,9 @@ class PaxiLauncher(Launcher):
 
             match val:
                 case 0:
-                    self.start(port_map)
+                    self.start(port_map, config_path)
                 case 1:
-                    self.stop(port_map)
+                    self.stop(port_map, config_path)
                 case 2:
                     endpoints = [f"http://{ip}:{port}" for ip,
                                  port in port_map["public"].items()]
@@ -92,7 +90,7 @@ class PaxiLauncher(Launcher):
 
     def generate_config(self, port_map):
         logging.info("Generating run_config.json file")
-        with open(PAXI_DIR / "template.json", 'r') as file:
+        with open(f"{self.local_dir}/template.json", 'r') as file:
             data = json.load(file)
 
         for i, node in enumerate(self.nodes):
@@ -105,22 +103,20 @@ class PaxiLauncher(Launcher):
             data["address"][id] = f"tcp://{private_ip}:{private_port}"
             data["http_address"][id] = f"http://{public_ip}:{public_port}"
 
-        config = PAXI_DIR / "run_config.json"
+        config = f"{self.local_dir}/run_config.json"
         with open(config, "w") as f:
             json.dump(data, f, indent=2)
 
         return config
 
-    def start(self, port_map):
-        config_path = self.generate_config(port_map)
-        self.build(config_path)
+    def start(self, port_map, config_path):
+        binary = f"{self.repo_dir_path}/server"
 
-        binary = PAXI_BIN / "server"
         for i, node in enumerate(self.nodes):
             logging.info(f"Starting Paxi instance on {node["public_ip"]}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 run_cmd = (
-                    f"nohup {binary.resolve()} -id 1.{i+1} "
+                    f"nohup {binary} -id 1.{i+1} "
                     f"-algorithm={self.selected_protocol['name']} "
                     f"-config {config_path} > /dev/null 2>&1 &"
                 )
@@ -138,18 +134,16 @@ class PaxiLauncher(Launcher):
 
         logging.info(f"All paxi {self.selected_protocol['name']} instances successfully started")
 
-    def stop(self, port_map):
-        binary = PAXI_BIN / "server"
-        local_config = PAXI_DIR / "run_config.json"
+    def stop(self, port_map, local_config):
+        binary = f"{self.repo_dir_path}/server"
 
         for i, node in enumerate(self.nodes):
             logging.info(f"Stopping Paxi instance on {node["public_ip"]}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
-                    f"pids=$(ps aux | grep '{binary.resolve()}' | grep -v grep | awk '{{print $2}}'); "
+                    f"pids=$(ps aux | grep '{binary}' | grep -v grep | awk '{{print $2}}'); "
                     f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
                     f"rm server.*.log; "
-                    f"rm {local_config.resolve()}"
                 )
                 self.local_run_cmd(stop_cmd)
             else:
@@ -165,87 +159,39 @@ class PaxiLauncher(Launcher):
 
                 self.remote_run_cmd(node["public_ip"], stop_cmd, False)
 
+        rm_config_cmd = f"rm {local_config}"
+        self.local_run_cmd(rm_config_cmd)
+
         logging.info(f"All paxi {self.selected_protocol['name']} instances successfully stopped")
 
-    def build(self, config_path=None):
+    def build(self, config_path):
         logging.info("Checking if protocol executables already exists...")
+        path, matching_commit = self.ensure_repo_exists(self.local_dir,
+                                                        self.project_repository,
+                                                        COMMIT_HASH)
 
-        path = self.ensure_repo_exists(self.local_dir,
-                                       self.project_repository,
-                                       COMMIT_HASH)
+        self.repo_dir_path = path
+        self.check_dependency(DEPENDENCIES["golang"], ">=1.18")
+        binary = f"{path}/bin/server"
 
-        logging.info("Building protocol executables...")
-        '''
-        self.check_dependency(DEPENDECIES.golang, ">=13123.123")
+        # Rebuild if binary doesn't exist
+        # or if repo commit doesn't match the default commit hash
+        if not os.path.isfile(binary) or not matching_commit:
+            logging.info("Building protocol executables...")
+            build_cmd = (
+                f"cd {path}/bin && "
+                "./build.sh"
+            )
+            self.local_run_cmd(build_cmd)
 
-        self._local_run_cmd(....)
-        self._remote_run_cmd(....)
-        '''
-
-
-
-        return
-
-        # rsync data to remote nodes
-        binary = PAXI_BIN / "server"
-        source_files = f"{str(config_path.resolve())} {str(binary.resolve())}"
+        source_files = f"{config_path} {binary}"
         remote_dir = f"/home/{self.user}/paxi"
 
         for node in self.nodes:
             if node["public_ip"] == "127.0.0.1":
                 continue
 
+            logging.info(f"Sending protocol executables to {node["public_ip"]}")
             self.remote_rsync(node["public_ip"], source_files, remote_dir)
 
-
-'''
-def start(path, protocol, nodes, ssh, port_map):
-    config_path = generate_config(nodes, port_map)
-
-    server = path / "server"
-    for i, node in enumerate(nodes):
-        if node["private"] == "127.0.0.1" and node["public"] == "127.0.0.1":
-            local_start(server, protocol, config_path, i+1)
-        else:
-            remote_start(server, protocol, config_path, i+1, node, ssh)
-
-    print(f"Paxi {protocol['name']} instances successfully started")
-
-
-
-
-def local_start(binary, protocol, config_path, id):
-    run_cmd = (
-        f"nohup {binary.resolve()} -id 1.{id} -algorithm={protocol['name']} "
-        f"-config {config_path} > /dev/null 2>&1 &"
-    )
-    print("Starting Paxi on localhost")
-    subprocess.run(run_cmd, check=True, shell=True)
-
-
-def remote_start(binary, protocol, config_path, id, node):
-    host = node["public"]
-    user = ssh["username"]
-    remote_dir = f"/home/{user}/paxi"
-    remote_server = f"{remote_dir}/server"
-    remote_config = f"{remote_dir}/run_config.json"
-
-    copy_cmd = ["rsync", "-avz", "-e", f"ssh -i {ssh['key']}",
-                str(config_path.resolve()), str(binary.resolve()),
-                f'{user}@{host}:{remote_dir}/']
-
-    run_cmd = (
-        f"ssh -i {ssh['key']} {user}@{host} "
-        f"'nohup {remote_server} -id 1.{id} -algorithm={protocol['name']} "
-        f"-config {remote_config} > /dev/null 2>&1 &'"
-    )
-
-    copy_cmd = ["rsync", "-avz", "-e", f"ssh -i {ssh['key']}",
-                str(config_path.resolve()), str(binary.resolve()),
-                f'{user}@{host}:{remote_dir}/']
-    subprocess.run(copy_cmd, check=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"Starting Paxi remotely on {host}")
-    subprocess.run(run_cmd, check=True, shell=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-'''
+        logging.info("Paxi build & setup complete")
