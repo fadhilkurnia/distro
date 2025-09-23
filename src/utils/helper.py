@@ -152,3 +152,23 @@ def get_repo_path_in_directory(root_dir, repo_url):
     logging.debug(
         f"Repository '{repo_url}' doesn't exist in '{item_path}'")
     return False
+
+
+def check_subdir_exists(parent_dir: str, subdir_name: str) -> bool:
+    """
+    Checks if a subdirectory exists within a parent directory.
+
+    Parameters
+    ----------
+    parent_dir : str
+        The path to the parent directory.
+    subdir_name : str
+        The name of the subdirectory to check for.
+
+    Returns
+    -------
+    bool
+        True if the subdirectory exists, False otherwise.
+    """
+    subdir_path = Path(parent_dir) / subdir_name
+    return subdir_path.is_dir()

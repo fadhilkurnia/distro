@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 import inspect
 import json
 import logging
-import os
 from pathlib import Path
 import shlex
 import subprocess
+import sys
 import warnings
 
 from src.utils import helper
@@ -177,8 +177,8 @@ class Launcher(ABC):
             logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
             return True
 
-        logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
-        return False
+        logging.error(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
+        sys.exit(f"{host} did not meet {entry["name"]} version requirement. Exiting distrobench")
 
     def ensure_repo_exists(self, dir_path, repo_url, commit=None):
         path = helper.get_repo_path_in_directory(dir_path, repo_url)

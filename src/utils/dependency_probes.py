@@ -8,6 +8,7 @@ class ProbeConfig(TypedDict):
     """
     maven: ProbeEntry
     golang: ProbeEntry
+    java: ProbeEntry
 
 
 # Add probes here and in ProbeConfig class schema.
@@ -22,5 +23,10 @@ DEPENDENCIES: ProbeConfig = {
         "name": "Go",
         "probe": "go version",
         "version_regex": "go version go(?P<version>[0-9.]+)"
+    },
+    "java": {
+        "name": "Java",
+        "probe": "java -version",
+        "version_regex": "version \"(?P<version>[0-9.]+)\""
     }
 }

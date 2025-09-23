@@ -71,8 +71,7 @@ class PaxiLauncher(Launcher):
         }
 
         port_map = self.map_ip_port()
-        config_path = self.generate_config(port_map)
-        self.build(config_path)
+        self.build()
 
         while True:
             val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
@@ -80,9 +79,9 @@ class PaxiLauncher(Launcher):
 
             match val:
                 case 0:
-                    self.start(port_map, config_path)
+                    self.start(port_map)
                 case 1:
-                    self.stop(port_map, config_path)
+                    self.stop(port_map)
                 case 2:
                     endpoints = [f"http://{ip}:{port}" for ip,
                                  port in port_map["public"].items()]
@@ -109,9 +108,21 @@ class PaxiLauncher(Launcher):
 
         return config
 
-    def start(self, port_map, config_path):
+    def start(self, port_map):
+        config_path = self.generate_config(port_map)
         binary = f"{self.repo_dir_path}/server"
+        source_files = f"{config_path} {binary}"
+        remote_dir = f"/home/{self.user}/paxi"
 
+        # Send binary to remote machine
+        for node in self.nodes:
+            if node["public_ip"] == "127.0.0.1":
+                continue
+
+            logging.info(f"Sending protocol executables to {node["public_ip"]}")
+            self.remote_rsync(node["public_ip"], source_files, remote_dir)
+
+        # Start paxi instances
         for i, node in enumerate(self.nodes):
             logging.info(f"Starting Paxi instance on {node["public_ip"]}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
@@ -134,7 +145,7 @@ class PaxiLauncher(Launcher):
 
         logging.info(f"All paxi {self.selected_protocol['name']} instances successfully started")
 
-    def stop(self, port_map, local_config):
+    def stop(self, port_map):
         binary = f"{self.repo_dir_path}/server"
 
         for i, node in enumerate(self.nodes):
@@ -159,17 +170,17 @@ class PaxiLauncher(Launcher):
 
                 self.remote_run_cmd(node["public_ip"], stop_cmd, False)
 
+        local_config = f"{self.local_dir}/run_config.json"
         rm_config_cmd = f"rm {local_config}"
         self.local_run_cmd(rm_config_cmd)
 
         logging.info(f"All paxi {self.selected_protocol['name']} instances successfully stopped")
 
-    def build(self, config_path):
+    def build(self):
         logging.info("Checking if protocol executables already exists...")
         path, matching_commit = self.ensure_repo_exists(self.local_dir,
                                                         self.project_repository,
                                                         COMMIT_HASH)
-
         self.repo_dir_path = path
         self.check_dependency(DEPENDENCIES["golang"], ">=1.18")
         binary = f"{path}/bin/server"
@@ -184,14 +195,4 @@ class PaxiLauncher(Launcher):
             )
             self.local_run_cmd(build_cmd)
 
-        source_files = f"{config_path} {binary}"
-        remote_dir = f"/home/{self.user}/paxi"
-
-        for node in self.nodes:
-            if node["public_ip"] == "127.0.0.1":
-                continue
-
-            logging.info(f"Sending protocol executables to {node["public_ip"]}")
-            self.remote_rsync(node["public_ip"], source_files, remote_dir)
-
-        logging.info("Paxi build & setup complete")
+        logging.info("Paxi build complete")

@@ -1099,5 +1099,51 @@
         ]
       }
     ]
+  },
+  {
+    "project": "apache.zookeeper",
+    "repo": "git@github.com:apache/zookeeper.git",
+    "protocols": [
+      {
+        "name": "zab",
+        "language": "Java",
+        "consistency": "Linearizability + Primary Integrity",
+        "persistency": "In-Memory",
+        "commit": "19f1842d4b6ee1f82cc8b05284959b26c6ae507d",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 53,
+                "AverageLatency(us)": 5643.2830188679245,
+                "MinLatency(us)": 3584,
+                "MaxLatency(us)": 13807,
+                "50thPercentileLatency(us)": 5199,
+                "95thPercentileLatency(us)": 8631,
+                "99thPercentileLatency(us)": 13807,
+                "Return=OK": 53
+              },
+              "OVERALL": {
+                "RunTime(ms)": 1716,
+                "Throughput(ops/sec)": 582.7505827505828
+              },
+              "READ": {
+                "Operations": 947,
+                "AverageLatency(us)": 1233.119324181626,
+                "MinLatency(us)": 516,
+                "MaxLatency(us)": 58527,
+                "50thPercentileLatency(us)": 1011,
+                "95thPercentileLatency(us)": 2553,
+                "99thPercentileLatency(us)": 3693,
+                "Return=OK": 947
+              }
+            }
+          }
+        ]
+      }
+    ]
   }
 ]
