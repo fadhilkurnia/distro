@@ -59,6 +59,7 @@ class PaxiLauncher(Launcher):
         prot_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
 
         self.project_name = "ailidani.paxi"
+        self.remote_dir = f"/home/{self.user}/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "paxi"
@@ -112,7 +113,6 @@ class PaxiLauncher(Launcher):
         config_path = self.generate_config(port_map)
         binary = f"{self.repo_dir_path}/server"
         source_files = f"{config_path} {binary}"
-        remote_dir = f"/home/{self.user}/{self.project_name}"
 
         # Send binary to remote machine
         for node in self.nodes:
@@ -120,7 +120,7 @@ class PaxiLauncher(Launcher):
                 continue
 
             logging.info(f"Sending protocol executables to {node["public_ip"]}")
-            self.remote_rsync(node["public_ip"], source_files, remote_dir)
+            self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start paxi instances
         for i, node in enumerate(self.nodes):
@@ -133,9 +133,8 @@ class PaxiLauncher(Launcher):
                 )
                 self.local_run_cmd(run_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
-                remote_binary = f"{remote_dir}/server"
-                remote_config = f"{remote_dir}/run_config.json"
+                remote_binary = f"{self.remote_dir}/server"
+                remote_config = f"{self.remote_dir}/run_config.json"
                 run_cmd = (
                     f"nohup {remote_binary} -id 1.{i+1} "
                     f"-algorithm={self.selected_protocol['name']} "
@@ -158,9 +157,8 @@ class PaxiLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
-                remote_binary = f"{remote_dir}/server"
-                remote_config = f"{remote_dir}/run_config.json"
+                remote_binary = f"{self.remote_dir}/server"
+                remote_config = f"{self.remote_dir}/run_config.json"
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); "
                     f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "

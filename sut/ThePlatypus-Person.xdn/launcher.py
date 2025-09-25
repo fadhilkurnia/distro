@@ -54,6 +54,7 @@ class XdnLauncher(Launcher):
         logging.info("Launching XdnLauncher")
 
         self.project_name = "ThePlatypus-Person.xdn"
+        self.remote_dir = f"/home/{self.user}/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "xdn"

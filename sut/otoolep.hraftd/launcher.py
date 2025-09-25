@@ -46,6 +46,7 @@ class HraftdLauncher(Launcher):
         logging.info("Launching HraftdLauncher")
 
         self.project_name = "otoolep.hraftd"
+        self.remote_dir = f"/home/{self.user}/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "hraftd"
@@ -82,7 +83,6 @@ class HraftdLauncher(Launcher):
     def start(self, nodes_map):
         binary = f"{self.repo_dir_path}/hraftd"
         source_files = f"{binary}"
-        remote_dir = f"/home/{self.user}/{self.project_name}"
 
         # Send binary to remote machine
         for node in self.nodes:
@@ -90,7 +90,7 @@ class HraftdLauncher(Launcher):
                 continue
 
             logging.info(f"Sending hraftd binary to {node["public_ip"]}")
-            self.remote_rsync(node["public_ip"], source_files, remote_dir)
+            self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start hraftd instances
         join = None
@@ -109,9 +109,8 @@ class HraftdLauncher(Launcher):
                 )
                 self.local_run_cmd(run_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
-                remote_binary = f"{remote_dir}/hraftd"
-                data_dir = f"{remote_dir}/node{i+1}"
+                remote_binary = f"{self.remote_dir}/hraftd"
+                data_dir = f"{self.remote_dir}/node{i+1}"
                 run_cmd = (
                     f"nohup {remote_binary} -id node{i+1} -haddr {haddr} "
                     f"-raddr {raddr} {join_part} {data_dir} > /dev/null 2>&1 &"
@@ -137,9 +136,8 @@ class HraftdLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
-                remote_binary = f"{remote_dir}/hraftd"
-                data_dir = f"{remote_dir}/node{i+1}"
+                remote_binary = f"{self.remote_dir}/hraftd"
+                data_dir = f"{self.remote_dir}/node{i+1}"
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); "
                     f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "

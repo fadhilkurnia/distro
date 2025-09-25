@@ -47,7 +47,6 @@ class Launcher(ABC):
 
         subclass_file = inspect.getfile(self.__class__)
         self.local_dir = Path(subclass_file).parent.resolve()
-        self.remote_dir = f"/home/{self.user}"
 
         self.client_ip = client_ip
         self.num_of_nodes = num_of_nodes

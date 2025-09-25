@@ -60,6 +60,7 @@ class ZookeeperLauncher(Launcher):
         logging.info("Launching ZookeeperLauncher")
 
         self.project_name = "apache.zookeeper"
+        self.remote_dir = f"/home/{self.user}/{self.project_name}"
         self.project_repository = REPO
         self.ycsb_interface = "zookeeper"
         self.ycsb_endpoint = "zookeeper.connectString"
@@ -86,20 +87,20 @@ class ZookeeperLauncher(Launcher):
                     endpoints = [f"{node["public_ip"]}:{node["client"]}" for node in node_maps]
                     self.ycsb(endpoints)
 
-    def generate_config(self, port_map):
+    def generate_config(self, node_maps):
         template_config = []
         with open(f"{self.local_dir}/template.cfg", 'r') as file:
             for line in file:
                 template_config.append(line.strip())
 
-            for i, node in enumerate(port_map):
+            for i, node in enumerate(node_maps):
                 template_config.append(f"server.{i+1}={node["private_ip"]}:{node['peer']}:{node['election']}")
 
-        for i, node in enumerate(port_map):
+        for i, node in enumerate(node_maps):
             local_config_path = f"{self.local_dir}/cluster/node{i+1}/config.cfg"
             local_myid_path = f"{self.local_dir}/cluster/node{i+1}/data/myid"
             local_data_path = f"{self.local_dir}/cluster/node{i+1}/data"
-            remote_data_path = f"/home/{self.user}/{self.project_name}/node{i+1}/data"
+            remote_data_path = f"{self.remote_dir}/node{i+1}/data"
 
             logging.info(f"Generating {local_config_path}")
 
@@ -125,7 +126,6 @@ class ZookeeperLauncher(Launcher):
 
         # Copy binary over to remote machine
         config_path = f"{self.local_dir}/cluster"
-        remote_dir = f"/home/{self.user}/{self.project_name}"
 
         for i, node in enumerate(self.nodes):
             if node["public_ip"] == "127.0.0.1":
@@ -137,10 +137,10 @@ class ZookeeperLauncher(Launcher):
             source_files = f"{self.repo_dir_path} {copied_config}"
 
             logging.info(f"Sending protocol executables and configs to {node["public_ip"]}")
-            self.remote_rsync(node["public_ip"], source_files, remote_dir)
+            self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start instances
-        for i, node in enumerate(self.nodes):
+        for i, node in enumerate(node_maps):
             logging.info(f"Starting Zookeeper instance on {node["public_ip"]}")
 
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
@@ -149,9 +149,8 @@ class ZookeeperLauncher(Launcher):
                 run_cmd = f"{local_binary} start {local_config}"
                 self.local_run_cmd(run_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
-                remote_binary = f"{remote_dir}/{self.extracted_bin_name}/bin/zkServer.sh"
-                remote_config = f"{remote_dir}/node{i+1}/config.cfg"
+                remote_binary = f"{self.remote_dir}/{self.extracted_bin_name}/bin/zkServer.sh"
+                remote_config = f"{self.remote_dir}/node{i+1}/config.cfg"
                 run_cmd = f"{remote_binary} start {remote_config}"
                 self.remote_run_cmd(node["public_ip"], run_cmd, True)
 
@@ -160,7 +159,7 @@ class ZookeeperLauncher(Launcher):
         # Insert /benchmark for YCSB from local machine
         client = f"{self.repo_dir_path}/bin/zkCli.sh"
         process = subprocess.Popen(
-            [client, "-server", f"{self.nodes[0]["public_ip"]}:2101"],
+            [client, "-server", f"{node_maps["public_ip"]}:2101"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -177,7 +176,7 @@ class ZookeeperLauncher(Launcher):
         logging.info("Zookeeper cluster successfully started")
 
     def stop(self, node_maps):
-        for i, node in enumerate(self.nodes):
+        for i, node in enumerate(node_maps):
             logging.info(f"Stopping Zookeeper instance on {node["public_ip"]}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_binary = f"{self.repo_dir_path}/bin/zkServer.sh"
@@ -185,12 +184,11 @@ class ZookeeperLauncher(Launcher):
                 stop_cmd = f"{local_binary} stop {local_config}"
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
-                remote_binary = f"{remote_dir}/{self.extracted_bin_name}/bin/zkServer.sh"
-                remote_config = f"{remote_dir}/node{i+1}/config.cfg"
+                remote_binary = f"{self.remote_dir}/{self.extracted_bin_name}/bin/zkServer.sh"
+                remote_config = f"{self.remote_dir}/node{i+1}/config.cfg"
                 stop_cmd = (
                     f"{remote_binary} stop {remote_config} && "
-                    f"rm -rf {remote_dir}/node{i+1}"
+                    f"rm -rf {self.remote_dir}/node{i+1}"
                 )
                 self.remote_run_cmd(node["public_ip"], stop_cmd, False)
 
@@ -219,7 +217,7 @@ class ZookeeperLauncher(Launcher):
                 self.local_run_cmd(curl_cmd)
         else:
             # Build from Source
-            logging.info(f"Building from source version {RELEASE_VER}")
+            logging.info(f"Building from source version {SOURCE_VER}")
             self.project_commit = SOURCE_HASH
             path, matching_commit = self.ensure_repo_exists(self.local_dir,
                                                             self.project_repository,
