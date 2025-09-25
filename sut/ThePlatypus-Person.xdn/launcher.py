@@ -84,7 +84,7 @@ class XdnLauncher(Launcher):
                     ]
                     self.ycsb(endpoints)
 
-    def generate_config(self, port_map):
+    def generate_config(self, nodes_map):
         logging.info("Generating config.properties file")
         config = []
         with open(f"{self.local_dir}/template.properties", 'r') as file:
@@ -93,13 +93,13 @@ class XdnLauncher(Launcher):
 
             config.append(f"DEFAULT_NUM_REPLICAS={self.num_of_nodes}")
 
-            for i, node in enumerate(port_map):
+            for i, node in enumerate(nodes_map):
                 config.append(f"active.AR{i}={node["private_ip"]}:{node["port"]}")
 
-            reconf = port_map[0]
+            reconf = nodes_map[0]
             config.append(f"reconfigurator.RC0={reconf["private_ip"]}:{reconf["port"] + 1000}")
 
-            if port_map[0]["private_ip"] == "127.0.0.1" and port_map[0]["public_ip"] == "127.0.0.1":
+            if nodes_map[0]["private_ip"] == "127.0.0.1" and nodes_map[0]["public_ip"] == "127.0.0.1":
                 config.append(f"SSH_KEY_PATH={self.ssh_key}")
             else:
                 config.append(f"SSH_KEY_PATH=/home/{self.user}/ThePlatypus-Person.xdn/{self.ssh_filename}")
@@ -111,8 +111,8 @@ class XdnLauncher(Launcher):
 
         return config_path
 
-    def start(self, port_map):
-        config_path = self.generate_config(port_map)
+    def start(self, nodes_map):
+        config_path = self.generate_config(nodes_map)
 
         # Send binary to remote machine
         build_dir = f"{self.repo_dir_path}/build"
@@ -144,7 +144,7 @@ class XdnLauncher(Launcher):
             jar_files.append(item)
 
         # Start instances
-        for i, node in enumerate(self.nodes):
+        for i, node in enumerate(nodes_map):
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_jars = [f"{self.repo_dir_path}/jars/{item}" for item in jar_files]
                 jars = ":".join(local_jars)
@@ -183,7 +183,7 @@ class XdnLauncher(Launcher):
                 self.remote_run_cmd(node["public_ip"], run_cmd, True)
 
         # Start Reconfigurator
-        if self.nodes[0]["private_ip"] == "127.0.0.1" and self.nodes[0]["public_ip"] == "127.0.0.1":
+        if nodes_map[0]["private_ip"] == "127.0.0.1" and nodes_map[0]["public_ip"] == "127.0.0.1":
             local_jars = [f"{self.repo_dir_path}/jars/{item}" for item in jar_files]
             jars = ":".join(local_jars)
             run_cmd = (
@@ -218,17 +218,17 @@ class XdnLauncher(Launcher):
                 f"edu.umass.cs.reconfiguration.ReconfigurableNode RC0 "
                 f"> reconf_{i}.log 2>&1 &"
             )
-            self.remote_run_cmd(self.nodes[0]["public_ip"], run_cmd, True)
+            self.remote_run_cmd(nodes_map[0]["public_ip"], run_cmd, True)
 
         time.sleep(15)
         env = os.environ.copy()
-        env["XDN_CONTROL_PLANE"] = self.nodes[0]["public_ip"]
+        env["XDN_CONTROL_PLANE"] = nodes_map[0]["public_ip"]
         yaml_path = f"{self.local_dir}/restkv-nd.yaml"
         cmd_service = [f"{self.repo_dir_path}/bin/xdn", "launch", "restkv", f"--file={yaml_path}"]
         subprocess.run(cmd_service, text=True, env=env)
         logging.info("All XDN instances successfully started")
 
-    def stop(self, port_map):
+    def stop(self, nodes_map):
         core_cleanup_cmd = (
             "pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
             "for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
@@ -247,8 +247,8 @@ class XdnLauncher(Launcher):
             "rm -rf /tmp/xdn /tmp/gigapaxos"
         )
 
-        for i, node in enumerate(self.nodes):
-            logging.info(f"Stopping Paxi instance on {node["public_ip"]}")
+        for i, node in enumerate(nodes_map):
+            logging.info(f"Stopping XDN instance on {node["public_ip"]}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
                     f"{core_cleanup_cmd}; "
