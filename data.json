@@ -1143,6 +1143,93 @@
             }
           }
         ]
+      },
+      {
+        "name": "zab",
+        "language": "Java",
+        "consistency": "Linearizability + Primary Integrity",
+        "persistency": "In-Memory",
+        "commit": "d8e5217729bfc7303b15bc36b1a6b7f1ecdd07d4",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "OVERALL": {
+                "RunTime(ms)": 1539,
+                "Throughput(ops/sec)": 649.772579597141
+              },
+              "READ": {
+                "Operations": 958,
+                "AverageLatency(us)": 1131.3329853862213,
+                "MinLatency(us)": 469,
+                "MaxLatency(us)": 57759,
+                "50thPercentileLatency(us)": 926,
+                "95thPercentileLatency(us)": 2227,
+                "99thPercentileLatency(us)": 3065,
+                "Return=OK": 958
+              },
+              "UPDATE": {
+                "Operations": 42,
+                "AverageLatency(us)": 4779.285714285715,
+                "MinLatency(us)": 3246,
+                "MaxLatency(us)": 9175,
+                "50thPercentileLatency(us)": 4475,
+                "95thPercentileLatency(us)": 7343,
+                "99thPercentileLatency(us)": 9175,
+                "Return=OK": 42
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "project": "ThePlatypus-Person.xdn",
+    "repo": "git@github.com:ThePlatypus-Person/xdn.git",
+    "protocols": [
+      {
+        "name": "xdn",
+        "language": "Java",
+        "consistency": "Linearizability + Primary Integrity",
+        "persistency": "On-Disk",
+        "commit": "fbd416c60403fbaeddddf6909ff28d0d0abe9542",
+        "workloads": [
+          {
+            "name": "read-heavy",
+            "type": "single-client",
+            "num_of_nodes": 3,
+            "result": {
+              "UPDATE": {
+                "Operations": 53,
+                "AverageLatency(us)": 21114.79245283019,
+                "MinLatency(us)": 14224,
+                "MaxLatency(us)": 56639,
+                "50thPercentileLatency(us)": 18927,
+                "95thPercentileLatency(us)": 39359,
+                "99thPercentileLatency(us)": 56639,
+                "Return=OK": 53
+              },
+              "READ": {
+                "Operations": 945,
+                "AverageLatency(us)": 10962.44761904762,
+                "MinLatency(us)": 3884,
+                "MaxLatency(us)": 43071,
+                "50thPercentileLatency(us)": 10295,
+                "95thPercentileLatency(us)": 17471,
+                "99thPercentileLatency(us)": 24335,
+                "Return=OK": 945,
+                "Return=ERROR": 2
+              },
+              "OVERALL": {
+                "RunTime(ms)": 17551,
+                "Throughput(ops/sec)": 56.976810438151674
+              }
+            }
+          }
+        ]
       }
     ]
   }

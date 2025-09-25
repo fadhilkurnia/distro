@@ -112,7 +112,7 @@ class PaxiLauncher(Launcher):
         config_path = self.generate_config(port_map)
         binary = f"{self.repo_dir_path}/server"
         source_files = f"{config_path} {binary}"
-        remote_dir = f"/home/{self.user}/paxi"
+        remote_dir = f"/home/{self.user}/{self.project_name}"
 
         # Send binary to remote machine
         for node in self.nodes:
@@ -133,7 +133,7 @@ class PaxiLauncher(Launcher):
                 )
                 self.local_run_cmd(run_cmd)
             else:
-                remote_dir = f"/home/{self.user}/paxi"
+                remote_dir = f"/home/{self.user}/{self.project_name}"
                 remote_binary = f"{remote_dir}/server"
                 remote_config = f"{remote_dir}/run_config.json"
                 run_cmd = (
@@ -158,7 +158,7 @@ class PaxiLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"/home/{self.user}/paxi"
+                remote_dir = f"/home/{self.user}/{self.project_name}"
                 remote_binary = f"{remote_dir}/server"
                 remote_config = f"{remote_dir}/run_config.json"
                 stop_cmd = (

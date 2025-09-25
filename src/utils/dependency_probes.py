@@ -9,6 +9,9 @@ class ProbeConfig(TypedDict):
     maven: ProbeEntry
     golang: ProbeEntry
     java: ProbeEntry
+    docker: ProbeEntry
+    fuse: ProbeEntry
+    rust: ProbeEntry
 
 
 # Add probes here and in ProbeConfig class schema.
@@ -28,5 +31,25 @@ DEPENDENCIES: ProbeConfig = {
         "name": "Java",
         "probe": "java -version",
         "version_regex": "version \"(?P<version>[0-9.]+)\""
-    }
+    },
+    "docker": {
+        "name": "Docker",
+        "probe": "docker --version",
+        "version_regex": "Docker version (?P<version>[0-9.]+)"
+    },
+    "fuse": {
+        "name": "libfuse3",
+        "probe": "fusermount --version",
+        "version_regex": "fusermount3 version: (?P<version>[0-9.]+)"
+    },
+    "rust": {
+        "name": "rust",
+        "probe": "rustc --version",
+        "version_regex": "rustc (?P<version>[0-9.]+)"
+    },
+    "cargo": {
+        "name": "cargo",
+        "probe": "cargo --version",
+        "version_regex": "cargo (?P<version>[0-9.]+)"
+    },
 }

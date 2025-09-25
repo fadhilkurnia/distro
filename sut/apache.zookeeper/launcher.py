@@ -99,7 +99,7 @@ class ZookeeperLauncher(Launcher):
             local_config_path = f"{self.local_dir}/cluster/node{i+1}/config.cfg"
             local_myid_path = f"{self.local_dir}/cluster/node{i+1}/data/myid"
             local_data_path = f"{self.local_dir}/cluster/node{i+1}/data"
-            remote_data_path = f"/home/{self.user}/zookeeper/node{i+1}/data"
+            remote_data_path = f"/home/{self.user}/{self.project_name}/node{i+1}/data"
 
             logging.info(f"Generating {local_config_path}")
 
@@ -125,12 +125,14 @@ class ZookeeperLauncher(Launcher):
 
         # Copy binary over to remote machine
         config_path = f"{self.local_dir}/cluster"
-        remote_dir = f"/home/{self.user}/zookeeper"
+        remote_dir = f"/home/{self.user}/{self.project_name}"
 
         for i, node in enumerate(self.nodes):
             if node["public_ip"] == "127.0.0.1":
                 continue
 
+            self.check_dependency(DEPENDENCIES["java"], ">=17", node["public_ip"])
+            self.check_dependency(DEPENDENCIES["maven"], ">=3.8", node["public_ip"])
             copied_config = f"{config_path}/node{i+1}"
             source_files = f"{self.repo_dir_path} {copied_config}"
 
@@ -147,7 +149,7 @@ class ZookeeperLauncher(Launcher):
                 run_cmd = f"{local_binary} start {local_config}"
                 self.local_run_cmd(run_cmd)
             else:
-                remote_dir = f"/home/{self.user}/zookeeper"
+                remote_dir = f"/home/{self.user}/{self.project_name}"
                 remote_binary = f"{remote_dir}/{self.extracted_bin_name}/bin/zkServer.sh"
                 remote_config = f"{remote_dir}/node{i+1}/config.cfg"
                 run_cmd = f"{remote_binary} start {remote_config}"
@@ -183,7 +185,7 @@ class ZookeeperLauncher(Launcher):
                 stop_cmd = f"{local_binary} stop {local_config}"
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"/home/{self.user}/zookeeper"
+                remote_dir = f"/home/{self.user}/{self.project_name}"
                 remote_binary = f"{remote_dir}/{self.extracted_bin_name}/bin/zkServer.sh"
                 remote_config = f"{remote_dir}/node{i+1}/config.cfg"
                 stop_cmd = (

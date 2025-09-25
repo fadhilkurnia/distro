@@ -365,7 +365,7 @@ class Launcher(ABC):
                                   ), None)
         if selected_protocol is None:
             logging.info(
-                f"{self.protocol["name"]} doesn't exist. Adding new protocol")
+                f"{self.selected_protocol["name"]} doesn't exist. Adding new protocol")
             protocols.append(protocol_data)
             helper.write_to_json(self.output_file, data, self.project_name,
                                  self.selected_protocol["name"], workload, self.project_commit)

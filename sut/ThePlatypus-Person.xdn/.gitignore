@@ -1,3 +1,6 @@
 xdn
 config.properties
 fuse_rust
+
+fuselog
+fuselog-apply

@@ -37,7 +37,6 @@ def main(nodes, ssh, client_ip, num_of_nodes, output_file):
 
     launcher_instance = LauncherClass(nodes, ssh, client_ip, num_of_nodes, output_file)
     launcher_instance.launch()
-    print(f"Initialized {launcher_instance}")
 
 
 def get_launchers(base_dir):
