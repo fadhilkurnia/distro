@@ -12,6 +12,8 @@ class ProbeConfig(TypedDict):
     docker: ProbeEntry
     fuse: ProbeEntry
     rust: ProbeEntry
+    gcc: ProbeEntry
+    cmake: ProbeEntry
 
 
 # Add probes here and in ProbeConfig class schema.
@@ -51,5 +53,15 @@ DEPENDENCIES: ProbeConfig = {
         "name": "cargo",
         "probe": "cargo --version",
         "version_regex": "cargo (?P<version>[0-9.]+)"
+    },
+    "gcc": {
+        "name": "gcc",
+        "probe": "gcc -v",
+        "version_regex": "gcc version (?P<version>[0-9.]+)"
+    },
+    "cmake": {
+        "name": "cmake",
+        "probe": "cmake --version",
+        "version_regex": "cmake version (?P<version>[0-9.]+)"
     },
 }
