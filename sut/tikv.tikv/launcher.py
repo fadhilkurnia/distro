@@ -5,7 +5,7 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "git@github.com:tikv/tikv.git"
+REPO = "https://github.com/tikv/tikv.git"
 
 SOURCE_VER = "v8.5"
 SOURCE_HASH = "a092f0444428d2d106993d3a039de7bdca57642c"

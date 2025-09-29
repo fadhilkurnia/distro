@@ -7,10 +7,10 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "git@github.com:ThePlatypus-Person/xdn.git"
+REPO = "https://github.com/ThePlatypus-Person/xdn.git"
 COMMIT_HASH = "fbd416c60403fbaeddddf6909ff28d0d0abe9542"
 
-FUSE_REPO = "git@github.com:ThePlatypus-Person/fuse_rust.git"
+FUSE_REPO = "https://github.com/ThePlatypus-Person/fuse_rust.git"
 FUSE_COMMIT_HASH = "6c4007998d7da0cf7eaa6bee3c0d0c01d606f17d"
 
 OPTIONS = [{"num": 0, "text": "Start XDN"},

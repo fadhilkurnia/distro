@@ -5,7 +5,7 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "git@github.com:otoolep/hraftd.git"
+REPO = "https://github.com/otoolep/hraftd.git"
 COMMIT_HASH = "b931e1f8956e13f0cf51ec02f6eaea5c28439b1c"
 
 OPTIONS = [{"num": 0, "text": "Start hraftd"},

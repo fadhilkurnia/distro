@@ -7,7 +7,7 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "git@github.com:apache/zookeeper.git"
+REPO = "https://github.com/apache/zookeeper.git"
 
 SOURCE_VER = "3.10.0-SNAPSHOT"
 SOURCE_HASH = "d8e5217729bfc7303b15bc36b1a6b7f1ecdd07d4"

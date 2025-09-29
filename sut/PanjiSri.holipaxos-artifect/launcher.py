@@ -6,10 +6,10 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "git@github.com:PanjiSri/holipaxos-artifect.git"
+REPO = "https://github.com/PanjiSri/holipaxos-artifect.git"
 COMMIT_HASH = "834cbcdce27391916485f7dffa88f217c122053b"
 
-ROCKSDB_REPO = "git@github.com:facebook/rocksdb.git"
+ROCKSDB_REPO = "https://github.com/facebook/rocksdb.git"
 ROCKSDB_COMMIT = "e859c3b7af8892064b1538a58565f7cc3ec354d5"
 
 OPTIONS = [{"num": 0, "text": "Start Protocol"},

@@ -5,7 +5,7 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "git@github.com:etcd-io/etcd.git"
+REPO = "https://github.com/etcd-io/etcd.git"
 
 SOURCE_VER = "v3.4"
 SOURCE_HASH = "f9d68b5f4c71969c1593881ee8792cd42e35499b"
