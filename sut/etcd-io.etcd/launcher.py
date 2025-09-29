@@ -56,7 +56,7 @@ class EtcdLauncher(Launcher):
         logging.info("Launching EtcdLauncher")
 
         self.project_name = "etcd-io.etcd"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.ycsb_interface = "etcd"
         self.ycsb_endpoint = "etcd.endpoints"

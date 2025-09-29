@@ -62,7 +62,7 @@ class TikvLauncher(Launcher):
         logging.info("Launching TikvLauncher")
 
         self.project_name = "tikv.tikv"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.ycsb_interface = "tikv"
         self.ycsb_endpoint = "tikv.clientConnect"

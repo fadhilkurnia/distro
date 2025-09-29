@@ -59,7 +59,7 @@ class PaxiLauncher(Launcher):
         prot_num = helper.get_option(1, len(PROTOCOLS), PROTOCOLS)
 
         self.project_name = "ailidani.paxi"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "paxi"
@@ -111,7 +111,7 @@ class PaxiLauncher(Launcher):
 
     def start(self, port_map):
         config_path = self.generate_config(port_map)
-        binary = f"{self.repo_dir_path}/server"
+        binary = f"{self.repo_dir_path}/bin/server"
         source_files = f"{config_path} {binary}"
 
         # Send binary to remote machine
@@ -147,7 +147,7 @@ class PaxiLauncher(Launcher):
         logging.info(f"All paxi {self.selected_protocol['name']} instances successfully started")
 
     def stop(self, port_map):
-        binary = f"{self.repo_dir_path}/server"
+        binary = f"{self.repo_dir_path}/bin/server"
 
         for i, node in enumerate(self.nodes):
             logging.info(f"Stopping Paxi instance on {node["public_ip"]}")
@@ -164,7 +164,7 @@ class PaxiLauncher(Launcher):
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); "
                     f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
-                    f"rm /home/{self.user}/server.*.log; "
+                    f"rm ~/server.*.log; "
                     f"rm {remote_config}"
                 )
 

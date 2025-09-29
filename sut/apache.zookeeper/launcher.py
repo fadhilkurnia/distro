@@ -60,7 +60,7 @@ class ZookeeperLauncher(Launcher):
         logging.info("Launching ZookeeperLauncher")
 
         self.project_name = "apache.zookeeper"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.ycsb_interface = "zookeeper"
         self.ycsb_endpoint = "zookeeper.connectString"

@@ -212,14 +212,14 @@ class Launcher(ABC):
         if self.client_ip == "127.0.0.1":
             ycsb_dir = local_ycsb_dir
         else:
-            ycsb_dir = f"/home/{self.user}/ycsb"
+            ycsb_dir = "~/distro/ycsb"
             mkdir_cmd = f"mkdir -p {ycsb_dir}"
             self.remote_run_cmd(self.client_ip, mkdir_cmd)
             self.remote_rsync(self.client_ip, f"{local_ycsb_dir}/", ycsb_dir)
 
         build_cmd = (
-            f"cd {shlex.quote(ycsb_dir)} && "
-            f"mvn clean package -pl {shlex.quote(self.ycsb_interface)} -am"
+            f"cd {ycsb_dir} && "
+            f"mvn clean package -pl {self.ycsb_interface} -am"
         )
 
         if self.client_ip == "127.0.0.1":
@@ -235,18 +235,16 @@ class Launcher(ABC):
         if self.client_ip == "127.0.0.1":
             ycsb_dir = str(YCSB_DIR.resolve())
         else:
-            ycsb_dir = f"/home/{self.user}/ycsb"
+            ycsb_dir = "~/distro/ycsb"
 
         ycsb_bin = f"{ycsb_dir}/bin/ycsb"
         workload_path = f"{ycsb_dir}/workloads/{workload["text"]}"
         run_cmd = (
-            f"cd {shlex.quote(ycsb_dir)} && "
-            f"{shlex.quote(ycsb_bin)} load {shlex.quote(self.ycsb_interface)} "
-            f"-P {shlex.quote(workload_path)} -p {shlex.quote(self.ycsb_endpoint)
-                                                  }={shlex.quote(addr_list[0])} > /dev/null && "
-            f"{shlex.quote(ycsb_bin)} run {shlex.quote(self.ycsb_interface)} "
-            f"-P {shlex.quote(workload_path)} -p {shlex.quote(self.ycsb_endpoint)
-                                                  }={shlex.quote(addr_list[0])}"
+            f"cd {ycsb_dir} && "
+            f"{ycsb_bin} load {self.ycsb_interface} "
+            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} > /dev/null && "
+            f"{ycsb_bin} run {self.ycsb_interface} "
+            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
         )
 
         if self.client_ip != "127.0.0.1":

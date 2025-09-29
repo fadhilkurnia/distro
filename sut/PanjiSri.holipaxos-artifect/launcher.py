@@ -56,7 +56,7 @@ class HolipaxosLauncher(Launcher):
         pers_num = helper.get_option(1, len(PERSISTENCY), PERSISTENCY, "\nSelect a Persistency Model:")
 
         self.project_name = "PanjiSri.holipaxos-artifect"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "holipaxos"

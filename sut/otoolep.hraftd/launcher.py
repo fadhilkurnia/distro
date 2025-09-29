@@ -46,7 +46,7 @@ class HraftdLauncher(Launcher):
         logging.info("Launching HraftdLauncher")
 
         self.project_name = "otoolep.hraftd"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "hraftd"

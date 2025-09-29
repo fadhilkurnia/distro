@@ -104,7 +104,7 @@ def run_ycsb(protocol, interface, addr_list, endpoint_name, ssh) -> None:
 def remote_ycsb(workload, addr_list, interface, endpoint_name, ssh):
     user = ssh["username"]
     local_dir = YCSB_DIR
-    remote_dir = f"/home/{user}/ycsb"
+    remote_dir = "~/distro/ycsb"
     remote_bin = f"{remote_dir}/bin/ycsb"
     workload_path = f"{remote_dir}/workloads/{workload["text"]}"
 

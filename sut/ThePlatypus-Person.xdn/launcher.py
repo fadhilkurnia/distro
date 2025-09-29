@@ -54,7 +54,7 @@ class XdnLauncher(Launcher):
         logging.info("Launching XdnLauncher")
 
         self.project_name = "ThePlatypus-Person.xdn"
-        self.remote_dir = f"/home/{self.user}/{self.project_name}"
+        self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "xdn"
@@ -103,7 +103,7 @@ class XdnLauncher(Launcher):
             if nodes_map[0]["private_ip"] == "127.0.0.1" and nodes_map[0]["public_ip"] == "127.0.0.1":
                 config.append(f"SSH_KEY_PATH={self.ssh_key}")
             else:
-                config.append(f"SSH_KEY_PATH=/home/{self.user}/ThePlatypus-Person.xdn/{self.ssh_filename}")
+                config.append(f"SSH_KEY_PATH=~/distro/ThePlatypus-Person.xdn/{self.ssh_filename}")
 
         config_path = f"{self.local_dir}/config.properties"
         with open(config_path, "w") as f:
@@ -167,7 +167,7 @@ class XdnLauncher(Launcher):
                 )
                 self.local_run_cmd(run_cmd)
             else:
-                remote_jars = [f"/home/{self.user}/{self.project_name}/jars/{item}" for item in jar_files]
+                remote_jars = [f"~/distro/{self.project_name}/jars/{item}" for item in jar_files]
                 jars = ":".join(remote_jars)
                 run_cmd = (
                     f"cd {remote_dir}; "
@@ -205,7 +205,7 @@ class XdnLauncher(Launcher):
             )
             self.local_run_cmd(run_cmd)
         else:
-            remote_jars = [f"/home/{self.user}/{self.project_name}/jars/{item}" for item in jar_files]
+            remote_jars = [f"~/distro/{self.project_name}/jars/{item}" for item in jar_files]
             jars = ":".join(remote_jars)
             run_cmd = (
                 f"cd {remote_dir}; "
@@ -259,7 +259,7 @@ class XdnLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"/home/{self.user}/{self.project_name}"
+                remote_dir = f"~/distro/{self.project_name}"
                 remote_config = f"{remote_dir}/config.properties"
                 stop_cmd = (
                     f"{core_cleanup_cmd}; "
