@@ -139,7 +139,7 @@ class HolipaxosLauncher(Launcher):
 
     def stop(self, port_map):
         local_binary = self.get_local_binary_path()
-        remote_binary = f"{self.remote_dir}/replicant"
+        remote_binary = f"{self.project_name}/replicant"
 
         for i, node in enumerate(self.nodes):
             logging.info(f"Stopping {self.selected_protocol["name"]} instance on {node["public_ip"]}")

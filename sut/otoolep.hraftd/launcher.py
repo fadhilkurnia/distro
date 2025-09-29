@@ -138,7 +138,7 @@ class HraftdLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_binary = f"{self.remote_dir}/hraftd"
+                remote_binary = f"{self.project_name}/hraftd"
                 data_dir = f"{self.remote_dir}/node{i+1}"
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); "

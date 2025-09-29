@@ -181,7 +181,7 @@ class TikvLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_binary = f"{self.remote_dir}/{self.repo_dir_name}/.*-server"
+                remote_binary = f"{self.project_name}/{self.repo_dir_name}/.*-server"
                 remote_pd_dir = f"{self.remote_dir}/pd{i+1}"
                 remote_tikv_dir = f"{self.remote_dir}/tikv{i+1}"
 

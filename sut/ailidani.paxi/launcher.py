@@ -159,7 +159,7 @@ class PaxiLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_binary = f"{self.remote_dir}/server"
+                remote_binary = f"{self.project_name}/server"
                 remote_config = f"{self.remote_dir}/run_config.json"
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{remote_binary}' | grep -v grep | awk '{{print $2}}'); "
