@@ -119,6 +119,8 @@ class HolipaxosLauncher(Launcher):
                 continue
 
             logging.info(f"Sending protocol executables to {node["public_ip"]}")
+            mkdir_cmd = f"mkdir -p {self.remote_dir}"
+            self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start holipaxos instances

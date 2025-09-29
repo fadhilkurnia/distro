@@ -213,6 +213,8 @@ class Launcher(ABC):
             ycsb_dir = local_ycsb_dir
         else:
             ycsb_dir = f"/home/{self.user}/ycsb"
+            mkdir_cmd = f"mkdir -p {ycsb_dir}"
+            self.remote_run_cmd(self.client_ip, mkdir_cmd)
             self.remote_rsync(self.client_ip, f"{local_ycsb_dir}/", ycsb_dir)
 
         build_cmd = (

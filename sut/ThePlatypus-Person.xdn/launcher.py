@@ -123,7 +123,6 @@ class XdnLauncher(Launcher):
         fuselog_apply = f"{self.local_dir}/fuselog-apply"
 
         source_files = f"{build_dir} {jar_dir} {conf_dir} {config_path} {fuselog} {fuselog_apply}"
-        remote_dir = f"/home/{self.user}/ThePlatypus-Person.xdn"
 
         for node in self.nodes:
             if node["public_ip"] == "127.0.0.1":
@@ -133,10 +132,13 @@ class XdnLauncher(Launcher):
             self.check_dependency(DEPENDENCIES["fuse"], ">=3.10", node["public_ip"])
             self.check_dependency(DEPENDENCIES["docker"], ">=26", node["public_ip"])
             logging.info(f"Sending XDN binaries to {node["public_ip"]}")
-            self.remote_rsync(node["public_ip"], source_files, remote_dir)
+
+            mkdir_cmd = f"mkdir -p {self.remote_dir}"
+            self.remote_run_cmd(node["public_ip"], mkdir_cmd)
+            self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
             cp_cmd = (
-                f"sudo cp {remote_dir}/fuselog /usr/local/bin/fuselog && "
-                f"sudo cp {remote_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
+                f"sudo cp {self.remote_dir}/fuselog /usr/local/bin/fuselog && "
+                f"sudo cp {self.remote_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
             )
             self.remote_run_cmd(node["public_ip"], cp_cmd, True)
 
