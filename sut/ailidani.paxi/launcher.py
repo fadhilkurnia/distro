@@ -6,7 +6,7 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "https://github.com/fadhilkurnia/distro.git"
+REPO = "https://github.com/ailidani/paxi.git"
 COMMIT_HASH = "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd"
 
 OPTIONS = [{"num": 0, "text": "Start Paxi"},
