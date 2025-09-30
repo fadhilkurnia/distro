@@ -233,9 +233,6 @@ class TikvLauncher(Launcher):
         else:
             # Build from Source
             logging.info("Building from source")
-            logging.error("Building from source is not implemented yet...")
-            raise RuntimeError("Build from source for TiKV is not implemented yet")
-
             self.project_commit = SOURCE_HASH
             path, matching_commit = self.ensure_repo_exists(self.local_dir,
                                                             self.project_repository,

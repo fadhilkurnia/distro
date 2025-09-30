@@ -170,7 +170,7 @@ class XdnLauncher(Launcher):
                 remote_jars = [f"~/distro/{self.project_name}/jars/{item}" for item in jar_files]
                 jars = ":".join(remote_jars)
                 run_cmd = (
-                    f"cd {remote_dir}; "
+                    f"cd {self.remote_dir}; "
                     "nohup java -DgigapaxosConfig=config.properties -ea "
                     "-Djavax.net.ssl.keyStorePassword=qwerty "
                     "-Djavax.net.ssl.trustStorePassword=qwerty "
@@ -208,7 +208,7 @@ class XdnLauncher(Launcher):
             remote_jars = [f"~/distro/{self.project_name}/jars/{item}" for item in jar_files]
             jars = ":".join(remote_jars)
             run_cmd = (
-                f"cd {remote_dir}; "
+                f"cd {self.remote_dir}; "
                 "nohup java -DgigapaxosConfig=config.properties -ea "
                 "-Djavax.net.ssl.keyStorePassword=qwerty "
                 "-Djavax.net.ssl.trustStorePassword=qwerty "
@@ -259,11 +259,10 @@ class XdnLauncher(Launcher):
                 )
                 self.local_run_cmd(stop_cmd)
             else:
-                remote_dir = f"~/distro/{self.project_name}"
-                remote_config = f"{remote_dir}/config.properties"
+                remote_config = f"{self.remote_dir}/config.properties"
                 stop_cmd = (
                     f"{core_cleanup_cmd}; "
-                    f"rm -rf {remote_dir}/node_{i}.log {remote_dir}/reconf_{i}.log {remote_config}"
+                    f"rm -rf {self.remote_dir}/node_{i}.log {self.remote_dir}/reconf_{i}.log {remote_config}"
                 )
                 self.remote_run_cmd(node["public_ip"], stop_cmd, False)
 
