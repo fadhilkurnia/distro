@@ -137,6 +137,8 @@ class XdnLauncher(Launcher):
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
             cp_cmd = (
+                f"sudo rm -rf /usr/local/bin/fuselog && "
+                f"sudo rm -rf /usr/local/bin/fuselog-apply && "
                 f"sudo cp {self.remote_dir}/fuselog /usr/local/bin/fuselog && "
                 f"sudo cp {self.remote_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
             )
@@ -167,7 +169,7 @@ class XdnLauncher(Launcher):
                 )
                 self.local_run_cmd(run_cmd)
             else:
-                remote_jars = [f"~/distro/{self.project_name}/jars/{item}" for item in jar_files]
+                remote_jars = [f"$HOME/distro/{self.project_name}/jars/{item}" for item in jar_files]
                 jars = ":".join(remote_jars)
                 run_cmd = (
                     f"cd {self.remote_dir}; "
@@ -201,11 +203,11 @@ class XdnLauncher(Launcher):
                 "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
                 f"-cp build/classes:{jars} "
                 f"edu.umass.cs.reconfiguration.ReconfigurableNode RC0 "
-                f"> reconf_{i}.log 2>&1 &"
+                f"> reconf_0.log 2>&1 &"
             )
             self.local_run_cmd(run_cmd)
         else:
-            remote_jars = [f"~/distro/{self.project_name}/jars/{item}" for item in jar_files]
+            remote_jars = [f"$HOME/distro/{self.project_name}/jars/{item}" for item in jar_files]
             jars = ":".join(remote_jars)
             run_cmd = (
                 f"cd {self.remote_dir}; "
@@ -296,13 +298,17 @@ class XdnLauncher(Launcher):
         if not os.path.exists(build_path) or not os.path.isdir(build_path):
             binary_exists = False
 
+        cli_binary = f"{path}/bin/xdn"
+        if not os.path.exists(cli_binary):
+            binary_exists = False
+
         # Rebuild if binary doesn't exist
         # or if repo commit doesn't match the default commit hash
         if not binary_exists or not matching_commit:
             logging.info("Building XDN binary...")
             build_cmd = (
                 f"cd {path} && "
-                "./bin/build_xdn_jar.sh",
+                "./bin/build_xdn_jar.sh && "
                 "./bin/build_xdn_cli.sh"
             )
             self.local_run_cmd(build_cmd)
