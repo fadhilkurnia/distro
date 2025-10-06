@@ -148,7 +148,7 @@ class HraftdLauncher(Launcher):
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{binary}' | grep -v grep | awk '{{print $2}}'); "
                     f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
-                    f"rm -rf {self.local_dir}; "
+                    f"rm -rf {data_dir}; "
                 )
                 self.local_run_cmd(stop_cmd)
             else:
