@@ -133,8 +133,8 @@ class TikvLauncher(Launcher):
                 self.local_run_cmd(run_pd_cmd)
 
                 run_tikv_cmd = (
-                    f"{local_tikv} --addr=\"0.0.0.0:{node["service_port"]}\" "
-                    f"--advertise-addr=\"{node["public_ip"]}:{node["service_port"]}\" "
+                    f"{local_tikv} --addr=\"0.0.0.0:{node['service_port']}\" "
+                    f"--advertise-addr=\"{node['public_ip']}:{node['service_port']}\" "
                     f"--data-dir={local_tikv_dir} "
                     f"--pd-endpoints=\"{pd_endpoints}\" > /dev/null 2>&1 &"
                 )
@@ -148,17 +148,17 @@ class TikvLauncher(Launcher):
                 run_pd_cmd = (
                     f"nohup {remote_pd} --name=pd{i+1} "
                     f"--data-dir={remote_pd_dir} "
-                    f"--client-urls=\"http://0.0.0.0:{node["client_port"]}\" "
-                    f"--advertise-client-urls=\"http://{node["public_ip"]}:{node["client_port"]}\" "
-                    f"--peer-urls=\"http://0.0.0.0:{node["peer_port"]}\" "
-                    f"--advertise-peer-urls=\"http://{node["private_ip"]}:{node["peer_port"]}\" "
+                    f"--client-urls=\"http://0.0.0.0:{node['client_port']}\" "
+                    f"--advertise-client-urls=\"http://{node['public_ip']}:{node['client_port']}\" "
+                    f"--peer-urls=\"http://0.0.0.0:{node['peer_port']}\" "
+                    f"--advertise-peer-urls=\"http://{node['private_ip']}:{node['peer_port']}\" "
                     f"--initial-cluster=\"{initial_cluster}\" > /dev/null 2>&1 &"
                 )
                 self.remote_run_cmd(node["public_ip"], run_pd_cmd, True)
 
                 run_tikv_cmd = (
-                    f"nohup {remote_tikv} --addr=\"0.0.0.0:{node["service_port"]}\" "
-                    f"--advertise-addr=\"{node["public_ip"]}:{node["service_port"]}\" "
+                    f"nohup {remote_tikv} --addr=\"0.0.0.0:{node['service_port']}\" "
+                    f"--advertise-addr=\"{node['public_ip']}:{node['service_port']}\" "
                     f"--data-dir={remote_tikv_dir} "
                     f"--pd-endpoints=\"{pd_endpoints}\" > /dev/null 2>&1 &"
                 )
@@ -167,7 +167,7 @@ class TikvLauncher(Launcher):
 
     def stop(self, node_maps):
         for i, node in enumerate(node_maps):
-            logging.info(f"Stopping TiKV instance on {node["public_ip"]}")
+            logging.info(f"Stopping TiKV instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_binary = f"{self.repo_dir_path}/.*-server"
                 local_pd_dir = f"{self.local_dir}/pd{i+1}"
