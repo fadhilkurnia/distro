@@ -103,7 +103,7 @@ class HraftdLauncher(Launcher):
             if node["public_ip"] == "127.0.0.1":
                 continue
 
-            logging.info(f"Sending hraftd binary to {node["public_ip"]}")
+            logging.info(f"Sending hraftd binary to {node['public_ip']}")
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
@@ -112,7 +112,7 @@ class HraftdLauncher(Launcher):
         join = None
 
         for i, node in enumerate(nodes_map):
-            logging.info(f"Starting hraftd instance on {node["public_ip"]}")
+            logging.info(f"Starting hraftd instance on {node['public_ip']}")
             haddr = f"{node['private_ip']}:{node['client_port']}"
             raddr = f"{node['private_ip']}:{node['peer_port']}"
             join_part = "" if join is None else join
@@ -142,7 +142,7 @@ class HraftdLauncher(Launcher):
         binary = f"{self.repo_dir_path}/hraftd"
 
         for i, node in enumerate(nodes_map):
-            logging.info(f"Stopping hraftd instance on {node["public_ip"]}")
+            logging.info(f"Stopping hraftd instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 data_dir = f"{self.local_dir}/node{i+1}"
                 stop_cmd = (
