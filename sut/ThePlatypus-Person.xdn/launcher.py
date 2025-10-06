@@ -80,7 +80,7 @@ class XdnLauncher(Launcher):
                     self.stop(nodes_map)
                 case 2:
                     endpoints = [
-                        f"http://{node["public_ip"]}:{node["client_port"]}"
+                        f"http://{node['public_ip']}:{node['client_port']}"
                         for node in nodes_map
                     ]
                     self.ycsb(endpoints)
@@ -95,10 +95,10 @@ class XdnLauncher(Launcher):
             config.append(f"DEFAULT_NUM_REPLICAS={self.num_of_nodes}")
 
             for i, node in enumerate(nodes_map):
-                config.append(f"active.AR{i}={node["private_ip"]}:{node["port"]}")
+                config.append(f"active.AR{i}={node['private_ip']}:{node['port']}")
 
             reconf = nodes_map[0]
-            config.append(f"reconfigurator.RC0={reconf["private_ip"]}:{reconf["port"] + 1000}")
+            config.append(f"reconfigurator.RC0={reconf['private_ip']}:{reconf['port'] + 1000}")
 
             if nodes_map[0]["private_ip"] == "127.0.0.1" and nodes_map[0]["public_ip"] == "127.0.0.1":
                 config.append(f"SSH_KEY_PATH={self.ssh_key}")
@@ -131,7 +131,7 @@ class XdnLauncher(Launcher):
             self.check_dependency(DEPENDENCIES["java"], ">=21", node["public_ip"])
             self.check_dependency(DEPENDENCIES["fuse"], ">=3.10", node["public_ip"])
             self.check_dependency(DEPENDENCIES["docker"], ">=26", node["public_ip"])
-            logging.info(f"Sending XDN binaries to {node["public_ip"]}")
+            logging.info(f"Sending XDN binaries to {node['public_ip']}")
 
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
@@ -253,7 +253,7 @@ class XdnLauncher(Launcher):
         )
 
         for i, node in enumerate(nodes_map):
-            logging.info(f"Stopping XDN instance on {node["public_ip"]}")
+            logging.info(f"Stopping XDN instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
                     f"{core_cleanup_cmd}; "

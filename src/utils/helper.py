@@ -56,7 +56,7 @@ def write_to_json(file, data, project_name, protocol_name, workload, commit):
         json.dump(data, f, indent=2)
 
     output = (
-        f"{workload["type"]} {workload["text"]} benchmark for "
+        f"{workload['type']} {workload['text']} benchmark for "
         f"{project_name}:{protocol_name} ({commit}) "
         f"has been added to {file}."
     )
@@ -79,12 +79,10 @@ def validate_nodes(nodes):
                 "Each dictionary in nodes must contain 'public_ip' and 'private_ip' keys.")
 
         if not isinstance(item['public_ip'], str):
-            raise TypeError(f"node 'public_ip' must be a string, got {
-                            type(item['public_ip']).__name__}.")
+            raise TypeError(f"node 'public_ip' must be a string, got {type(item['public_ip']).__name__}.")
 
         if not isinstance(item['private_ip'], str):
-            raise TypeError(f"node 'private_ip' must be a string, got {
-                            type(item['private_ip']).__name__}.")
+            raise TypeError(f"node 'private_ip' must be a string, got {type(item['private_ip']).__name__}.")
 
 
 def validate_ssh(ssh):
@@ -97,16 +95,13 @@ def validate_ssh(ssh):
             raise KeyError(f"ssh missing required key: '{k}'")
 
     if not isinstance(ssh['key'], Path):
-        raise TypeError(f"ssh key 'key' must be of type pathlib.Path, got {
-                        type(ssh['key']).__name__} instead.")
+        raise TypeError(f"ssh key 'key' must be of type pathlib.Path, got {type(ssh['key']).__name__} instead.")
 
     if not isinstance(ssh['username'], str):
-        raise TypeError(f"ssh key 'username' must be of type str, got {
-                        type(ssh['username']).__name__} instead.")
+        raise TypeError(f"ssh key 'username' must be of type str, got {type(ssh['username']).__name__} instead.")
 
     if not isinstance(ssh['filename'], str):
-        raise TypeError(f"ssh key 'filename' must be of type str, got {
-                        type(ssh['filename']).__name__} instead.")
+        raise TypeError(f"ssh key 'filename' must be of type str, got {type(ssh['filename']).__name__} instead.")
 
 
 def check_repo_exists(dir_path, github_url):
@@ -145,12 +140,10 @@ def get_repo_path_in_directory(root_dir, repo_url):
 
         if os.path.isdir(item_path):
             if check_repo_exists(item_path, repo_url):
-                logging.debug(f"Found repository '{
-                              repo_url}' in '{item_path}'")
+                logging.debug(f"Found repository '{repo_url}' in '{item_path}'")
                 return item_path
 
-    logging.debug(
-        f"Repository '{repo_url}' doesn't exist in '{item_path}'")
+    logging.debug(f"Repository '{repo_url}' doesn't exist in '{item_path}'")
     return False
 
 

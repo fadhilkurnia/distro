@@ -81,7 +81,7 @@ class HolipaxosLauncher(Launcher):
                 case 1:
                     self.stop(node_maps)
                 case 2:
-                    endpoints = [f"{node["private_ip"]}:{node["client_port"]}" for node in node_maps]
+                    endpoints = [f"{node['private_ip']}:{node['client_port']}" for node in node_maps]
                     self.ycsb([",".join(endpoints)])
 
     def generate_config(self, node_maps):
@@ -92,7 +92,7 @@ class HolipaxosLauncher(Launcher):
             data = json.load(file)
 
             for node in node_maps:
-                data["peers"].append(f"{node["private_ip"]}:{node["peer_port"]}")
+                data["peers"].append(f"{node['private_ip']}:{node['peer_port']}")
 
                 if persistency == "In-Memory":
                     data["store"] = "mem"
@@ -118,14 +118,14 @@ class HolipaxosLauncher(Launcher):
             if node["public_ip"] == "127.0.0.1":
                 continue
 
-            logging.info(f"Sending protocol executables to {node["public_ip"]}")
+            logging.info(f"Sending protocol executables to {node['public_ip']}")
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start holipaxos instances
         for i, node in enumerate(self.nodes):
-            logging.info(f"Starting {self.selected_protocol["name"]} instance on {node["public_ip"]}")
+            logging.info(f"Starting {self.selected_protocol['name']} instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 run_cmd = self.get_run_cmd(local_binary, i, config_path)
                 self.local_run_cmd(run_cmd)
@@ -142,7 +142,7 @@ class HolipaxosLauncher(Launcher):
         remote_binary = f"{self.project_name}/replicant"
 
         for i, node in enumerate(self.nodes):
-            logging.info(f"Stopping {self.selected_protocol["name"]} instance on {node["public_ip"]}")
+            logging.info(f"Stopping {self.selected_protocol['name']} instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{local_binary}' | grep -v grep | awk '{{print $2}}'); "
@@ -197,7 +197,7 @@ class HolipaxosLauncher(Launcher):
             logging.info("Building protocol executables...")
             self.local_run_cmd(build_cmd)
 
-        logging.info(f"{self.selected_protocol["name"]} build complete")
+        logging.info(f"{self.selected_protocol['name']} build complete")
 
     def get_local_binary_path(self):
         prot_name = self.selected_protocol["name"]

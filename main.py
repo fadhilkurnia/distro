@@ -18,7 +18,7 @@ def main(nodes, ssh, client_ip, num_of_nodes, output_file):
     max_project_name = max(len(item["project"]) for item in launchers)
     launcher_options = [{
         "num": i+1,
-        "text": f"{item["project"].ljust(max_project_name)} - {item["repo"]}",
+        "text": f"{item['project'].ljust(max_project_name)} - {item['repo']}",
         "module": item["module"]
     } for i, item in enumerate(launchers)]
 
@@ -86,8 +86,8 @@ if __name__ == "__main__":
     client_ip = os.getenv("CLIENT_IP")
     output_file = os.getenv("OUTPUT_FILE", "data.local.json")
 
-    logging.info(f"Nodes ({num_of_nodes})\t\t: {[n["public_ip"] for n in nodes]}")
-    logging.info(f"SSH Key File\t: {ssh["filename"]}")
+    logging.info(f"Nodes ({num_of_nodes})\t\t: {[n['public_ip'] for n in nodes]}")
+    logging.info(f"SSH Key File\t: {ssh['filename']}")
     logging.info(f"Client IP\t\t: {client_ip}")
     logging.info(f"Output File\t: {output_file}")
 

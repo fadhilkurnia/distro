@@ -87,7 +87,7 @@ class TikvLauncher(Launcher):
                     self.stop(node_maps)
                 case 2:
                     endpoints = [
-                        f"{node["private_ip"]}:{node["client_port"]}"
+                        f"{node['private_ip']}:{node['client_port']}"
                         for node in node_maps
                     ]
                     self.ycsb(endpoints)
@@ -102,18 +102,18 @@ class TikvLauncher(Launcher):
                 continue
 
             source_files = f"{self.repo_dir_path}"
-            logging.info(f"Sending TiKV binary to {node["public_ip"]}")
+            logging.info(f"Sending TiKV binary to {node['public_ip']}")
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         return
         # Start instances
-        initial_cluster = ",".join(f"pd{i+1}=http://{n["private_ip"]}:{n["peer_port"]}" for i, n in enumerate(node_maps))
-        pd_endpoints = ",".join(f"{n["private_ip"]}:{n["client_port"]}" for n in node_maps)
+        initial_cluster = ",".join(f"pd{i+1}=http://{n['private_ip']}:{n['peer_port']}" for i, n in enumerate(node_maps))
+        pd_endpoints = ",".join(f"{n['private_ip']}:{n['client_port']}" for n in node_maps)
 
         for i, node in enumerate(node_maps):
-            logging.info(f"Starting TiKV on {node["public_ip"]}")
+            logging.info(f"Starting TiKV on {node['public_ip']}")
 
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_pd = f"{self.repo_dir_path}/pd-server"
@@ -124,10 +124,10 @@ class TikvLauncher(Launcher):
                 run_pd_cmd = (
                     f"nohup {local_pd} --name=pd{i+1} "
                     f"--data-dir={local_pd_dir} "
-                    f"--client-urls=\"http://0.0.0.0:{node["client_port"]}\" "
-                    f"--advertise-client-urls=\"http://{node["public_ip"]}:{node["client_port"]}\" "
-                    f"--peer-urls=\"http://0.0.0.0:{node["peer_port"]}\" "
-                    f"--advertise-peer-urls=\"http://{node["private_ip"]}:{node["peer_port"]}\" "
+                    f"--client-urls=\"http://0.0.0.0:{node['client_port']}\" "
+                    f"--advertise-client-urls=\"http://{node['public_ip']}:{node['client_port']}\" "
+                    f"--peer-urls=\"http://0.0.0.0:{node['peer_port']}\" "
+                    f"--advertise-peer-urls=\"http://{node['private_ip']}:{node['peer_port']}\" "
                     f"--initial-cluster=\"{initial_cluster}\" > /dev/null 2>&1 &"
                 )
                 self.local_run_cmd(run_pd_cmd)

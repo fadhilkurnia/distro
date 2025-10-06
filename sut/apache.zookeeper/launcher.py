@@ -84,7 +84,7 @@ class ZookeeperLauncher(Launcher):
                 case 1:
                     self.stop(node_maps)
                 case 2:
-                    endpoints = [f"{node["public_ip"]}:{node["client"]}" for node in node_maps]
+                    endpoints = [f"{node['public_ip']}:{node['client']}" for node in node_maps]
                     self.ycsb(endpoints)
 
     def generate_config(self, node_maps):
@@ -94,7 +94,7 @@ class ZookeeperLauncher(Launcher):
                 template_config.append(line.strip())
 
             for i, node in enumerate(node_maps):
-                template_config.append(f"server.{i+1}={node["private_ip"]}:{node['peer']}:{node['election']}")
+                template_config.append(f"server.{i+1}={node['private_ip']}:{node['peer']}:{node['election']}")
 
         for i, node in enumerate(node_maps):
             local_config_path = f"{self.local_dir}/cluster/node{i+1}/config.cfg"
@@ -115,7 +115,7 @@ class ZookeeperLauncher(Launcher):
             else:
                 config.append(f"dataDir={remote_data_path}")
 
-            config.append(f"clientPort={node["client"]}")
+            config.append(f"clientPort={node['client']}")
 
             with open(local_config_path, "w") as f:
                 for line in config:
@@ -136,14 +136,14 @@ class ZookeeperLauncher(Launcher):
             copied_config = f"{config_path}/node{i+1}"
             source_files = f"{self.repo_dir_path} {copied_config}"
 
-            logging.info(f"Sending protocol executables and configs to {node["public_ip"]}")
+            logging.info(f"Sending protocol executables and configs to {node['public_ip']}")
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start instances
         for i, node in enumerate(node_maps):
-            logging.info(f"Starting Zookeeper instance on {node["public_ip"]}")
+            logging.info(f"Starting Zookeeper instance on {node['public_ip']}")
 
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_binary = f"{self.repo_dir_path}/bin/zkServer.sh"
@@ -161,7 +161,7 @@ class ZookeeperLauncher(Launcher):
         # Insert /benchmark for YCSB from local machine
         client = f"{self.repo_dir_path}/bin/zkCli.sh"
         process = subprocess.Popen(
-            [client, "-server", f"{node_maps["public_ip"]}:2101"],
+            [client, "-server", f"{node_maps[0]['public_ip']}:2101"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -179,7 +179,7 @@ class ZookeeperLauncher(Launcher):
 
     def stop(self, node_maps):
         for i, node in enumerate(node_maps):
-            logging.info(f"Stopping Zookeeper instance on {node["public_ip"]}")
+            logging.info(f"Stopping Zookeeper instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_binary = f"{self.repo_dir_path}/bin/zkServer.sh"
                 local_config = f"{self.local_dir}/cluster/node{i+1}/config.cfg"

@@ -106,7 +106,7 @@ def remote_ycsb(workload, addr_list, interface, endpoint_name, ssh):
     local_dir = YCSB_DIR
     remote_dir = "~/distro/ycsb"
     remote_bin = f"{remote_dir}/bin/ycsb"
-    workload_path = f"{remote_dir}/workloads/{workload["text"]}"
+    workload_path = f"{remote_dir}/workloads/{workload['text']}"
 
     copy_cmd = (
         f"rsync -avz -e 'ssh -i {ssh['key']}' "
@@ -214,7 +214,7 @@ def insert_ycsb_output(project_name, protocol, workload, result):
                               and p["commit"] == protocol.get("commit", "")
                               ), None)
     if selected_protocol is None:
-        print(f"{protocol["name"]} doesn't exist. Adding new protocol")
+        print(f"{protocol['name']} doesn't exist. Adding new protocol")
         protocols.append(protocol_data)
         write_to_json(data, project_name, protocol, workload)
         return
@@ -227,13 +227,13 @@ def insert_ycsb_output(project_name, protocol, workload, result):
                               and w["num_of_nodes"] == int(os.getenv("NUM_OF_NODES"))
                               ), None)
     if selected_workload is None:
-        print(f"{workload["text"]} doesn't exist. Adding new workload")
+        print(f"{workload['text']} doesn't exist. Adding new workload")
         workloads.append(workload_data)
         write_to_json(data, project_name, protocol, workload)
         return
 
     # Workload already exists
-    print(f"{workload["text"]} already exist. Overriding previous result")
+    print(f"{workload['text']} already exist. Overriding previous result")
     selected_workload["result"] = result
     write_to_json(data, project_name, protocol, workload)
 
@@ -243,8 +243,8 @@ def write_to_json(data, project_name, protocol, workload):
         json.dump(data, f, indent=2)
 
     output = (
-        f"{workload["type"]} {workload["text"]} benchmark for "
-        f"{project_name}:{protocol["name"]} ({protocol.get("commit", "")}) "
+        f"{workload['type']} {workload['text']} benchmark for "
+        f"{project_name}:{protocol['name']} ({protocol.get('commit', '')}) "
         f"has been added to {DATA}."
     )
     print(output)

@@ -119,14 +119,14 @@ class PaxiLauncher(Launcher):
             if node["public_ip"] == "127.0.0.1":
                 continue
 
-            logging.info(f"Sending protocol executables to {node["public_ip"]}")
+            logging.info(f"Sending protocol executables to {node['public_ip']}")
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start paxi instances
         for i, node in enumerate(self.nodes):
-            logging.info(f"Starting Paxi instance on {node["public_ip"]}")
+            logging.info(f"Starting Paxi instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 run_cmd = (
                     f"nohup {binary} -id 1.{i+1} "
@@ -150,7 +150,7 @@ class PaxiLauncher(Launcher):
         binary = f"{self.repo_dir_path}/bin/server"
 
         for i, node in enumerate(self.nodes):
-            logging.info(f"Stopping Paxi instance on {node["public_ip"]}")
+            logging.info(f"Stopping Paxi instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{binary}' | grep -v grep | awk '{{print $2}}'); "

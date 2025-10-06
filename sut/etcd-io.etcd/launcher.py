@@ -81,7 +81,7 @@ class EtcdLauncher(Launcher):
                     self.stop(node_maps)
                 case 2:
                     endpoints = [
-                        f"http://{node["private_ip"]}:{node["client_port"]}"
+                        f"http://{node['private_ip']}:{node['client_port']}"
                         for node in node_maps
                     ]
                     self.ycsb(endpoints)
@@ -97,16 +97,16 @@ class EtcdLauncher(Launcher):
 
             source_files = f"{self.repo_dir_path}"
 
-            logging.info(f"Sending etcd binary to {node["public_ip"]}")
+            logging.info(f"Sending etcd binary to {node['public_ip']}")
             mkdir_cmd = f"mkdir -p {self.remote_dir}"
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start instances
-        initial_cluster = ",".join(f"node{i+1}=http://{n["private_ip"]}:{n["peer_port"]}" for i, n in enumerate(node_maps))
+        initial_cluster = ",".join(f"node{i+1}=http://{n['private_ip']}:{n['peer_port']}" for i, n in enumerate(node_maps))
 
         for i, node in enumerate(node_maps):
-            logging.info(f"Starting etcd instance on {node["public_ip"]}")
+            logging.info(f"Starting etcd instance on {node['public_ip']}")
 
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_binary = f"{self.repo_dir_path}/etcd"
@@ -114,10 +114,10 @@ class EtcdLauncher(Launcher):
 
                 run_cmd = (
                     f"nohup {local_binary} --name node{i+1} --data-dir {data_dir} "
-                    f"--listen-peer-urls http://0.0.0.0:{node["peer_port"]} "
-                    f"--initial-advertise-peer-urls http://{node["private_ip"]}:{node["peer_port"]} "
-                    f"--listen-client-urls http://0.0.0.0:{node["client_port"]} "
-                    f"--advertise-client-urls http://{node["private_ip"]}:{node["client_port"]},http://{node["public_ip"]}:{node["client_port"]} "
+                    f"--listen-peer-urls http://0.0.0.0:{node['peer_port']} "
+                    f"--initial-advertise-peer-urls http://{node['private_ip']}:{node['peer_port']} "
+                    f"--listen-client-urls http://0.0.0.0:{node['client_port']} "
+                    f"--advertise-client-urls http://{node['private_ip']}:{node['client_port']},http://{node['public_ip']}:{node['client_port']} "
                     f"--initial-cluster {initial_cluster} "
                     f"--initial-cluster-state new "
                     f"--initial-cluster-token etcd-distrobench-cluster > /dev/null 2>&1 &"
@@ -129,10 +129,10 @@ class EtcdLauncher(Launcher):
 
                 run_cmd = (
                     f"nohup {remote_binary} --name node{i+1} --data-dir {data_dir} "
-                    f"--listen-peer-urls http://0.0.0.0:{node["peer_port"]} "
-                    f"--initial-advertise-peer-urls http://{node["private_ip"]}:{node["peer_port"]} "
-                    f"--listen-client-urls http://0.0.0.0:{node["client_port"]} "
-                    f"--advertise-client-urls http://{node["private_ip"]}:{node["client_port"]},http://{node["public_ip"]}:{node["client_port"]} "
+                    f"--listen-peer-urls http://0.0.0.0:{node['peer_port']} "
+                    f"--initial-advertise-peer-urls http://{node['private_ip']}:{node['peer_port']} "
+                    f"--listen-client-urls http://0.0.0.0:{node['client_port']} "
+                    f"--advertise-client-urls http://{node['private_ip']}:{node['client_port']},http://{node['public_ip']}:{node['client_port']} "
                     f"--initial-cluster {initial_cluster} "
                     f"--initial-cluster-state new "
                     f"--initial-cluster-token etcd-distrobench-cluster > /dev/null 2>&1 &"
@@ -142,7 +142,7 @@ class EtcdLauncher(Launcher):
 
     def stop(self, node_maps):
         for i, node in enumerate(node_maps):
-            logging.info(f"Stopping etcd instance on {node["public_ip"]}")
+            logging.info(f"Stopping etcd instance on {node['public_ip']}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 local_binary = f"{self.repo_dir_path}/etcd"
                 local_dir = f"{self.local_dir}/node{i+1}"

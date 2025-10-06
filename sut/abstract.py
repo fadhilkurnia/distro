@@ -52,6 +52,10 @@ class Launcher(ABC):
         self.num_of_nodes = num_of_nodes
         self.output_file = output_file
 
+        # Fault injection support (optional - set by launchers)
+        self.fault_injection_identifier = None
+        self.fault_injection_target_index = 0
+
     @property
     def project_name(self) -> str:
         return self._project_name
@@ -164,20 +168,20 @@ class Launcher(ABC):
             success, output = run_remote_probe(entry["probe"], host, self.user, self.ssh_key)
 
         if not success:
-            logging.error(f"Missing dependency '{entry["name"]}' in {host} (requires version {requirement})")
+            logging.error(f"Missing dependency '{entry['name']}' in {host} (requires version {requirement})")
             raise RuntimeError(output)
 
         host_version = extract_version(output, entry["version_regex"])
         if host_version is None:
-            logging.error(f"Unable to get version for dependency '{entry["name"]}' in {host}")
+            logging.error(f"Unable to get version for dependency '{entry['name']}' in {host}")
             raise RuntimeError()
 
         if version_satisfies(host_version, requirement):
-            logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
+            logging.info(f"{host} has dependency '{entry['name']}' version {host_version} (requires version {requirement})")
             return True
 
-        logging.error(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
-        sys.exit(f"{host} did not meet {entry["name"]} version requirement. Exiting distrobench")
+        logging.error(f"{host} has dependency '{entry['name']}' version {host_version} (requires version {requirement})")
+        sys.exit(f"{host} did not meet {entry['name']} version requirement. Exiting distrobench")
 
     def ensure_repo_exists(self, dir_path, repo_url, commit=None):
         path = helper.get_repo_path_in_directory(dir_path, repo_url)
@@ -238,7 +242,7 @@ class Launcher(ABC):
             ycsb_dir = "~/distro/ycsb"
 
         ycsb_bin = f"{ycsb_dir}/bin/ycsb"
-        workload_path = f"{ycsb_dir}/workloads/{workload["text"]}"
+        workload_path = f"{ycsb_dir}/workloads/{workload['text']}"
         run_cmd = (
             f"cd {ycsb_dir} && "
             f"{ycsb_bin} load {self.ycsb_interface} "
@@ -364,10 +368,10 @@ class Launcher(ABC):
                                   ), None)
         if selected_protocol is None:
             logging.info(
-                f"{self.selected_protocol["name"]} doesn't exist. Adding new protocol")
+                f"{self.selected_protocol['name']} doesn't exist. Adding new protocol")
             protocols.append(protocol_data)
             helper.write_to_json(self.output_file, data, self.project_name,
-                                 self.selected_protocol["name"], workload, self.project_commit)
+                                 self.selected_protocol['name'], workload, self.project_commit)
             return
 
         # Check if workload already exists
@@ -379,18 +383,18 @@ class Launcher(ABC):
                                   ), None)
         if selected_workload is None:
             logging.info(
-                f"{workload["text"]} doesn't exist. Adding new workload")
+                f"{workload['text']} doesn't exist. Adding new workload")
             workloads.append(workload_data)
             helper.write_to_json(self.output_file, data, self.project_name,
-                                 self.selected_protocol["name"], workload, self.project_commit)
+                                 self.selected_protocol['name'], workload, self.project_commit)
             return
 
         # Workload already exists
         logging.info(
-            f"{workload["text"]} already exist. Overriding previous result")
+            f"{workload['text']} already exist. Overriding previous result")
         selected_workload["result"] = final_result
         helper.write_to_json(self.output_file, data, self.project_name,
-                             self.selected_protocol["name"], workload, self.project_commit)
+                             self.selected_protocol['name'], workload, self.project_commit)
 
     def ycsb(self, addr_list) -> None:
         self._build_ycsb()
@@ -432,3 +436,70 @@ class Launcher(ABC):
         logging.debug(f"Running: {rsync_cmd}")
         subprocess.run(rsync_cmd, check=True, shell=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def crash_node(self, target_index=None):
+        """
+        Crash a specific node for fault injection testing.
+
+        :param target_index: Index of node to crash (uses fault_injection_target_index if None)
+        :raises RuntimeError: If fault injection is not configured or process not found
+        """
+        if self.fault_injection_identifier is None:
+            raise RuntimeError(
+                "Fault injection not enabled. Set self.fault_injection_identifier in launcher."
+            )
+
+        if target_index is None:
+            target_index = self.fault_injection_target_index
+
+        if target_index >= len(self.nodes):
+            raise ValueError(f"Invalid target_index {target_index}, only {len(self.nodes)} nodes available")
+
+        identifier = self.fault_injection_identifier
+        target_node = self.nodes[target_index]
+
+        if target_node["public_ip"] == "127.0.0.1":
+            # Local: use sorted ps to match index order
+            # ps aux --sort=start_time ensures process order matches start() iteration order
+            find_cmd = (
+                f"ps aux --sort=start_time | grep '{identifier}' | grep -v grep | "
+                f"awk '{{print $2}}' | sed -n '{target_index + 1}p'"
+            )
+            result = subprocess.run(find_cmd, shell=True, capture_output=True, text=True)
+            pid = result.stdout.strip()
+
+            if not pid:
+                raise RuntimeError(
+                    f"No process found at index {target_index} for pattern '{identifier}'. "
+                    f"Make sure the cluster is running."
+                )
+
+            logging.warning(f"[FAULT INJECTION] Crashing local node {target_index} (PID {pid})")
+            kill_cmd = f"kill -9 {pid}"
+            self.local_run_cmd(kill_cmd)
+            logging.info(f"[FAULT INJECTION] Successfully crashed node {target_index}")
+        else:
+            # Remote: only one process per host, so just grep for the identifier
+            find_cmd = f"ps aux | grep '{identifier}' | grep -v grep | awk '{{print $2}}'"
+            ssh_cmd = f"ssh -i {str(self.ssh_key)} {self.user}@{target_node['public_ip']} {shlex.quote(find_cmd)}"
+
+            result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
+            pid = result.stdout.strip()
+
+            if not pid:
+                raise RuntimeError(
+                    f"No process found on {target_node['public_ip']} for pattern '{identifier}'. "
+                    f"Make sure the cluster is running."
+                )
+
+            logging.warning(
+                f"[FAULT INJECTION] Crashing remote node {target_index} "
+                f"at {target_node['public_ip']} (PID {pid})"
+            )
+            kill_cmd = f"kill -9 {pid}"
+            self.remote_run_cmd(target_node["public_ip"], kill_cmd)
+            logging.info(f"[FAULT INJECTION] Successfully crashed node {target_index}")
+
+    def is_fault_injection_enabled(self):
+        """Check if fault injection is configured for this launcher."""
+        return self.fault_injection_identifier is not None
