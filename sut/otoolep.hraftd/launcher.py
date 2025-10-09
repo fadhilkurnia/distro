@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from sut.abstract import Launcher
 from src.utils import helper
@@ -13,6 +14,7 @@ OPTIONS = [{"num": 0, "text": "Start hraftd"},
            {"num": 2, "text": "Run Benchmark"},
            {"num": 3, "text": "Crash Node (Fault Injection)"}]
 
+START_DELAY_SEC = float(os.getenv("HRAFTD_START_DELAY", "5.0"))
 
 class HraftdLauncher(Launcher):
     def __init__(self, nodes, ssh, client_ip, num_of_nodes, output_file):
@@ -63,8 +65,8 @@ class HraftdLauncher(Launcher):
         self.build()
 
         # Enable fault injection (optional)
-        self.fault_injection_identifier = f"{self.repo_dir_path}/hraftd"
-        self.fault_injection_target_index = 0  # Crash first node (typically the leader)
+        # self.fault_injection_identifier = f"{self.repo_dir_path}/hraftd"
+        # self.fault_injection_target_index = 0
 
         while True:
             val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
@@ -80,7 +82,9 @@ class HraftdLauncher(Launcher):
                         f"http://{node['public_ip']}:{node['client_port']}"
                         for node in nodes_map
                     ]
-                    self.ycsb(endpoints)
+                    endpoint_string = ','.join(endpoints)
+                    logging.info(f"Endpoint: {endpoint_string}")
+                    self.ycsb([endpoint_string])
                 case 3:
                     # Crash a node (fault injection)
                     try:
@@ -135,6 +139,10 @@ class HraftdLauncher(Launcher):
 
             if join is None:
                 join = f"-join {node['private_ip']}:{node['client_port']}"
+
+            if i < len(nodes_map) - 1:
+                logging.info(f"Waiting {START_DELAY_SEC} seconds before starting the next node...")
+                time.sleep(START_DELAY_SEC)
 
         logging.info("All hraftd instances successfully started")
 

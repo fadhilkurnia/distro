@@ -6,6 +6,8 @@ from pathlib import Path
 import shlex
 import subprocess
 import sys
+import threading
+import time
 import warnings
 
 from src.utils import helper
@@ -19,6 +21,7 @@ from src.utils.dependency import (
 
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
+DEFAULT_FAULT_DELAY_SECONDS = 5.0
 WORKLOADS = [
     {
         "num": 1,
@@ -27,6 +30,16 @@ WORKLOADS = [
     }, {
         "num": 2,
         "text": "update-heavy",
+        "type": "single-client",
+    },
+    {
+        "num": 3,
+        "text": "insert-heavy_30s",
+        "type": "single-client",
+    },
+    {
+        "num": 4,
+        "text": "update-heavy_30s",
         "type": "single-client",
     }
 ]
@@ -55,6 +68,7 @@ class Launcher(ABC):
         # Fault injection support (optional - set by launchers)
         self.fault_injection_identifier = None
         self.fault_injection_target_index = 0
+        self.scheduled_crash_delay = DEFAULT_FAULT_DELAY_SECONDS
 
     @property
     def project_name(self) -> str:
@@ -243,40 +257,143 @@ class Launcher(ABC):
 
         ycsb_bin = f"{ycsb_dir}/bin/ycsb"
         workload_path = f"{ycsb_dir}/workloads/{workload['text']}"
-        run_cmd = (
-            f"cd {ycsb_dir} && "
-            f"{ycsb_bin} load {self.ycsb_interface} "
-            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} > /dev/null && "
-            f"{ycsb_bin} run {self.ycsb_interface} "
-            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+
+        # Check if the workload is insert-heavy_30s and fault injection is enabled
+        enable_fault_injection = (
+            workload["text"] == "insert-heavy_30s"
+            and self.is_fault_injection_enabled()
         )
 
-        if self.client_ip != "127.0.0.1":
-            run_cmd = [
-                "ssh", "-i", self.ssh_key,
-                f"{self.user}@{self.client_ip}",
-                "bash -c", shlex.quote(run_cmd)
-            ]
+        if enable_fault_injection:
+            # Split load and run phases for fault injection
+            load_cmd = (
+                f"cd {ycsb_dir} && "
+                f"{ycsb_bin} load {self.ycsb_interface} "
+                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+            )
 
-        process = subprocess.Popen(
-            run_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+            logging.info("[FAULT INJECTION] Executing load phase before fault injection")
+            if self.client_ip != "127.0.0.1":
+                load_cmd_list = [
+                    "ssh", "-i", self.ssh_key,
+                    f"{self.user}@{self.client_ip}",
+                    "bash -c", shlex.quote(load_cmd)
+                ]
+                load_process = subprocess.Popen(
+                    load_cmd_list,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+            else:
+                load_process = subprocess.Popen(
+                    load_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    shell=True,
+                )
 
-        output = []
-        for line in process.stdout:
-            print(line, end='')
-            output.append(line)
+            load_output = []
+            for line in load_process.stdout:
+                print(line, end='')
+                load_output.append(line)
 
-        return_code = process.wait()
+            load_return_code = load_process.wait()
+            if load_return_code != 0:
+                raise subprocess.CalledProcessError(
+                    load_return_code, load_process.args, output="".join(load_output))
 
-        if return_code != 0:
-            raise subprocess.CalledProcessError(
-                return_code, process.args, output="".join(output))
+            # Schedule the crash after load phase completes
+            crash_thread = None
+            try:
+                crash_thread = self.schedule_crash()
+            except Exception as e:
+                logging.warning(f"Failed to schedule crash: {e}")
 
-        return output
+            logging.info("[FAULT INJECTION] Executing run phase with scheduled crash")
+            run_cmd = (
+                f"cd {ycsb_dir} && "
+                f"{ycsb_bin} run {self.ycsb_interface} "
+                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+            )
+
+            if self.client_ip != "127.0.0.1":
+                run_cmd_list = [
+                    "ssh", "-i", self.ssh_key,
+                    f"{self.user}@{self.client_ip}",
+                    "bash -c", shlex.quote(run_cmd)
+                ]
+                process = subprocess.Popen(
+                    run_cmd_list,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+            else:
+                process = subprocess.Popen(
+                    run_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    shell=True,
+                )
+
+            output = []
+            for line in process.stdout:
+                print(line, end='')
+                output.append(line)
+
+            return_code = process.wait()
+
+            if return_code != 0:
+                raise subprocess.CalledProcessError(
+                    return_code, process.args, output="".join(output))
+
+            return output
+        else:
+            # Original behavior: load and run in single command chain
+            run_cmd = (
+                f"cd {ycsb_dir} && "
+                f"{ycsb_bin} load {self.ycsb_interface} "
+                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} > /dev/null && "
+                f"{ycsb_bin} run {self.ycsb_interface} "
+                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+            )
+
+            if self.client_ip != "127.0.0.1":
+                run_cmd = [
+                    "ssh", "-i", self.ssh_key,
+                    f"{self.user}@{self.client_ip}",
+                    "bash -c", shlex.quote(run_cmd)
+                ]
+                process = subprocess.Popen(
+                    run_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+            else:
+                process = subprocess.Popen(
+                    run_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    shell=True,
+                )
+
+            output = []
+            for line in process.stdout:
+                print(line, end='')
+                output.append(line)
+
+            return_code = process.wait()
+
+            if return_code != 0:
+                raise subprocess.CalledProcessError(
+                    return_code, process.args, output="".join(output))
+
+            return output
 
     def _store_ycsb_result(self, result, workload):
         parsed_data = {}
@@ -503,3 +620,47 @@ class Launcher(ABC):
     def is_fault_injection_enabled(self):
         """Check if fault injection is configured for this launcher."""
         return self.fault_injection_identifier is not None
+
+    def schedule_crash(self, delay=None, target_index=None):
+        """
+        Schedule a node crash to occur after a delay (in seconds).
+        Returns the background thread that will execute the crash.
+
+        :param delay: Seconds to wait before crash (uses scheduled_crash_delay if None)
+        :param target_index: Index of node to crash (uses fault_injection_target_index if None)
+        :return: Thread object executing the scheduled crash
+        :raises RuntimeError: If fault injection is not configured
+        """
+        if not self.is_fault_injection_enabled():
+            raise RuntimeError(
+                "Fault injection not enabled. Set self.fault_injection_identifier in launcher."
+            )
+
+        if delay is None:
+            delay = self.scheduled_crash_delay
+
+        if target_index is None:
+            target_index = self.fault_injection_target_index
+
+        target_node = self.nodes[target_index]
+        node_host = target_node.get("public_ip", "unknown")
+
+        logging.info(
+            f"[FAULT INJECTION] Scheduling crash of node {target_index} "
+            f"at {node_host} in {delay} seconds"
+        )
+
+        def _crash_after_delay():
+            time.sleep(delay)
+            try:
+                self.crash_node(target_index)
+            except Exception as e:
+                logging.error(f"[FAULT INJECTION] Failed to crash node: {e}")
+
+        thread = threading.Thread(
+            target=_crash_after_delay,
+            name=f"fault-crash-node-{target_index}",
+            daemon=True
+        )
+        thread.start()
+        return thread
