@@ -49,19 +49,13 @@ document.addEventListener("DOMContentLoaded", () => {
 	    return res.json(); // Or .json() if JSON
 	})
 	.then(data => {
-	    const renamed = data.map(item => {
-		return {
-		    ...item,
-		    project: item.project.replaceAll(".", "/"),
-		};
-	    });
-	    const renamedData = JSON.stringify(renamed);
-	    sessionStorage.setItem("data", renamedData);
+	    const dataString = JSON.stringify(data);
+	    sessionStorage.setItem("data", dataString);
 
-	    loadWorkloadSelect(renamedData);
-	    loadMetricSelect(renamedData);
-	    loadFilters(renamedData);
-	    loadTable(renamedData);
+	    loadWorkloadSelect(dataString);
+	    loadMetricSelect(dataString);
+	    loadFilters(dataString);
+	    loadTable(dataString);
 	})
 	.catch(error => {
 	    console.error('Error fetching file:', error);
@@ -370,7 +364,19 @@ function loadTable(data) {
 	persistency.classList.add("flex-1", "select-none", "basis-0", "w-0");
 	persistency.textContent = row.persistency ? row.persistency : "-";
 
-	tr.append(project, protocol, language, runtime, throughput, consistency, persistency);
+	const liveness = document.createElement("td");
+	liveness.classList.add("flex-1", "select-none", "basis-0", "w-0");
+	if (row.liveness_data) {
+	    const link = document.createElement("a");
+	    link.href = `/liveness.html?system=${encodeURIComponent(row.project)}`;
+	    link.textContent = "📊 View";
+	    link.classList.add("text-sky-500", "hover:text-sky-400", "hover:underline");
+	    liveness.appendChild(link);
+	} else {
+	    liveness.textContent = "—";
+	}
+
+	tr.append(project, protocol, language, runtime, throughput, consistency, persistency, liveness);
 	tableBody.appendChild(tr);
     });
 }

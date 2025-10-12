@@ -711,7 +711,8 @@
       }
     },
     "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    "persistency": "In-Memory",
+    "liveness_data": "liveness_data/otoolep.hraftd.csv"
   },
   {
     "project": "otoolep.hraftd",
@@ -745,7 +746,8 @@
       }
     },
     "consistency": "Linearizability",
-    "persistency": "In-Memory"
+    "persistency": "In-Memory",
+    "liveness_data": "liveness_data/otoolep.hraftd.csv"
   },
   {
     "project": "holipaxos-artifect.holipaxos",

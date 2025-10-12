@@ -11,8 +11,7 @@ COMMIT_HASH = "b931e1f8956e13f0cf51ec02f6eaea5c28439b1c"
 
 OPTIONS = [{"num": 0, "text": "Start hraftd"},
            {"num": 1, "text": "Stop hraftd"},
-           {"num": 2, "text": "Run Benchmark"},
-           {"num": 3, "text": "Crash Node (Fault Injection)"}]
+           {"num": 2, "text": "Run Benchmark"}]
 
 START_DELAY_SEC = float(os.getenv("HRAFTD_START_DELAY", "5.0"))
 
@@ -65,8 +64,8 @@ class HraftdLauncher(Launcher):
         self.build()
 
         # Enable fault injection (optional)
-        # self.fault_injection_identifier = f"{self.repo_dir_path}/hraftd"
-        # self.fault_injection_target_index = 0
+        self.fault_injection_identifier = f"{self.repo_dir_path}/hraftd"
+        self.fault_injection_target_index = 0
 
         while True:
             val = helper.get_option(0, len(OPTIONS) - 1, OPTIONS)
@@ -85,15 +84,6 @@ class HraftdLauncher(Launcher):
                     endpoint_string = ','.join(endpoints)
                     logging.info(f"Endpoint: {endpoint_string}")
                     self.ycsb([endpoint_string])
-                case 3:
-                    # Crash a node (fault injection)
-                    try:
-                        node_index = int(input(f"Enter node index to crash (0-{len(nodes_map)-1}): "))
-                        self.crash_node(node_index)
-                    except ValueError as e:
-                        logging.error(f"Invalid input: {e}")
-                    except RuntimeError as e:
-                        logging.error(f"Fault injection failed: {e}")
 
     def generate_config(self):
         logging.warning("HraftdLauncher does not implement generate_config()")

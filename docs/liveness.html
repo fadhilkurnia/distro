@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Liveness - Distrobench</title>
+	<link rel="stylesheet" href="style.css">
+    </head>
+
+    <body class="w-screen overflow-x-hidden box-border">
+	<div id="root" class="bg-gray-950 w-screen min-h-screen overflow-auto text-gray-100">
+
+	    <!-- Navigation Bar -->
+	    <nav class="flex justify-between items-center px-5 py-4 tracking-tight border-b border-gray-700 fixed top-0 w-screen backdrop-blur-sm backdrop-opacity-100 z-100 select-none">
+		<!-- Logo -->
+		<h1 class="font-sans text-gray-100 text-lg font-bold">
+		    <a href="/">Distrobench.</a>
+		</h1>
+
+		<!-- Menu -->
+		<div>
+		    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbarLinearizability" class="flex items-center justify-between w-full py-2 px-3 text-white rounded-sm font-sans hover:text-sky-500 md:hover:bg-transparent md:border-0 md:hover:text-sky-500 md:p-0 md:w-auto dark:text-white md:dark:hover:text-sky-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
+			Linearizability
+			<svg class="w-2.5 h-full ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
+			    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
+			</svg>
+		    </button>
+		    <div id="dropdownNavbarLinearizability" class="z-10 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44 dark:bg-gray-700 dark:divide-gray-600">
+			<ul class="py-2 text-sm text-gray-700 dark:text-gray-400" aria-labelledby="dropdownLargeButton">
+			    <li><a href="/result.html?consistency=Linearizability" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Linearizability</a></li>
+			    <li><a href="/result.html?consistency=Linearizability %2B Primary Integrity" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Primary-Backup</a></li>
+			</ul>
+		    </div>
+		</div>
+		<div class="font-sans text-white hover:text-sky-500">
+		    <a href="/result.html?consistency=Sequential">Sequential</a>
+		</div>
+		<div class="font-sans text-white hover:text-sky-500">
+		    <a href="/result.html?consistency=Causal">Causal</a>
+		</div>
+		<div class="font-sans text-white hover:text-sky-500">
+		    <a href="/result.html?consistency=Pram">PRAM</a>
+		</div>
+		<div>
+		    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbarClientCentric" class="flex items-center justify-between w-full py-2 px-3 text-white rounded-sm font-sans hover:text-sky-500 md:hover:bg-transparent md:border-0 md:hover:text-sky-500 md:p-0 md:w-auto dark:text-white md:dark:hover:text-sky-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
+			Client-Centric
+			<svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/></svg>
+		    </button>
+		    <div id="dropdownNavbarClientCentric" class="z-10 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-55 dark:bg-gray-700 dark:divide-gray-600">
+			<ul class="py-2 text-sm text-gray-700 dark:text-gray-400" aria-labelledby="dropdownLargeButton">
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Writes Follow Reads (WFR)</a></li>
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Monotonic Reads (MR)</a></li>
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Monotonic Writes (MW)</a></li>
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Read Your Writes (RYW)</a></li>
+		    </div>
+		</div>
+		<div class="font-sans text-white hover:text-sky-500">
+		    <a href="/result.html?consistency=Eventual">Eventual</a>
+		</div>
+		<div class="font-sans text-white hover:text-sky-500">
+		    <a href="/liveness.html">Liveness</a>
+		</div>
+
+		<!-- Add Protocol Button -->
+		<div class="flex items-center gap-3">
+		    <button type="button" class="bg-sky-500 self-end py-2 px-3 text-sm rounded-md hover:bg-sky-600 hover:duration-200">Add new protocol</button>
+		</div>
+	    </nav>
+
+	    <!-- Main Content -->
+	    <div class="flex flex-col items-center p-10 pt-20 mt-5">
+		<div class="w-full max-w-6xl">
+		    <div class="mb-6">
+			<h1 class="text-2xl font-bold text-white mb-2">Liveness Analysis</h1>
+		    </div>
+
+		    <!-- System Info Card -->
+		    <div class="border border-gray-700 rounded-lg p-4 mb-6 bg-gray-900">
+			<div class="text-sm">
+			    <span class="text-gray-400">System:</span>
+			    <span id="systemName" class="text-white ml-2">-</span>
+			</div>
+		    </div>
+
+		    <!-- Chart Container -->
+		    <div class="border border-gray-700 rounded-lg overflow-hidden bg-gray-900 p-6">
+			<h2 class="text-lg font-semibold mb-4 text-white">Throughput Over Time</h2>
+			<div class="relative" style="height: 500px;">
+			    <canvas id="livenessChart"></canvas>
+			</div>
+		    </div>
+
+		    <!-- Stats Card -->
+		    <div class="grid grid-cols-3 gap-4 mt-6">
+			<div class="border border-gray-700 rounded-lg p-4 bg-gray-900">
+			    <div class="text-gray-400 text-sm">Average Throughput</div>
+			    <div id="avgThroughput" class="text-2xl font-bold text-white mt-1">-</div>
+			    <div class="text-gray-500 text-xs mt-1">ops/sec</div>
+			</div>
+			<div class="border border-gray-700 rounded-lg p-4 bg-gray-900">
+			    <div class="text-gray-400 text-sm">Peak Throughput</div>
+			    <div id="maxThroughput" class="text-2xl font-bold text-white mt-1">-</div>
+			    <div class="text-gray-500 text-xs mt-1">ops/sec</div>
+			</div>
+			<div class="border border-gray-700 rounded-lg p-4 bg-gray-900">
+			    <div class="text-gray-400 text-sm">Outage Duration</div>
+			    <div id="outageDuration" class="text-2xl font-bold text-red-400 mt-1">-</div>
+			    <div class="text-gray-500 text-xs mt-1">seconds</div>
+			</div>
+		    </div>
+
+		    <!-- Info Box -->
+		    <div class="mt-6 border border-yellow-600 rounded-lg p-4 bg-yellow-900/20">
+			<div class="flex items-start gap-3">
+			    <svg class="w-5 h-5 text-yellow-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+			    </svg>
+			    <div>
+				<h3 class="text-yellow-500 font-semibold text-sm">About this test</h3>
+				<p class="text-gray-300 text-sm mt-1">
+				    This graph shows throughput measured every second during a 30-second test window.
+				    In this scenario, a single node was crashed while quorum was maintained.
+				    Drops to zero indicate temporary unavailability as the system recovers from the node failure.
+				</p>
+			    </div>
+			</div>
+		    </div>
+		</div>
+	    </div>
+
+	    <hr class="text-gray-700 mx-25 mt-10">
+	    <div class="mx-25 my-5 flex">
+		<small class="ml-auto">Copyright 2025 © <a href="https://fadhil.id/" class="text-sky-500">Fadhil Kurnia</a></small>
+	    </div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="./liveness.js" defer></script>
+    </body>
+</html>

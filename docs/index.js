@@ -35,17 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
 	    return res.json();
 	})
 	.then(data => {
-	    const renamed = data.map(item => {
-		return {
-		    ...item,
-		    project: item.project.replaceAll(".", "/"),
-		};
-	    });
-	    const renamedData = JSON.stringify(renamed);
-	    sessionStorage.setItem("data", renamedData);
+	    const dataString = JSON.stringify(data);
+	    sessionStorage.setItem("data", dataString);
 
-	    loadWorkloadSelect(renamedData);
-	    loadOverviewTables(renamedData, selectedWorkload);
+	    loadWorkloadSelect(dataString);
+	    loadOverviewTables(dataString, selectedWorkload);
 	})
 	.catch(error => {
 	    console.error('Error fetching file:', error);

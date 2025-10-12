@@ -9,6 +9,8 @@ import sys
 import threading
 import time
 import warnings
+import csv
+import shutil
 
 from src.utils import helper
 from src.utils.dependency import (
@@ -21,7 +23,7 @@ from src.utils.dependency import (
 
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
-DEFAULT_FAULT_DELAY_SECONDS = 5.0
+DEFAULT_FAULT_DELAY_SECONDS = 10.0
 WORKLOADS = [
     {
         "num": 1,
@@ -34,12 +36,7 @@ WORKLOADS = [
     },
     {
         "num": 3,
-        "text": "insert-heavy_30s",
-        "type": "single-client",
-    },
-    {
-        "num": 4,
-        "text": "update-heavy_30s",
+        "text": "liveness-test",
         "type": "single-client",
     }
 ]
@@ -258,9 +255,9 @@ class Launcher(ABC):
         ycsb_bin = f"{ycsb_dir}/bin/ycsb"
         workload_path = f"{ycsb_dir}/workloads/{workload['text']}"
 
-        # Check if the workload is insert-heavy_30s and fault injection is enabled
+        # Check if the workload is liveness-test and fault injection is enabled
         enable_fault_injection = (
-            workload["text"] == "insert-heavy_30s"
+            workload["text"] == "liveness-test"
             and self.is_fault_injection_enabled()
         )
 
@@ -315,7 +312,8 @@ class Launcher(ABC):
             run_cmd = (
                 f"cd {ycsb_dir} && "
                 f"{ycsb_bin} run {self.ycsb_interface} "
-                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} "
+                f"-p measurementtype=timeseries -p timeseries.granularity=1000"
             )
 
             if self.client_ip != "127.0.0.1":
@@ -395,7 +393,63 @@ class Launcher(ABC):
 
             return output
 
+    def save_insert_timeseries_csv(self, result, csv_path):
+        time_buckets = {}
+
+        for line in result:
+            line = line.strip()
+            if not line.startswith("[INSERT]"):
+                continue
+
+            if "-ops" in line:
+                parts = line.split(", ")
+                if len(parts) >= 3:
+                    time_str = parts[1].replace("-ops", "")
+                    ops_count = parts[2]
+                    time_buckets[time_str] = {"ops": ops_count, "latency": None}
+
+            elif line.count(",") >= 2:
+                parts = line.split(", ")
+                if len(parts) >= 3:
+                    time_str = parts[1]
+                    latency = parts[2]
+                    if time_str.isdigit() and time_str in time_buckets:
+                        time_buckets[time_str]["latency"] = latency
+
+        csv_path = Path(csv_path)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(csv_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['t', 'ops', 'latency'])
+
+            # Sort by time and write rows
+            for time_str in sorted(time_buckets.keys(), key=int):
+                data = time_buckets[time_str]
+                writer.writerow([time_str, data['ops'], data['latency']])
+
+        logging.info(f"INSERT timeseries data saved to {csv_path}")
+
     def _store_ycsb_result(self, result, workload):
+        # Save INSERT timeseries CSV when fault injection is enabled
+        liveness_csv_relative_path = None
+        if self.is_fault_injection_enabled() and "INSERT" in "".join(result):
+            csv_path = self.local_dir / "liveness_data.csv"
+            self.save_insert_timeseries_csv(result, csv_path)
+
+            # Copy CSV to docs/liveness_data/ for web access
+            docs_liveness_dir = self.ROOT_DIR / "docs" / "liveness_data"
+            docs_liveness_dir.mkdir(parents=True, exist_ok=True)
+
+            dest_csv_name = f"{self.project_name}.csv"
+            dest_csv_path = docs_liveness_dir / dest_csv_name
+
+            shutil.copy(csv_path, dest_csv_path)
+
+            # Store relative path for JSON (relative to docs/)
+            liveness_csv_relative_path = f"liveness_data/{dest_csv_name}"
+            logging.info(f"Liveness data copied to {dest_csv_path}")
+
         parsed_data = {}
         for line in result:
             line = line.strip()
@@ -461,6 +515,10 @@ class Launcher(ABC):
             "protocols": [protocol_data]
         }
 
+        # Add liveness_data if available
+        if liveness_csv_relative_path:
+            project_data["liveness_data"] = liveness_csv_relative_path
+
         # Check if project already exists
         selected_project = next((p for p in data
                                  if p["project"] == self.project_name
@@ -473,6 +531,10 @@ class Launcher(ABC):
             helper.write_to_json(self.output_file, data, self.project_name,
                                  self.selected_protocol["name"], workload, self.project_commit)
             return
+
+        # Update liveness_data if available
+        if liveness_csv_relative_path:
+            selected_project["liveness_data"] = liveness_csv_relative_path
 
         # Check if protocol already exists
         protocols = selected_project["protocols"]
@@ -555,12 +617,6 @@ class Launcher(ABC):
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def crash_node(self, target_index=None):
-        """
-        Crash a specific node for fault injection testing.
-
-        :param target_index: Index of node to crash (uses fault_injection_target_index if None)
-        :raises RuntimeError: If fault injection is not configured or process not found
-        """
         if self.fault_injection_identifier is None:
             raise RuntimeError(
                 "Fault injection not enabled. Set self.fault_injection_identifier in launcher."
@@ -618,19 +674,9 @@ class Launcher(ABC):
             logging.info(f"[FAULT INJECTION] Successfully crashed node {target_index}")
 
     def is_fault_injection_enabled(self):
-        """Check if fault injection is configured for this launcher."""
         return self.fault_injection_identifier is not None
 
     def schedule_crash(self, delay=None, target_index=None):
-        """
-        Schedule a node crash to occur after a delay (in seconds).
-        Returns the background thread that will execute the crash.
-
-        :param delay: Seconds to wait before crash (uses scheduled_crash_delay if None)
-        :param target_index: Index of node to crash (uses fault_injection_target_index if None)
-        :return: Thread object executing the scheduled crash
-        :raises RuntimeError: If fault injection is not configured
-        """
         if not self.is_fault_injection_enabled():
             raise RuntimeError(
                 "Fault injection not enabled. Set self.fault_injection_identifier in launcher."
