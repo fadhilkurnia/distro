@@ -1,3 +1,4 @@
+import sys
 import json
 import logging
 import os
@@ -35,24 +36,31 @@ class PaxiLauncher(Launcher):
         super().__init__(nodes, ssh, client_ip, num_of_nodes, output_file)
 
     def map_ip_port(self):
-        port = {"private": {}, "public": {}}
+        data = []
+        private_ip_map = {}
+        public_ip_map = {}
         for node in self.nodes:
             public_ip = node["public_ip"]
             private_ip = node["private_ip"]
 
-            if (public_ip not in port["public"]
-                    or port["public"][public_ip] is None):
-                port["public"][public_ip] = 3000
+            if (public_ip not in public_ip_map
+                    or public_ip_map[public_ip] is None):
+                public_ip_map[public_ip] = 3000
             else:
-                port["public"][public_ip] += 1
+                public_ip_map[public_ip] += 1
 
-            if (private_ip not in port["private"]
-                    or port["private"][private_ip] is None):
-                port["private"][private_ip] = 2000
+            if (private_ip not in private_ip_map
+                    or private_ip_map[private_ip] is None):
+                private_ip_map[private_ip] = 2000
             else:
-                port["private"][private_ip] += 1
+                private_ip_map[private_ip] += 1
 
-        return port
+            data.append({"public_ip": public_ip,
+                         "private_ip": private_ip,
+                         "private_port": private_ip_map[private_ip],
+                         "public_port": public_ip_map[public_ip]})
+
+        return data
 
     def launch(self):
         logging.info("Launching PaxiLauncher")
@@ -63,7 +71,7 @@ class PaxiLauncher(Launcher):
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "paxi"
-        self.ycsb_endpoint = "rest.endpoint"
+        self.ycsb_endpoint = "url.prefix"
         self.selected_protocol = {
             "name": PROTOCOLS[prot_num-1]["text"],
             "language": "Go",
@@ -84,8 +92,7 @@ class PaxiLauncher(Launcher):
                 case 1:
                     self.stop(port_map)
                 case 2:
-                    endpoints = [f"http://{ip}:{port}" for ip,
-                                 port in port_map["public"].items()]
+                    endpoints = [f"http://{node["public_ip"]}:{node["public_port"]}" for node in port_map]
                     self.ycsb(endpoints)
 
     def generate_config(self, port_map):
@@ -93,12 +100,12 @@ class PaxiLauncher(Launcher):
         with open(f"{self.local_dir}/template.json", 'r') as file:
             data = json.load(file)
 
-        for i, node in enumerate(self.nodes):
+        for i, node in enumerate(port_map):
             id = f"1.{i+1}"
             public_ip = node["public_ip"]
             private_ip = node["private_ip"]
-            public_port = port_map['public'][public_ip]
-            private_port = port_map['private'][private_ip]
+            public_port = node["public_port"]
+            private_port = node["private_port"]
 
             data["address"][id] = f"tcp://{private_ip}:{private_port}"
             data["http_address"][id] = f"http://{public_ip}:{public_port}"
@@ -154,8 +161,8 @@ class PaxiLauncher(Launcher):
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
                     f"pids=$(ps aux | grep '{binary}' | grep -v grep | awk '{{print $2}}'); "
-                    f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
-                    f"rm server.*.log; "
+                    f"for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid 2>/dev/null || true; done; "
+                    f"rm server.*.log || true; "
                 )
                 self.local_run_cmd(stop_cmd)
             else:

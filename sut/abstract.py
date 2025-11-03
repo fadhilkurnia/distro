@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
+from dotenv import load_dotenv
 import inspect
 import json
 import logging
+import os
 from pathlib import Path
 import shlex
 import subprocess
 import sys
+import time
 import warnings
 
 from src.utils import helper
@@ -17,17 +20,63 @@ from src.utils.dependency import (
     version_satisfies,
 )
 
+
+load_dotenv()
+
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
+
 WORKLOADS = [
     {
         "num": 1,
-        "text": "read-heavy",
         "type": "single-client",
+        "name": "Workload A: Update heavy workload",
+        "filename": "workloada",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.5,
+        "update_proportion": 0.5,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
     }, {
         "num": 2,
-        "text": "update-heavy",
         "type": "single-client",
+        "name": "Workload B: Read mostly workload",
+        "filename": "workloadb",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.95,
+        "update_proportion": 0.05,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
+    }, {
+        "num": 3,
+        "type": "single-client",
+        "name": "Workload C: Read only",
+        "filename": "workloadc",
+        "request_distribution": "zipfian",
+        "read_proportion": 1,
+        "update_proportion": 0,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
+    }, {
+        "num": 4,
+        "type": "single-client",
+        "name": "Workload D: Read latest workload",
+        "filename": "workloadd",
+        "request_distribution": "latest",
+        "read_proportion": 0.95,
+        "update_proportion": 0,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0.05,
+    }, {
+        "num": 5,
+        "type": "single-client",
+        "name": "Workload F: Read-modify-write workload",
+        "filename": "workloadf",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.5,
+        "update_proportion": 0,
+        "read_modify_write_proportion": 0.05,
+        "insert_proportion": 0,
     }
 ]
 
@@ -219,7 +268,7 @@ class Launcher(ABC):
 
         build_cmd = (
             f"cd {ycsb_dir} && "
-            f"mvn clean package -pl {self.ycsb_interface} -am"
+            f"mvn clean package -pl {self.ycsb_interface} -am -DskipTests"
         )
 
         if self.client_ip == "127.0.0.1":
@@ -228,7 +277,7 @@ class Launcher(ABC):
         else:
             self.remote_run_cmd(self.client_ip, build_cmd, True)
 
-    def _run_ycsb(self, addr_list, workload):
+    def _load_ycsb(self, addr_list, record_count, args):
         if not addr_list:
             raise ValueError("addr_list cannot be empty")
 
@@ -238,13 +287,67 @@ class Launcher(ABC):
             ycsb_dir = "~/distro/ycsb"
 
         ycsb_bin = f"{ycsb_dir}/bin/ycsb"
-        workload_path = f"{ycsb_dir}/workloads/{workload["text"]}"
-        run_cmd = (
+        load_insert_retry_limit = os.getenv("LOAD_INSERT_RETRY_LIMIT", 10)
+        load_insert_retry_interval = os.getenv("LOAD_INSERT_RETRY_INTERVAL", 1)
+        field_count = os.getenv("FIELD_COUNT", 1)
+        field_length = os.getenv("FIELD_LENGTH", 100)
+        load_thread_count = os.getenv("LOAD_THREAD_COUNT", 64)
+        benchmark_seed = os.getenv("BENCHMARK_SEED", 42)
+
+        logging.info(f"Loading {record_count} YCSB key-value pairs to {self.project_name}-{self.selected_protocol["name"]} using {load_thread_count} threads")
+
+        load_cmd = (
             f"cd {ycsb_dir} && "
             f"{ycsb_bin} load {self.ycsb_interface} "
-            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} > /dev/null && "
+            "-p workload=site.ycsb.workloads.CoreWorkload "
+            "-p insertorder=hashed "
+            f"-p {self.ycsb_endpoint}={addr_list[0]} "
+            f"-p recordcount={record_count} "
+            f"-p core_workload_insertion_retry_limit={load_insert_retry_limit} "
+            f"-p core_workload_insertion_retry_interval={load_insert_retry_interval} "
+            f"-p fieldcount={field_count} "
+            f"-p fieldlength={field_length} "
+            f"-p threadcount={load_thread_count} "
+            f"-p seed={benchmark_seed} "
+            f"-p {args}"
+        )
+
+        if self.client_ip == "127.0.0.1":
+            self.local_run_cmd(load_cmd)
+        else:
+            self.remote_run_cmd(self.client_ip, load_cmd)
+
+    def _run_ycsb(self, addr_list, workload, args):
+        if not addr_list:
+            raise ValueError("addr_list cannot be empty")
+
+        if self.client_ip == "127.0.0.1":
+            ycsb_dir = str(YCSB_DIR.resolve())
+        else:
+            ycsb_dir = "~/distro/ycsb"
+
+        ycsb_bin = f"{ycsb_dir}/bin/ycsb"
+        workload_path = f"{ycsb_dir}/workloads/{workload["filename"]}"
+
+        logging.info(f"Running YCSB {workload["name"]} benchmark on {self.project_name}-{self.selected_protocol["name"]} using {workload["thread_count"]} threads")
+
+        run_cmd = (
+            f"cd {ycsb_dir} && "
             f"{ycsb_bin} run {self.ycsb_interface} "
-            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} "
+            f"-p recordcount={workload["record_count"]} "
+            f"-p operationcount={workload["operation_count"]} "
+            f"-p insertproportion={workload["insert_proportion"]} "
+            f"-p readproportion={workload["read_proportion"]} "
+            f"-p updateproportion={workload["update_proportion"]} "
+            f"-p readmodifywriteproportion={workload["read_modify_write_proportion"]} "
+            f"-p readproportion={workload["read_proportion"]} "
+            f"-p requestdistribution={workload["request_distribution"]} "
+            f"-p fieldcount={workload["field_count"]} "
+            f"-p fieldlength={workload["field_length"]} "
+            f"-p seed={workload["seed"]} "
+            f"-p threadcount={workload["thread_count"]} "
+            f"-p {args}"
         )
 
         if self.client_ip != "127.0.0.1":
@@ -253,13 +356,20 @@ class Launcher(ABC):
                 f"{self.user}@{self.client_ip}",
                 "bash -c", shlex.quote(run_cmd)
             ]
-
-        process = subprocess.Popen(
-            run_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+            process = subprocess.Popen(
+                run_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+        else:
+            process = subprocess.Popen(
+                run_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                shell=True
+            )
 
         output = []
         for line in process.stdout:
@@ -311,18 +421,31 @@ class Launcher(ABC):
 
         # Insert Parsed Data
         print(json.dumps(parsed_data, indent=2))
-        keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
+        keep_keys = {"READ","READ-FAILED", "UPDATE", "UPDATE-FAILED", "DELETE", "DELETE-FAILED", "INSERT", "INSERT-FAILED", "OVERALL"}
         final_result = {k: parsed_data[k]
                         for k in keep_keys if k in parsed_data}
 
         with open(self.output_file, "r") as f:
             data = json.load(f)
 
-        workload_data = {
-            "name": workload["text"],
-            "type": workload["type"],
-            "num_of_nodes": self.num_of_nodes,
+        result_data = {
+            "thread_count": workload["thread_count"],
             "result": final_result
+        }
+
+        workload_data = {
+            "name": workload["name"],
+            "type": workload["type"],
+            "operation_count": workload["operation_count"],
+            "record_count": workload["record_count"],
+            "request_distribution": workload["request_distribution"],
+            "read_proportion": workload["read_proportion"],
+            "update_proportion": workload["update_proportion"],
+            "read_modify_write_proportion": workload["read_modify_write_proportion"],
+            "insert_proportion": workload["insert_proportion"],
+            "num_of_nodes": self.num_of_nodes,
+            "seed": workload["seed"],
+            "results": [result_data]
         }
 
         protocol_data = {
@@ -373,33 +496,104 @@ class Launcher(ABC):
         # Check if workload already exists
         workloads = selected_protocol["workloads"]
         selected_workload = next((w for w in workloads
-                                  if w["name"] == workload["text"]
+                                  if w["name"] == workload["name"]
                                   and w["type"] == workload["type"]
+                                  and w["operation_count"] == workload["operation_count"]
+                                  and w["record_count"] == workload["record_count"]
+                                  and w["request_distribution"] == workload["request_distribution"]
+                                  and w["read_proportion"] == workload["read_proportion"]
+                                  and w["update_proportion"] == workload["update_proportion"]
+                                  and w["read_modify_write_proportion"] == workload["read_modify_write_proportion"]
+                                  and w["insert_proportion"] == workload["insert_proportion"]
                                   and w["num_of_nodes"] == self.num_of_nodes
+                                  and w["seed"] == workload["seed"]
                                   ), None)
         if selected_workload is None:
-            logging.info(
-                f"{workload["text"]} doesn't exist. Adding new workload")
+            logging.info(f"{workload["name"]} doesn't exist. Adding new workload")
             workloads.append(workload_data)
             helper.write_to_json(self.output_file, data, self.project_name,
                                  self.selected_protocol["name"], workload, self.project_commit)
             return
 
-        # Workload already exists
-        logging.info(
-            f"{workload["text"]} already exist. Overriding previous result")
-        selected_workload["result"] = final_result
+        # Check if thread count result already exists
+        results_data = selected_workload["results"]
+        selected_result = next((r for r in results_data
+                                if r["thread_count"] == workload["thread_count"]
+                                ), None)
+        if selected_result is None:
+            logging.info(f"{workload["thread_count"]} thread count doesn't exist. Adding new result on this thread count")
+            results_data.append(result_data)
+            helper.write_to_json(self.output_file, data, self.project_name,
+                                 self.selected_protocol["name"], workload, self.project_commit)
+            return
+
+        # Thread count result already exists
+        logging.info(f"{workload["thread_count"]} thread count already exist. Overriding previous result")
+        selected_result["result"] = final_result
         helper.write_to_json(self.output_file, data, self.project_name,
                              self.selected_protocol["name"], workload, self.project_commit)
 
-    def ycsb(self, addr_list) -> None:
+    def ycsb(self, addr_list, args) -> None:
         self._build_ycsb()
 
-        num = helper.get_option(1, len(WORKLOADS), WORKLOADS)
-        selected_workload = WORKLOADS[num-1]
-        result = self._run_ycsb(addr_list, selected_workload)
+        default_record_count = int(os.getenv("DEFAULT_RECORD_COUNT", 1000000))
+        default_operation_count = int(os.getenv("DEFAULT_OPERATION_COUNT", 500000))
+        record_count = helper.get_positive_num("Enter Record Count", default_record_count)
+        operation_count = helper.get_positive_num("Enter Operation Count", default_operation_count)
 
-        self._store_ycsb_result(result, selected_workload)
+        # Load key-value pairs first before running benchmark
+        #self._load_ycsb(addr_list, record_count, args)
+
+        # Run Workload
+        workload_text = [{
+            "num": item["num"],
+            "text": (
+                f"[{item["type"]}] {item["name"]} ({item["request_distribution"]})\n"
+                f"{int(item["insert_proportion"] * 100):10d}% insert\n"
+                f"{int(item["read_proportion"] * 100):10d}% read\n"
+                f"{int(item["update_proportion"] * 100):10d}% update\n"
+                f"{int(item["read_modify_write_proportion"] * 100):10d}% read-modify-write"
+            )
+        } for item in WORKLOADS]
+        workload_text.append({"num": 0,
+                              "text": "Stop Benchmark"})
+
+        field_count = os.getenv("FIELD_COUNT", 1)
+        field_length = os.getenv("FIELD_LENGTH", 100)
+        benchmark_seed = os.getenv("BENCHMARK_SEED", 42)
+        thread_count_str = os.getenv("BENCHMARK_THREAD_COUNTS", "8,16,32,64,128")
+        thread_counts = [int(item.strip()) for item in thread_count_str.split(',')]
+
+        '''
+        while True:
+            num = helper.get_option(0, len(workload_text), workload_text)
+
+            if num == 0:
+                return
+        '''
+        for num in range(1, 6):
+            selected_workload = WORKLOADS[num-1]
+            selected_workload["operation_count"] = operation_count
+            selected_workload["record_count"] = record_count
+            selected_workload["field_count"] = field_count
+            selected_workload["field_length"] = field_length
+            selected_workload["seed"] = benchmark_seed
+
+            # Run same workload Multiple times with different thread counts
+            for thread_count in thread_counts:
+                selected_workload["thread_count"] = thread_count
+                result = self._run_ycsb(addr_list, selected_workload, args)
+                self._store_ycsb_result(result, selected_workload)
+
+                #break_duration = 20
+                break_duration = 5
+                logging.info(f"Taking {break_duration} second break after running {selected_workload["name"]} with {thread_count} thread(s)")
+                time.sleep(break_duration)
+                while (True):
+                    user_input = input("Do you want to continue? (y/n): ").strip().lower()
+                    if user_input == 'y':
+                        print("Continuing the process...")
+                        break
 
     def local_run_cmd(self, cmd):
         logging.debug(f"Running: {cmd}")

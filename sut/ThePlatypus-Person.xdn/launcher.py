@@ -58,7 +58,7 @@ class XdnLauncher(Launcher):
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "xdn"
-        self.ycsb_endpoint = "xdn.restkv.endpoint"
+        self.ycsb_endpoint = "url.prefix"
         self.selected_protocol = {
             "name": "xdn",
             "language": "Java",
@@ -80,10 +80,10 @@ class XdnLauncher(Launcher):
                     self.stop(nodes_map)
                 case 2:
                     endpoints = [
-                        f"http://{node["public_ip"]}:{node["client_port"]}"
+                        f"http://{node["public_ip"]}:{node["client_port"]}/api/kv/"
                         for node in nodes_map
                     ]
-                    self.ycsb(endpoints)
+                    self.ycsb(endpoints, "headers='XDN restkv'")
 
     def generate_config(self, nodes_map):
         logging.info("Generating config.properties file")
@@ -221,7 +221,7 @@ class XdnLauncher(Launcher):
                 "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
                 f"-cp build/classes:{jars} "
                 f"edu.umass.cs.reconfiguration.ReconfigurableNode RC0 "
-                f"> reconf_{i}.log 2>&1 &"
+                f"> reconf_0.log 2>&1 &"
             )
             self.remote_run_cmd(nodes_map[0]["public_ip"], run_cmd, True)
 
