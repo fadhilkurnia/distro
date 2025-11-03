@@ -107,7 +107,6 @@ class TikvLauncher(Launcher):
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
-        return
         # Start instances
         initial_cluster = ",".join(f"pd{i+1}=http://{n['private_ip']}:{n['peer_port']}" for i, n in enumerate(node_maps))
         pd_endpoints = ",".join(f"{n['private_ip']}:{n['client_port']}" for n in node_maps)

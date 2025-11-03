@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
     <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,53 +8,54 @@
     </head>
 
     <body class="w-screen overflow-x-hidden box-border">
-	<div id="root" class="bg-gray-950 w-screen min-h-screen overflow-auto text-gray-100">
+	<div id="root" class="bg-gray-50 w-screen min-h-screen overflow-auto text-gray-950 flex flex-col">
 
 	    <!-- Navigation Bar -->
 	    <nav class="flex justify-between items-center px-5 py-4 tracking-tight border-b border-gray-700 fixed top-0 w-screen backdrop-blur-sm backdrop-opacity-100 z-100 select-none">
 		<!-- Logo -->
-		<h1 class="font-sans text-gray-100 text-lg font-bold">
+		<h1 class="font-sans text-gray-950 text-lg font-bold">
 		    <a href="/">Distrobench.</a>
 		</h1>
 
 		<!-- Menu -->
 		<div>
-		    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbarLinearizability" class="flex items-center justify-between w-full py-2 px-3 text-white rounded-sm font-sans hover:text-sky-500 md:hover:bg-transparent md:border-0 md:hover:text-sky-500 md:p-0 md:w-auto dark:text-white md:dark:hover:text-sky-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
+		    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbarLinearizability" 
+			class="flex items-center justify-between w-full py-2 px-3 text-gray-700 rounded-sm font-sans">
 			Linearizability
 			<svg class="w-2.5 h-full ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
 			    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/>
 			</svg>
 		    </button>
-		    <div id="dropdownNavbarLinearizability" class="z-10 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44 dark:bg-gray-700 dark:divide-gray-600">
-			<ul class="py-2 text-sm text-gray-700 dark:text-gray-400" aria-labelledby="dropdownLargeButton">
-			    <li><a href="/result.html?consistency=Linearizability" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Linearizability</a></li>
-			    <li><a href="/result.html?consistency=Linearizability %2B Primary Integrity" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Primary-Backup</a></li>
+		    <div id="dropdownNavbarLinearizability" class="z-10 hidden font-normal bg-gray-100 divide-y divide-gray-600 rounded-lg shadow-sm w-44">
+			<ul class="py-2 text-sm text-gray-700" aria-labelledby="dropdownLargeButton">
+			    <li><a href="/result.html?consistency=Linearizability" class="block px-4 py-2 hover:bg-gray-300">Linearizability</a></li>
+			    <li><a href="/result.html?consistency=Linearizability %2B Primary Integrity" class="block px-4 py-2 hover:bg-gray-300">Primary-Backup</a></li>
 			</ul>
 		    </div>
 		</div>
-		<div class="font-sans text-white hover:text-sky-500">
+		<div class="font-sans text-gray-700 hover:text-sky-700">
 		    <a href="/result.html?consistency=Sequential">Sequential</a>
 		</div>
-		<div class="font-sans text-white hover:text-sky-500">
+		<div class="font-sans text-gray-700 hover:text-sky-700">
 		    <a href="/result.html?consistency=Causal">Causal</a>
 		</div>
-		<div class="font-sans text-white hover:text-sky-500">
+		<div class="font-sans text-gray-700 hover:text-sky-700">
 		    <a href="/result.html?consistency=Pram">PRAM</a>
 		</div>
 		<div>
-		    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbarClientCentric" class="flex items-center justify-between w-full py-2 px-3 text-white rounded-sm font-sans hover:text-sky-500 md:hover:bg-transparent md:border-0 md:hover:text-sky-500 md:p-0 md:w-auto dark:text-white md:dark:hover:text-sky-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
+		    <button id="dropdownNavbarLink" data-dropdown-toggle="dropdownNavbarClientCentric" class="flex items-center justify-between w-full py-2 px-3 text-gray-700 rounded-sm font-sans hover:text-sky-500 md:hover:bg-transparent md:border-0 md:hover:text-sky-500 md:p-0 md:w-auto dark:text-gray-700 md:dark:hover:text-sky-500 dark:focus:text-gray-700 dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent">
 			Client-Centric
 			<svg class="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 4 4 4-4"/></svg>
 		    </button>
-		    <div id="dropdownNavbarClientCentric" class="z-10 hidden font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-55 dark:bg-gray-700 dark:divide-gray-600">
-			<ul class="py-2 text-sm text-gray-700 dark:text-gray-400" aria-labelledby="dropdownLargeButton">
-			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Writes Follow Reads (WFR)</a></li>
-			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Monotonic Reads (MR)</a></li>
-			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Monotonic Writes (MW)</a></li>
-			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">Read Your Writes (RYW)</a></li>
+		    <div id="dropdownNavbarClientCentric" class="z-10 hidden font-normal bg-gray-100 divide-y divide-gray-600 rounded-lg shadow-sm w-54">
+			<ul class="py-2 text-sm text-gray-800" aria-labelledby="dropdownLargeButton">
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-300">Writes Follow Reads (WFR)</a></li>
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-300">Monotonic Reads (MR)</a></li>
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-300">Monotonic Writes (MW)</a></li>
+			    <li><a href="#" class="block px-4 py-2 hover:bg-gray-300">Read Your Writes (RYW)</a></li>
 		    </div>
 		</div>
-		<div class="font-sans text-white hover:text-sky-500">
+		<div class="font-sans text-gray-700 hover:text-sky-500">
 		    <a href="/result.html?consistency=Eventual">Eventual</a>
 		</div>
 
@@ -67,44 +68,86 @@
 		</div>
 	    </nav>
 
-	    <!-- Linearizability Page -->
-	    <div class="px-5 pt-20 flex flex-col gap-3 pb-5">
+	    <!-- Result Page -->
+	    <div class="px-5 pt-20 flex flex-col gap-3 pb-5 mb-auto">
+		<h2 class="scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight first:mt-0">Latency and Throughput</h2>
 		<!-- Select Area -->
 		<div class="flex gap-3 select-none">
-		    <div class="flex flex-col flex-1 gap-1">
-			<fieldset class="relative h-min flex-1 border border-gray-600 bg-gray-900 text-gray-100 rounded-lg hover:bg-gray-800 hover:duration-100">
-			    <legend class="ml-2 text-xs capitalize text-gray-400">Workload</legend>
-			    <select name="workload" id="workload-select" class="appearance-none w-full h-full py-1 px-3 pb-2">
-				<option value="">Select a workload</option>
-			    </select>	
+		    <div class="flex flex-col flex-2 gap-1">
+			<div class="flex gap-1">
 
-			    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-				    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
-				</svg>
-			    </div>
-			</fieldset>
+			    <fieldset class="relative h-min flex-2 border border-gray-400 bg-gray-200 text-gray-950 rounded-lg hover:bg-gray-300 hover:duration-100">
+				<legend class="ml-2 text-xs capitalize text-gray-950">Workload</legend>
+				<select name="workload" id="workload-select" class="appearance-none w-full h-full py-1 px-3 pb-2 bg-transparent rounded-lg focus:outline-none">
+				    <option value="">Select a workload</option>
+				</select>	
 
-			<fieldset class="relative h-min flex-1 border border-gray-600 bg-gray-900 text-gray-100 rounded-lg hover:bg-gray-800 hover:duration-100">
-			    <legend class="ml-2 text-xs capitalize text-gray-400">Metric</legend>
-			    <select name="workload" id="metric-select" class="appearance-none w-full h-full py-1 px-3 pb-2">
-				<option value="">Select a metric</option>
-			    </select>	
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				    </svg>
+				</div>
+			    </fieldset>
 
-			    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-				    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
-				</svg>
-			    </div>
-			</fieldset>
+			    <fieldset class="relative h-min flex-1 border border-gray-400 bg-gray-200 text-gray-950 rounded-lg hover:bg-gray-300 hover:duration-100">
+				<legend class="ml-2 text-xs capitalize text-gray-900">Type</legend>
+				<select name="workload-type" id="workload-type" class="appearance-none w-full h-full py-1 px-3 pb-2 bg-transparent rounded-lg focus:outline-none">
+				    <option value="">Select type</option>
+				</select>	
+
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				    </svg>
+				</div>
+			    </fieldset>
+			</div>
+
+			<div class="flex gap-1">
+			    <fieldset class="relative h-min flex-2 border border-gray-400 bg-gray-200 text-gray-950 rounded-lg hover:bg-gray-300 hover:duration-100">
+				<legend class="ml-2 text-xs capitalize text-gray-950">Number of Nodes</legend>
+				<select name="node-num" id="node-num-select" class="appearance-none w-full h-full py-1 px-3 pb-2 bg-transparent rounded-lg focus:outline-none">
+				    <option value="">Node count</option>
+				</select>	
+
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				    </svg>
+				</div>
+			    </fieldset>
+
+
+			    <fieldset class="relative h-min flex-2 border border-gray-400 bg-gray-200 text-gray-950 rounded-lg hover:bg-gray-300 hover:duration-100">
+				<legend class="ml-2 text-xs capitalize text-gray-900">Record Count</legend>
+				<select name="recordcount" id="recordcount-select" class="appearance-none w-full h-full py-1 px-3 pb-2 bg-transparent rounded-lg focus:outline-none"></select>	
+
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				    </svg>
+				</div>
+			    </fieldset>
+
+			    <fieldset class="relative h-min flex-2 border border-gray-400 bg-gray-200 text-gray-950 rounded-lg hover:bg-gray-300 hover:duration-100">
+				<legend class="ml-2 text-xs capitalize text-gray-900">Operation Count</legend>
+				<select name="operationcount" id="operationcount-select" class="appearance-none w-full h-full py-1 px-3 pb-2 bg-transparent rounded-lg focus:outline-none"></select>	
+
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+				    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+				    </svg>
+				</div>
+			    </fieldset>
+			</div>
 		    </div>
 
 		    <!-- Filter by Protocol -->
-		    <fieldset class="flex-1 text-gray-100 border border-gray-700 rounded-lg bg-gray-900 px-2 pb-2">
-			<legend class="text-xs capitalize mb-1 text-gray-400">Filter by Consensus Protocol</legend>
+		    <fieldset class="flex-1 text-gray-950 border border-gray-400 rounded-lg bg-gray-200 px-2 pb-2">
+			<legend class="text-xs capitalize mb-1 text-gray-900">Filter by Consensus Protocol</legend>
 
 			<div id="select-protocol" class="flex gap-1 flex-wrap">
-			    <label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-800 text-gray-100 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
+			    <label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-300 text-gray-950 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
 				<input class="cursor-pointer sr-only" type="radio" name="protocol" value="All"/>
 				<span class="text-xs">All</span>
 			    </label>
@@ -112,11 +155,11 @@
 		    </fieldset>
 
 		    <!-- Filter by Consistency Model -->
-		    <fieldset class="flex-1 text-gray-100 border border-gray-700 rounded-lg bg-gray-900 px-2 pb-2">
-			<legend class="text-xs capitalize mb-1 text-gray-400">Filter by Consistency Model</legend>
+		    <fieldset class="flex-1 text-gray-950 border border-gray-400 rounded-lg bg-gray-200 px-2 pb-2">
+			<legend class="text-xs capitalize mb-1 text-gray-900">Filter by Consistency Model</legend>
 
 			<div id="select-consistency" class="flex gap-1 flex-wrap">
-			    <label class="flex bg-sky-500 rounded-md px-2 align-center border border-sky-500">
+			    <label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-300 text-gray-950 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
 				<input class="cursor-pointer sr-only" type="radio" name="protocol" value="All"/>
 				<span class="text-gray-950 text-xs">All</span>
 			    </label>
@@ -124,11 +167,11 @@
 		    </fieldset>
 
 		    <!-- Filter by Persistency -->
-		    <fieldset class="flex-1 text-gray-100 border border-gray-700 rounded-lg bg-gray-900 px-2 pb-2">
-			<legend class="text-xs capitalize mb-1 text-gray-400">Filter by Persistency</legend>
+		    <fieldset class="flex-1 text-gray-950 border border-gray-400 rounded-lg bg-gray-200 px-2 pb-2">
+			<legend class="text-xs capitalize mb-1 text-gray-900">Filter by Persistency</legend>
 
 			<div id="select-persistency" class="flex gap-1 flex-wrap">
-			    <label class="flex bg-sky-500 rounded-md px-2 align-center border border-sky-500">
+			    <label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-300 text-gray-950 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
 				<input class="cursor-pointer sr-only" type="radio" name="protocol" value="All"/>
 				<span class="text-gray-950 text-xs">All</span>
 			    </label>
@@ -136,30 +179,91 @@
 		    </fieldset>
 		</div>
 
-		<!-- Chart -->
-		<div id="chart-section" class="flex gap-3">
+		<!-- First Chart Section -->
+		<div class="w-full flex gap-3">
+		    <!-- Proportion Chart -->
+		    <div id="proportion-data" class="flex flex-1 gap-2">
+			<div class="flex-1 flex flex-col gap-2">
+			    <canvas id="proportion-chart" class="w-full h-full"></canvas>
+
+			    <!-- Select Operation -->
+			    <fieldset class="flex-1 text-gray-950 border border-gray-400 rounded-lg bg-gray-200 px-2 pb-2">
+				<legend class="text-xs capitalize mb-1 text-gray-900">Filter Latency Data by Operation</legend>
+
+				<div id="select-operation" class="flex gap-1 flex-wrap">
+				    <label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-300 text-gray-950 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
+					<input class="cursor-pointer sr-only" type="radio" name="thread_count" value="All"/>
+					<span class="text-gray-950 text-xs">All</span>
+				    </label>
+				</div>
+			    </fieldset>
+
+			    <fieldset class="flex-1 text-gray-950 border border-gray-400 rounded-lg bg-gray-200 px-2 pb-2">
+				<legend class="text-xs capitalize mb-1 text-gray-900">Select Latency</legend>
+
+				<div id="select-latency" class="flex gap-1 flex-wrap"></div>
+			    </fieldset>
+			</div>
+
+			<div class="flex-3">
+			    <canvas id="result-chart" class="w-full h-full"></canvas>
+			</div>
+		    </div>
+		</div>
+
+		<h2 class="scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight first:mt-0">Operation Failure (Abort Rate)</h2>
+		<div class="flex gap-2">
+		    <div class="flex flex-col">
+			<div id="abort-rate" class="flex-1">
+			    <canvas id="abort-rate-chart" class="w-full h-full"></canvas>
+			</div>
+
+			<!-- Select Thread Count -->
+			<fieldset class="self-center text-gray-950 border border-gray-400 rounded-lg bg-gray-200 px-7 pb-2">
+			    <legend class="text-xs capitalize mb-1 text-gray-900">Filter Operation Distribution by Thread Count</legend>
+
+			    <div id="select-thread" class="flex gap-1 flex-wrap items-center justify-center">
+				<label class="flex bg-transparent rounded-md px-2 align-center border border-gray-700 hover:bg-gray-300 text-gray-950 active:bg-sky-500 active:text-gray-950 active:border-sky-500">
+				    <input class="cursor-pointer sr-only" type="radio" name="threads" value="All"/>
+				    <span class="text-gray-950 text-xs">All</span>
+				</label>
+			    </div>
+			</fieldset>
+		    </div>
+
+		    <div id="proportion-data" class="flex-1">
+			<div class="flex-1">
+			    <canvas id="op-distribution-chart" class="w-full"></canvas>
+			</div>
+		    </div>
+		</div>
+		<div class="flex-1">
+		    <canvas id="failure-threadcount-chart" class="w-full h-60"></canvas>
 		</div>
 
 		<!-- Table -->
+		<h2 id="table-title" class="scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight first:mt-0">Overall Result (Tabular)</h2>
+
 		<div class="border border-gray-700 rounded-lg overflow-hidden">
 		    <table id="main-table" class="w-full">
 			<thead>
-			    <tr class="text-gray-100 border-b border-gray-700 flex gap-5 text-base text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+			    <tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-base text-left py-2 px-4">
 				<th class="flex-2 select-none basis-0" onclick="sortTable(0)">Project</th>
 				<th class="flex-2 select-none basis-0" onclick="sortTable(1)">Protocol</th>
-				<th class="flex-1 select-none basis-0" onclick="sortTable(2)">Language</th>
-				<th class="flex-1 select-none basis-0" onclick="sortTable(3)">Runtime (ms)</th>
-				<th class="flex-1 select-none basis-0" onclick="sortTable(4)">Throughput (ops/sec)</th>
-				<th class="flex-1 select-none basis-0" onclick="sortTable(5)">Consistency Model</th>
-				<th class="flex-1 select-none basis-0" onclick="sortTable(6)">Persistency</th>
-				<th class="flex-1 select-none basis-0" onclick="sortTable(7)">Liveness</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(2)">Commit Hash</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(3)">Language</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(4)">Runtime (ms)</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(5)">Throughput (ops/sec)</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(6)">Consistency Model</th>
+				<th class="flex-1 select-none basis-0" onclick="sortTable(7)">Persistency</th>
 			    </tr>
 			</thead>
 
 			<tbody class="divide-y divide-gray-700">
-			    <tr class="text-gray-100 flex gap-5 text-base text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+			    <tr class="text-gray-950 flex gap-5 text-base text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				<td class="flex-2">Project</th>
 				<td class="flex-2">Protocol</th>
+				<td class="flex-1">Commit Hash</th>
 				<td class="flex-1">Language</th>
 				<td class="flex-1">Runtime (ms)</th>
 				<td class="flex-1">Throughput (ops/sec)</th>
@@ -169,17 +273,19 @@
 			</tbody>
 		    </table>
 		</div>
-
 	    </div>
 
+	    <!-- Footer -->
 	    <hr class="text-gray-700 mx-5">
 	    <div class="mx-5 my-5 flex">
 		<small class="ml-auto">Copyright 2025 © <a href="https://fadhil.id/" class="text-sky-500">Fadhil Kurnia</a></small>
 	    </div>
 	</div>
 
+
 	<script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 	<script src="./result.js" defer></script>
     </body>
 </html>

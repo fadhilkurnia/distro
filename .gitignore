@@ -1,8 +1,11 @@
 __pycache__
 *.py[cod]
 
-.env
-ssh-key.pem
-
 docs/liveness_data/*.csv
 *.log
+
+.env*
+ssh-key*.pem
+
+.m2/
+out/

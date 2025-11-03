@@ -6,6 +6,29 @@ import subprocess
 from pathlib import Path
 
 
+def get_positive_num(prompt, default_number) -> int:
+    while True:
+        try:
+            user_input = input(f"\n{prompt} (default = {default_number}): ").strip()
+
+            if not user_input:
+                print(f"Using default value of {default_number}")
+                return default_number
+
+            num = int(user_input)
+            if num > 0:
+                return num
+            else:
+                print("Input must be a positive number (> 0).")
+                continue
+
+        except KeyboardInterrupt:
+            print("\nExiting program...")
+            sys.exit()
+        except ValueError:
+            pass
+
+
 def get_option(min, max, opts, header="\nOptions:") -> int:
     """
     Print opts to stdout then gets user number input.
@@ -56,7 +79,7 @@ def write_to_json(file, data, project_name, protocol_name, workload, commit):
         json.dump(data, f, indent=2)
 
     output = (
-        f"{workload['type']} {workload['text']} benchmark for "
+        f"{workload["type"]} {workload["name"]} benchmark for "
         f"{project_name}:{protocol_name} ({commit}) "
         f"has been added to {file}."
     )

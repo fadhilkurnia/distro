@@ -1,6 +1,12 @@
-xdn
-config.properties
-fuse_rust
+xdn/
+flamegraph*/
+fuse_rust/
 
+config.properties
+
+fuserust
+fuserust-apply
 fuselog
 fuselog-apply
+xdn-bin
+

@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
+from dotenv import load_dotenv
 import inspect
 import json
 import logging
+import os
 from pathlib import Path
 import shlex
 import subprocess
 import sys
-import threading
 import time
 import warnings
-import csv
-import shutil
 
 from src.utils import helper
 from src.utils.dependency import (
@@ -21,23 +20,63 @@ from src.utils.dependency import (
     version_satisfies,
 )
 
+
+load_dotenv()
+
 YCSB_DIR = Path("./src/ycsb")
 YCSB_BIN = YCSB_DIR / "bin" / "ycsb"
-DEFAULT_FAULT_DELAY_SECONDS = 10.0
+
 WORKLOADS = [
     {
         "num": 1,
-        "text": "read-heavy",
         "type": "single-client",
+        "name": "Workload A: Update heavy workload",
+        "filename": "workloada",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.5,
+        "update_proportion": 0.5,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
     }, {
         "num": 2,
-        "text": "update-heavy",
         "type": "single-client",
-    },
-    {
+        "name": "Workload B: Read mostly workload",
+        "filename": "workloadb",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.95,
+        "update_proportion": 0.05,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
+    }, {
         "num": 3,
-        "text": "liveness-test",
         "type": "single-client",
+        "name": "Workload C: Read only",
+        "filename": "workloadc",
+        "request_distribution": "zipfian",
+        "read_proportion": 1,
+        "update_proportion": 0,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
+    }, {
+        "num": 4,
+        "type": "single-client",
+        "name": "Workload D: Read latest workload",
+        "filename": "workloadd",
+        "request_distribution": "latest",
+        "read_proportion": 0.95,
+        "update_proportion": 0,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0.05,
+    }, {
+        "num": 5,
+        "type": "single-client",
+        "name": "Workload F: Read-modify-write workload",
+        "filename": "workloadf",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.5,
+        "update_proportion": 0,
+        "read_modify_write_proportion": 0.05,
+        "insert_proportion": 0,
     }
 ]
 
@@ -61,11 +100,6 @@ class Launcher(ABC):
         self.client_ip = client_ip
         self.num_of_nodes = num_of_nodes
         self.output_file = output_file
-
-        # Fault injection support (optional - set by launchers)
-        self.fault_injection_identifier = None
-        self.fault_injection_target_index = 0
-        self.scheduled_crash_delay = DEFAULT_FAULT_DELAY_SECONDS
 
     @property
     def project_name(self) -> str:
@@ -179,20 +213,20 @@ class Launcher(ABC):
             success, output = run_remote_probe(entry["probe"], host, self.user, self.ssh_key)
 
         if not success:
-            logging.error(f"Missing dependency '{entry['name']}' in {host} (requires version {requirement})")
+            logging.error(f"Missing dependency '{entry["name"]}' in {host} (requires version {requirement})")
             raise RuntimeError(output)
 
         host_version = extract_version(output, entry["version_regex"])
         if host_version is None:
-            logging.error(f"Unable to get version for dependency '{entry['name']}' in {host}")
+            logging.error(f"Unable to get version for dependency '{entry["name"]}' in {host}")
             raise RuntimeError()
 
         if version_satisfies(host_version, requirement):
-            logging.info(f"{host} has dependency '{entry['name']}' version {host_version} (requires version {requirement})")
+            logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
             return True
 
-        logging.error(f"{host} has dependency '{entry['name']}' version {host_version} (requires version {requirement})")
-        sys.exit(f"{host} did not meet {entry['name']} version requirement. Exiting distrobench")
+        logging.error(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
+        sys.exit(f"{host} did not meet {entry["name"]} version requirement. Exiting distrobench")
 
     def ensure_repo_exists(self, dir_path, repo_url, commit=None):
         path = helper.get_repo_path_in_directory(dir_path, repo_url)
@@ -234,7 +268,7 @@ class Launcher(ABC):
 
         build_cmd = (
             f"cd {ycsb_dir} && "
-            f"mvn clean package -pl {self.ycsb_interface} -am"
+            f"mvn clean package -pl {self.ycsb_interface} -am -DskipTests"
         )
 
         if self.client_ip == "127.0.0.1":
@@ -243,7 +277,7 @@ class Launcher(ABC):
         else:
             self.remote_run_cmd(self.client_ip, build_cmd, True)
 
-    def _run_ycsb(self, addr_list, workload):
+    def _load_ycsb(self, addr_list, record_count, args):
         if not addr_list:
             raise ValueError("addr_list cannot be empty")
 
@@ -253,203 +287,104 @@ class Launcher(ABC):
             ycsb_dir = "~/distro/ycsb"
 
         ycsb_bin = f"{ycsb_dir}/bin/ycsb"
-        workload_path = f"{ycsb_dir}/workloads/{workload['text']}"
+        load_insert_retry_limit = os.getenv("LOAD_INSERT_RETRY_LIMIT", 10)
+        load_insert_retry_interval = os.getenv("LOAD_INSERT_RETRY_INTERVAL", 1)
+        field_count = os.getenv("FIELD_COUNT", 1)
+        field_length = os.getenv("FIELD_LENGTH", 100)
+        load_thread_count = os.getenv("LOAD_THREAD_COUNT", 64)
+        benchmark_seed = os.getenv("BENCHMARK_SEED", 42)
 
-        # Check if the workload is liveness-test and fault injection is enabled
-        enable_fault_injection = (
-            workload["text"] == "liveness-test"
-            and self.is_fault_injection_enabled()
+        logging.info(f"Loading {record_count} YCSB key-value pairs to {self.project_name}-{self.selected_protocol["name"]} using {load_thread_count} threads")
+
+        load_cmd = (
+            f"cd {ycsb_dir} && "
+            f"{ycsb_bin} load {self.ycsb_interface} "
+            "-p workload=site.ycsb.workloads.CoreWorkload "
+            "-p insertorder=hashed "
+            f"-p {self.ycsb_endpoint}={addr_list[0]} "
+            f"-p recordcount={record_count} "
+            f"-p core_workload_insertion_retry_limit={load_insert_retry_limit} "
+            f"-p core_workload_insertion_retry_interval={load_insert_retry_interval} "
+            f"-p fieldcount={field_count} "
+            f"-p fieldlength={field_length} "
+            f"-p threadcount={load_thread_count} "
+            f"-p seed={benchmark_seed} "
+            f"-p {args}"
         )
 
-        if enable_fault_injection:
-            # Split load and run phases for fault injection
-            load_cmd = (
-                f"cd {ycsb_dir} && "
-                f"{ycsb_bin} load {self.ycsb_interface} "
-                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
-            )
-
-            logging.info("[FAULT INJECTION] Executing load phase before fault injection")
-            if self.client_ip != "127.0.0.1":
-                load_cmd_list = [
-                    "ssh", "-i", self.ssh_key,
-                    f"{self.user}@{self.client_ip}",
-                    "bash -c", shlex.quote(load_cmd)
-                ]
-                load_process = subprocess.Popen(
-                    load_cmd_list,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
-            else:
-                load_process = subprocess.Popen(
-                    load_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    shell=True,
-                )
-
-            load_output = []
-            for line in load_process.stdout:
-                print(line, end='')
-                load_output.append(line)
-
-            load_return_code = load_process.wait()
-            if load_return_code != 0:
-                raise subprocess.CalledProcessError(
-                    load_return_code, load_process.args, output="".join(load_output))
-
-            # Schedule the crash after load phase completes
-            crash_thread = None
-            try:
-                crash_thread = self.schedule_crash()
-            except Exception as e:
-                logging.warning(f"Failed to schedule crash: {e}")
-
-            logging.info("[FAULT INJECTION] Executing run phase with scheduled crash")
-            run_cmd = (
-                f"cd {ycsb_dir} && "
-                f"{ycsb_bin} run {self.ycsb_interface} "
-                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} "
-                f"-p measurementtype=timeseries -p timeseries.granularity=1000"
-            )
-
-            if self.client_ip != "127.0.0.1":
-                run_cmd_list = [
-                    "ssh", "-i", self.ssh_key,
-                    f"{self.user}@{self.client_ip}",
-                    "bash -c", shlex.quote(run_cmd)
-                ]
-                process = subprocess.Popen(
-                    run_cmd_list,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
-            else:
-                process = subprocess.Popen(
-                    run_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    shell=True,
-                )
-
-            output = []
-            for line in process.stdout:
-                print(line, end='')
-                output.append(line)
-
-            return_code = process.wait()
-
-            if return_code != 0:
-                raise subprocess.CalledProcessError(
-                    return_code, process.args, output="".join(output))
-
-            return output
+        if self.client_ip == "127.0.0.1":
+            self.local_run_cmd(load_cmd)
         else:
-            # Original behavior: load and run in single command chain
-            run_cmd = (
-                f"cd {ycsb_dir} && "
-                f"{ycsb_bin} load {self.ycsb_interface} "
-                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} > /dev/null && "
-                f"{ycsb_bin} run {self.ycsb_interface} "
-                f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]}"
+            self.remote_run_cmd(self.client_ip, load_cmd)
+
+    def _run_ycsb(self, addr_list, workload, args):
+        if not addr_list:
+            raise ValueError("addr_list cannot be empty")
+
+        if self.client_ip == "127.0.0.1":
+            ycsb_dir = str(YCSB_DIR.resolve())
+        else:
+            ycsb_dir = "~/distro/ycsb"
+
+        ycsb_bin = f"{ycsb_dir}/bin/ycsb"
+        workload_path = f"{ycsb_dir}/workloads/{workload["filename"]}"
+
+        logging.info(f"Running YCSB {workload["name"]} benchmark on {self.project_name}-{self.selected_protocol["name"]} using {workload["thread_count"]} threads")
+
+        run_cmd = (
+            f"cd {ycsb_dir} && "
+            f"{ycsb_bin} run {self.ycsb_interface} "
+            f"-P {workload_path} -p {self.ycsb_endpoint}={addr_list[0]} "
+            f"-p recordcount={workload["record_count"]} "
+            f"-p operationcount={workload["operation_count"]} "
+            f"-p insertproportion={workload["insert_proportion"]} "
+            f"-p readproportion={workload["read_proportion"]} "
+            f"-p updateproportion={workload["update_proportion"]} "
+            f"-p readmodifywriteproportion={workload["read_modify_write_proportion"]} "
+            f"-p readproportion={workload["read_proportion"]} "
+            f"-p requestdistribution={workload["request_distribution"]} "
+            f"-p fieldcount={workload["field_count"]} "
+            f"-p fieldlength={workload["field_length"]} "
+            f"-p seed={workload["seed"]} "
+            f"-p threadcount={workload["thread_count"]} "
+            f"-p {args}"
+        )
+
+        if self.client_ip != "127.0.0.1":
+            run_cmd = [
+                "ssh", "-i", self.ssh_key,
+                f"{self.user}@{self.client_ip}",
+                "bash -c", shlex.quote(run_cmd)
+            ]
+            process = subprocess.Popen(
+                run_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+        else:
+            process = subprocess.Popen(
+                run_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                shell=True
             )
 
-            if self.client_ip != "127.0.0.1":
-                run_cmd = [
-                    "ssh", "-i", self.ssh_key,
-                    f"{self.user}@{self.client_ip}",
-                    "bash -c", shlex.quote(run_cmd)
-                ]
-                process = subprocess.Popen(
-                    run_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
-            else:
-                process = subprocess.Popen(
-                    run_cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    shell=True,
-                )
+        output = []
+        for line in process.stdout:
+            print(line, end='')
+            output.append(line)
 
-            output = []
-            for line in process.stdout:
-                print(line, end='')
-                output.append(line)
+        return_code = process.wait()
 
-            return_code = process.wait()
+        if return_code != 0:
+            raise subprocess.CalledProcessError(
+                return_code, process.args, output="".join(output))
 
-            if return_code != 0:
-                raise subprocess.CalledProcessError(
-                    return_code, process.args, output="".join(output))
-
-            return output
-
-    def save_insert_timeseries_csv(self, result, csv_path):
-        time_buckets = {}
-
-        for line in result:
-            line = line.strip()
-            if not line.startswith("[INSERT]"):
-                continue
-
-            if "-ops" in line:
-                parts = line.split(", ")
-                if len(parts) >= 3:
-                    time_str = parts[1].replace("-ops", "")
-                    ops_count = parts[2]
-                    time_buckets[time_str] = {"ops": ops_count, "latency": None}
-
-            elif line.count(",") >= 2:
-                parts = line.split(", ")
-                if len(parts) >= 3:
-                    time_str = parts[1]
-                    latency = parts[2]
-                    if time_str.isdigit() and time_str in time_buckets:
-                        time_buckets[time_str]["latency"] = latency
-
-        csv_path = Path(csv_path)
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(csv_path, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['t', 'ops', 'latency'])
-
-            # Sort by time and write rows
-            for time_str in sorted(time_buckets.keys(), key=int):
-                data = time_buckets[time_str]
-                writer.writerow([time_str, data['ops'], data['latency']])
-
-        logging.info(f"INSERT timeseries data saved to {csv_path}")
+        return output
 
     def _store_ycsb_result(self, result, workload):
-        # Save INSERT timeseries CSV when fault injection is enabled
-        liveness_csv_relative_path = None
-        if self.is_fault_injection_enabled() and "INSERT" in "".join(result):
-            csv_path = self.local_dir / "liveness_data.csv"
-            self.save_insert_timeseries_csv(result, csv_path)
-
-            # Copy CSV to docs/liveness_data/ for web access
-            docs_liveness_dir = self.ROOT_DIR / "docs" / "liveness_data"
-            docs_liveness_dir.mkdir(parents=True, exist_ok=True)
-
-            dest_csv_name = f"{self.project_name}.csv"
-            dest_csv_path = docs_liveness_dir / dest_csv_name
-
-            shutil.copy(csv_path, dest_csv_path)
-
-            # Store relative path for JSON (relative to docs/)
-            liveness_csv_relative_path = f"liveness_data/{dest_csv_name}"
-            logging.info(f"Liveness data copied to {dest_csv_path}")
-
         parsed_data = {}
         for line in result:
             line = line.strip()
@@ -486,18 +421,31 @@ class Launcher(ABC):
 
         # Insert Parsed Data
         print(json.dumps(parsed_data, indent=2))
-        keep_keys = {"READ", "UPDATE", "DELETE", "INSERT", "OVERALL"}
+        keep_keys = {"READ","READ-FAILED", "UPDATE", "UPDATE-FAILED", "DELETE", "DELETE-FAILED", "INSERT", "INSERT-FAILED", "OVERALL"}
         final_result = {k: parsed_data[k]
                         for k in keep_keys if k in parsed_data}
 
         with open(self.output_file, "r") as f:
             data = json.load(f)
 
-        workload_data = {
-            "name": workload["text"],
-            "type": workload["type"],
-            "num_of_nodes": self.num_of_nodes,
+        result_data = {
+            "thread_count": workload["thread_count"],
             "result": final_result
+        }
+
+        workload_data = {
+            "name": workload["name"],
+            "type": workload["type"],
+            "operation_count": workload["operation_count"],
+            "record_count": workload["record_count"],
+            "request_distribution": workload["request_distribution"],
+            "read_proportion": workload["read_proportion"],
+            "update_proportion": workload["update_proportion"],
+            "read_modify_write_proportion": workload["read_modify_write_proportion"],
+            "insert_proportion": workload["insert_proportion"],
+            "num_of_nodes": self.num_of_nodes,
+            "seed": workload["seed"],
+            "results": [result_data]
         }
 
         protocol_data = {
@@ -515,10 +463,6 @@ class Launcher(ABC):
             "protocols": [protocol_data]
         }
 
-        # Add liveness_data if available
-        if liveness_csv_relative_path:
-            project_data["liveness_data"] = liveness_csv_relative_path
-
         # Check if project already exists
         selected_project = next((p for p in data
                                  if p["project"] == self.project_name
@@ -532,10 +476,6 @@ class Launcher(ABC):
                                  self.selected_protocol["name"], workload, self.project_commit)
             return
 
-        # Update liveness_data if available
-        if liveness_csv_relative_path:
-            selected_project["liveness_data"] = liveness_csv_relative_path
-
         # Check if protocol already exists
         protocols = selected_project["protocols"]
         selected_protocol = next((p for p in protocols
@@ -547,42 +487,113 @@ class Launcher(ABC):
                                   ), None)
         if selected_protocol is None:
             logging.info(
-                f"{self.selected_protocol['name']} doesn't exist. Adding new protocol")
+                f"{self.selected_protocol["name"]} doesn't exist. Adding new protocol")
             protocols.append(protocol_data)
             helper.write_to_json(self.output_file, data, self.project_name,
-                                 self.selected_protocol['name'], workload, self.project_commit)
+                                 self.selected_protocol["name"], workload, self.project_commit)
             return
 
         # Check if workload already exists
         workloads = selected_protocol["workloads"]
         selected_workload = next((w for w in workloads
-                                  if w["name"] == workload["text"]
+                                  if w["name"] == workload["name"]
                                   and w["type"] == workload["type"]
+                                  and w["operation_count"] == workload["operation_count"]
+                                  and w["record_count"] == workload["record_count"]
+                                  and w["request_distribution"] == workload["request_distribution"]
+                                  and w["read_proportion"] == workload["read_proportion"]
+                                  and w["update_proportion"] == workload["update_proportion"]
+                                  and w["read_modify_write_proportion"] == workload["read_modify_write_proportion"]
+                                  and w["insert_proportion"] == workload["insert_proportion"]
                                   and w["num_of_nodes"] == self.num_of_nodes
+                                  and w["seed"] == workload["seed"]
                                   ), None)
         if selected_workload is None:
-            logging.info(
-                f"{workload['text']} doesn't exist. Adding new workload")
+            logging.info(f"{workload["name"]} doesn't exist. Adding new workload")
             workloads.append(workload_data)
             helper.write_to_json(self.output_file, data, self.project_name,
-                                 self.selected_protocol['name'], workload, self.project_commit)
+                                 self.selected_protocol["name"], workload, self.project_commit)
             return
 
-        # Workload already exists
-        logging.info(
-            f"{workload['text']} already exist. Overriding previous result")
-        selected_workload["result"] = final_result
-        helper.write_to_json(self.output_file, data, self.project_name,
-                             self.selected_protocol['name'], workload, self.project_commit)
+        # Check if thread count result already exists
+        results_data = selected_workload["results"]
+        selected_result = next((r for r in results_data
+                                if r["thread_count"] == workload["thread_count"]
+                                ), None)
+        if selected_result is None:
+            logging.info(f"{workload["thread_count"]} thread count doesn't exist. Adding new result on this thread count")
+            results_data.append(result_data)
+            helper.write_to_json(self.output_file, data, self.project_name,
+                                 self.selected_protocol["name"], workload, self.project_commit)
+            return
 
-    def ycsb(self, addr_list) -> None:
+        # Thread count result already exists
+        logging.info(f"{workload["thread_count"]} thread count already exist. Overriding previous result")
+        selected_result["result"] = final_result
+        helper.write_to_json(self.output_file, data, self.project_name,
+                             self.selected_protocol["name"], workload, self.project_commit)
+
+    def ycsb(self, addr_list, args) -> None:
         self._build_ycsb()
 
-        num = helper.get_option(1, len(WORKLOADS), WORKLOADS)
-        selected_workload = WORKLOADS[num-1]
-        result = self._run_ycsb(addr_list, selected_workload)
+        default_record_count = int(os.getenv("DEFAULT_RECORD_COUNT", 1000000))
+        default_operation_count = int(os.getenv("DEFAULT_OPERATION_COUNT", 500000))
+        record_count = helper.get_positive_num("Enter Record Count", default_record_count)
+        operation_count = helper.get_positive_num("Enter Operation Count", default_operation_count)
 
-        self._store_ycsb_result(result, selected_workload)
+        # Load key-value pairs first before running benchmark
+        #self._load_ycsb(addr_list, record_count, args)
+
+        # Run Workload
+        workload_text = [{
+            "num": item["num"],
+            "text": (
+                f"[{item["type"]}] {item["name"]} ({item["request_distribution"]})\n"
+                f"{int(item["insert_proportion"] * 100):10d}% insert\n"
+                f"{int(item["read_proportion"] * 100):10d}% read\n"
+                f"{int(item["update_proportion"] * 100):10d}% update\n"
+                f"{int(item["read_modify_write_proportion"] * 100):10d}% read-modify-write"
+            )
+        } for item in WORKLOADS]
+        workload_text.append({"num": 0,
+                              "text": "Stop Benchmark"})
+
+        field_count = os.getenv("FIELD_COUNT", 1)
+        field_length = os.getenv("FIELD_LENGTH", 100)
+        benchmark_seed = os.getenv("BENCHMARK_SEED", 42)
+        thread_count_str = os.getenv("BENCHMARK_THREAD_COUNTS", "8,16,32,64,128")
+        thread_counts = [int(item.strip()) for item in thread_count_str.split(',')]
+
+        '''
+        while True:
+            num = helper.get_option(0, len(workload_text), workload_text)
+
+            if num == 0:
+                return
+        '''
+        for num in range(1, 6):
+            selected_workload = WORKLOADS[num-1]
+            selected_workload["operation_count"] = operation_count
+            selected_workload["record_count"] = record_count
+            selected_workload["field_count"] = field_count
+            selected_workload["field_length"] = field_length
+            selected_workload["seed"] = benchmark_seed
+
+            # Run same workload Multiple times with different thread counts
+            for thread_count in thread_counts:
+                selected_workload["thread_count"] = thread_count
+                result = self._run_ycsb(addr_list, selected_workload, args)
+                self._store_ycsb_result(result, selected_workload)
+
+                #break_duration = 20
+                break_duration = 5
+                logging.info(f"Taking {break_duration} second break after running {selected_workload["name"]} with {thread_count} thread(s)")
+                time.sleep(break_duration)
+                while (True):
+                    user_input = input("Do you want to continue? (y/n): ").strip().lower()
+                    if user_input == 'y':
+                        print("Continuing the process...")
+                        break
 
     def local_run_cmd(self, cmd):
         logging.debug(f"Running: {cmd}")
@@ -615,98 +626,3 @@ class Launcher(ABC):
         logging.debug(f"Running: {rsync_cmd}")
         subprocess.run(rsync_cmd, check=True, shell=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    def crash_node(self, target_index=None):
-        if self.fault_injection_identifier is None:
-            raise RuntimeError(
-                "Fault injection not enabled. Set self.fault_injection_identifier in launcher."
-            )
-
-        if target_index is None:
-            target_index = self.fault_injection_target_index
-
-        if target_index >= len(self.nodes):
-            raise ValueError(f"Invalid target_index {target_index}, only {len(self.nodes)} nodes available")
-
-        identifier = self.fault_injection_identifier
-        target_node = self.nodes[target_index]
-
-        if target_node["public_ip"] == "127.0.0.1":
-            # Local: use sorted ps to match index order
-            # ps aux --sort=start_time ensures process order matches start() iteration order
-            find_cmd = (
-                f"ps aux --sort=start_time | grep '{identifier}' | grep -v grep | "
-                f"awk '{{print $2}}' | sed -n '{target_index + 1}p'"
-            )
-            result = subprocess.run(find_cmd, shell=True, capture_output=True, text=True)
-            pid = result.stdout.strip()
-
-            if not pid:
-                raise RuntimeError(
-                    f"No process found at index {target_index} for pattern '{identifier}'. "
-                    f"Make sure the cluster is running."
-                )
-
-            logging.warning(f"[FAULT INJECTION] Crashing local node {target_index} (PID {pid})")
-            kill_cmd = f"kill -9 {pid}"
-            self.local_run_cmd(kill_cmd)
-            logging.info(f"[FAULT INJECTION] Successfully crashed node {target_index}")
-        else:
-            # Remote: only one process per host, so just grep for the identifier
-            find_cmd = f"ps aux | grep '{identifier}' | grep -v grep | awk '{{print $2}}'"
-            ssh_cmd = f"ssh -i {str(self.ssh_key)} {self.user}@{target_node['public_ip']} {shlex.quote(find_cmd)}"
-
-            result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True)
-            pid = result.stdout.strip()
-
-            if not pid:
-                raise RuntimeError(
-                    f"No process found on {target_node['public_ip']} for pattern '{identifier}'. "
-                    f"Make sure the cluster is running."
-                )
-
-            logging.warning(
-                f"[FAULT INJECTION] Crashing remote node {target_index} "
-                f"at {target_node['public_ip']} (PID {pid})"
-            )
-            kill_cmd = f"kill -9 {pid}"
-            self.remote_run_cmd(target_node["public_ip"], kill_cmd)
-            logging.info(f"[FAULT INJECTION] Successfully crashed node {target_index}")
-
-    def is_fault_injection_enabled(self):
-        return self.fault_injection_identifier is not None
-
-    def schedule_crash(self, delay=None, target_index=None):
-        if not self.is_fault_injection_enabled():
-            raise RuntimeError(
-                "Fault injection not enabled. Set self.fault_injection_identifier in launcher."
-            )
-
-        if delay is None:
-            delay = self.scheduled_crash_delay
-
-        if target_index is None:
-            target_index = self.fault_injection_target_index
-
-        target_node = self.nodes[target_index]
-        node_host = target_node.get("public_ip", "unknown")
-
-        logging.info(
-            f"[FAULT INJECTION] Scheduling crash of node {target_index} "
-            f"at {node_host} in {delay} seconds"
-        )
-
-        def _crash_after_delay():
-            time.sleep(delay)
-            try:
-                self.crash_node(target_index)
-            except Exception as e:
-                logging.error(f"[FAULT INJECTION] Failed to crash node: {e}")
-
-        thread = threading.Thread(
-            target=_crash_after_delay,
-            name=f"fault-crash-node-{target_index}",
-            daemon=True
-        )
-        thread.start()
-        return thread
