@@ -277,7 +277,7 @@ class Launcher(ABC):
         else:
             self.remote_run_cmd(self.client_ip, build_cmd, True)
 
-    def _load_ycsb(self, addr_list, record_count, args):
+    def _load_ycsb(self, addr_list, record_count, args=None):
         if not addr_list:
             raise ValueError("addr_list cannot be empty")
 
@@ -309,15 +309,17 @@ class Launcher(ABC):
             f"-p fieldlength={field_length} "
             f"-p threadcount={load_thread_count} "
             f"-p seed={benchmark_seed} "
-            f"-p {args}"
         )
+
+        if args is not None:
+            load_cmd += f"-p {args}"
 
         if self.client_ip == "127.0.0.1":
             self.local_run_cmd(load_cmd)
         else:
             self.remote_run_cmd(self.client_ip, load_cmd)
 
-    def _run_ycsb(self, addr_list, workload, args):
+    def _run_ycsb(self, addr_list, workload, args=None):
         if not addr_list:
             raise ValueError("addr_list cannot be empty")
 
@@ -347,8 +349,10 @@ class Launcher(ABC):
             f"-p fieldlength={workload["field_length"]} "
             f"-p seed={workload["seed"]} "
             f"-p threadcount={workload["thread_count"]} "
-            f"-p {args}"
         )
+
+        if args is not None:
+            run_cmd += f"-p {args}"
 
         if self.client_ip != "127.0.0.1":
             run_cmd = [
@@ -533,7 +537,7 @@ class Launcher(ABC):
         helper.write_to_json(self.output_file, data, self.project_name,
                              self.selected_protocol["name"], workload, self.project_commit)
 
-    def ycsb(self, addr_list, args) -> None:
+    def ycsb(self, addr_list, args=None) -> None:
         self._build_ycsb()
 
         default_record_count = int(os.getenv("DEFAULT_RECORD_COUNT", 1000000))
@@ -585,15 +589,17 @@ class Launcher(ABC):
                 result = self._run_ycsb(addr_list, selected_workload, args)
                 self._store_ycsb_result(result, selected_workload)
 
-                #break_duration = 20
-                break_duration = 5
+                break_duration = 20
+                #break_duration = 5
                 logging.info(f"Taking {break_duration} second break after running {selected_workload["name"]} with {thread_count} thread(s)")
                 time.sleep(break_duration)
+                '''
                 while (True):
                     user_input = input("Do you want to continue? (y/n): ").strip().lower()
                     if user_input == 'y':
                         print("Continuing the process...")
                         break
+                '''
 
     def local_run_cmd(self, cmd):
         logging.debug(f"Running: {cmd}")

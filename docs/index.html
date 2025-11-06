@@ -80,6 +80,9 @@
 		    <br>
 		    <br>
 		    We aim to speed the journey from research prototypes to industry adoption for many protocols.
+		    <br>
+		    <br>
+		    A read heavy workload used to evaulate the protocol ranking with 64 threads used to make concurrent requests in the YCSB benchmark
 		    </p>
 		</small>
 	    </div>
@@ -88,41 +91,26 @@
 
 	    <!-- Overwiew tables -->
 	    <div class="mx-25 mt-5 mb-10">
-		<div class="flex gap-3 items-center mb-3">
-		    <h1 class="my-3 text-lg">🏆 Leaderboard</h1>
-
-		    <fieldset class="relative h-min w-[200px] border border-gray-600 bg-gray-900 text-gray-950 rounded-lg hover:bg-gray-800 hover:duration-100">
-			<legend class="ml-2 text-xs capitalize text-gray-400">Workload</legend>
-			<select name="workload" id="workload-select" class="appearance-none w-full h-full py-1 px-3 pb-2">
-			    <option value="">Select a workload</option>
-			</select>	
-
-			<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
-			    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
-			    </svg>
-			</div>
-		    </fieldset>
-		</div>
+		<h1 class="my-3 text-lg">🏆 Leaderboard</h1>
 
 		<div class="grid grid-cols-2 gap-4">
 
 		    <div class="min-h-80 border border-gray-700 rounded-md font-sans">
 			<div class="flex justify-between items-center p-3">
 			    <p class="my-1">Linearizability</p>
-			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Linearizability">View</a></small></p>
+			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Linearizability" href="/result.html?consistency=Linearizability">View</a></small></p>
 			</div>
 			<table id="overview-linearizability" class="w-full text-sm">
 			    <thead>
-				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="select-none w-10 text-center">Rank</td>
-				    <td class="flex-3 select-none basis-0">Protocol</td>
-				    <td class="flex-1 select-none basis-0">Runtime&nbsp;<small>(ms)</small></td>
-				    <td class="flex-1 select-none basis-0">Throughput&nbsp;<small>(ops/s)</small></td>
+				    <td class="flex-3 select-none basis-0 min-w-fit">Protocol</td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Latency&nbsp;<small>(ms)</small></td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Throughput&nbsp;<small>(ops/s)</small></td>
 				</tr>
 			    </thead>
 			    <tbody class="divide-y divide-gray-700">
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">1</td>
 				    <td class="flex-3">MultiPaxos - fadhilkurnia/xdn</td>
 				    <td class="flex-1">123</td>
@@ -135,7 +123,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">2</td>
 				    <td class="flex-3">MultiPaxos - ailidani/paxi</td>
 				    <td class="flex-1">123</td>
@@ -148,7 +136,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">3</td>
 				    <td class="flex-3">M2Paxos - ailidani/paxi</td>
 				    <td class="flex-1">123</td>
@@ -161,7 +149,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">4</td>
 				    <td class="flex-3">Dynamo - ailidani/paxi</td>
 				    <td class="flex-1">123</td>
@@ -174,7 +162,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">5</td>
 				    <td class="flex-3">Raft - otoolep/hraftd</td>
 				    <td class="flex-1">123</td>
@@ -194,19 +182,19 @@
 		    <div class="min-h-80 border border-gray-700 rounded-md font-sans">
 			<div class="flex justify-between items-center p-3">
 			    <p class="my-1">Primary-Backup (Linearizability + Primary Integrity)</p>
-			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Linearizability + Primary Integrity">View</a></small></p>
+			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Linearizability + Primary Integrity" href="/result.html?consistency=Linearizability %2B Primary Integrity">View</a></small></p>
 			</div>
 			<table id="overview-primary-backup"  class="w-full text-sm">
 			    <thead>
-				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="select-none w-10 text-center">Rank</td>
-				    <td class="flex-3 select-none basis-0">Protocol</td>
-				    <td class="flex-1 select-none basis-0">Runtime&nbsp;<small>(ms)</small></td>
-				    <td class="flex-1 select-none basis-0">Throughput&nbsp;<small>(ops/s)</small></td>
+				    <td class="flex-3 select-none basis-0 min-w-fit">Protocol</td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Latency&nbsp;<small>(ms)</small></td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Throughput&nbsp;<small>(ops/s)</small></td>
 				</tr>
 			    </thead>
 			    <tbody class="divide-y divide-gray-700">
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">1</td>
 				    <td class="flex-3">PBoP - fadhilkurnia/xdn</td>
 				    <td class="flex-1">123</td>
@@ -219,7 +207,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">2</td>
 				    <td class="flex-3">ZAB - apache/zookeeper</td>
 				    <td class="flex-1">123</td>
@@ -239,19 +227,20 @@
 		    <div class="min-h-80 border border-gray-700 rounded-md font-sans">
 			<div class="flex justify-between items-center p-3">
 			    <p class="my-1">Sequential Consistency</p>
-			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Sequential">View</a></small></p>
+			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Sequential" href="/result.html?consistency=Sequential">View</a></small></p>
+
 			</div>
 			<table id="overview-sequential" class="w-full text-sm">
 			    <thead>
-				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="select-none w-10 text-center">Rank</td>
-				    <td class="flex-3 select-none basis-0">Protocol</td>
-				    <td class="flex-1 select-none basis-0">Runtime&nbsp;<small>(ms)</small></td>
-				    <td class="flex-1 select-none basis-0">Throughput&nbsp;<small>(ops/s)</small></td>
+				    <td class="flex-3 select-none basis-0 min-w-fit">Protocol</td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Latency&nbsp;<small>(ms)</small></td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Throughput&nbsp;<small>(ops/s)</small></td>
 				</tr>
 			    </thead>
 			    <tbody class="divide-y divide-gray-700">
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">1</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -264,7 +253,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">2</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -284,19 +273,20 @@
 		    <div class="min-h-80 border border-gray-700 rounded-md font-sans">
 			<div class="flex justify-between items-center p-3">
 			    <p class="my-1">Causal consistency</p>
-			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Causal">View</a></small></p>
+			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Causal" href="/result.html?consistency=Causal">View</a></small></p>
+
 			</div>
 			<table id="overview-causal" class="w-full text-sm">
 			    <thead>
-				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="select-none w-10 text-center">Rank</td>
-				    <td class="flex-3 select-none basis-0">Protocol</td>
-				    <td class="flex-1 select-none basis-0">Runtime&nbsp;<small>(ms)</small></td>
-				    <td class="flex-1 select-none basis-0">Throughput&nbsp;<small>(ops/s)</small></td>
+				    <td class="flex-3 select-none basis-0 min-w-fit">Protocol</td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Latency&nbsp;<small>(ms)</small></td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Throughput&nbsp;<small>(ops/s)</small></td>
 				</tr>
 			    </thead>
 			    <tbody class="divide-y divide-gray-700">
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">1</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -309,7 +299,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">2</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -329,19 +319,20 @@
 		    <div class="min-h-80 border border-gray-700 rounded-md font-sans">
 			<div class="flex justify-between items-center p-3">
 			    <p class="my-1">PRAM</p>
-			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Pram">View</a></small></p>
+			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Pram" href="/result.html?consistency=Pram">View</a></small></p>
+
 			</div>
 			<table id="overview-pram" class="w-full text-sm">
 			    <thead>
-				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="select-none w-10 text-center">Rank</td>
-				    <td class="flex-3 select-none basis-0">Protocol</td>
-				    <td class="flex-1 select-none basis-0">Runtime&nbsp;<small>(ms)</small></td>
-				    <td class="flex-1 select-none basis-0">Throughput&nbsp;<small>(ops/s)</small></td>
+				    <td class="flex-3 select-none basis-0 min-w-fit">Protocol</td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Latency&nbsp;<small>(ms)</small></td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Throughput&nbsp;<small>(ops/s)</small></td>
 				</tr>
 			    </thead>
 			    <tbody class="divide-y divide-gray-700">
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">1</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -354,7 +345,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">2</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -374,19 +365,19 @@
 		    <div class="min-h-80 border border-gray-700 rounded-md font-sans">
 			<div class="flex justify-between items-center p-3">
 			    <p class="my-1">Eventual Consistency</p>
-			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Eventual">View</a></small></p>
+			    <p><small><a class="hover:text-sky-500 view-result" data-consistency="Eventual" href="/result.html?consistency=Eventual">View</a></small></p>
 			</div>
 			<table id="overview-eventual" class="w-full text-sm">
 			    <thead>
-				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 border-b border-gray-700 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="select-none w-10 text-center">Rank</td>
-				    <td class="flex-3 select-none basis-0">Protocol</td>
-				    <td class="flex-1 select-none basis-0">Runtime&nbsp;<small>(ms)</small></td>
-				    <td class="flex-1 select-none basis-0">Throughput&nbsp;<small>(ops/s)</small></td>
+				    <td class="flex-3 select-none basis-0 min-w-fit">Protocol</td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Latency&nbsp;<small>(ms)</small></td>
+				    <td class="flex-1 select-none basis-0 min-w-fit">Throughput&nbsp;<small>(ops/s)</small></td>
 				</tr>
 			    </thead>
 			    <tbody class="divide-y divide-gray-700">
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">1</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
@@ -399,7 +390,7 @@
 					</div>
 				    </td>
 				</tr>
-				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-900 hover:duration-100">
+				<tr class="text-gray-950 flex gap-5 text-left py-2 px-4 hover:bg-gray-300 hover:duration-100">
 				    <td class="flex-1">2</td>
 				    <td class="flex-3">??? - ???</td>
 				    <td class="flex-1">123</td>
