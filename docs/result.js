@@ -84,21 +84,17 @@ function loadSelectElement(elementPointer, values, fieldName, defaultValue = nul
     elementPointer.value = filter[fieldName];
 }
 
-function fetchData(filename) {
-    fetch(filename).then(res => {
-	if (!res.ok) throw new Error('Network response was not OK');
-	console.error("error: ", res.json());
-	return res.json();
-    }).then(data => {
-	const renamed = data.map(item => {
-	    return { ...item, project: item.project.replaceAll(".", "/") }
-	});
+async function fetchData(filename) {
+    const res = await fetch(filename);
+    if (!res.ok) throw new Error("Network response was not OK");
 
-	const renamedData = JSON.stringify(renamed);
-	return renamedData;
-    }).catch(error => {
-	console.error('Error fetching file:', error);
+    const json = await res.json();
+    const renamed = json.map(item => {
+	return { ...item, project: item.project.replaceAll(".", "/") }
     });
+
+    const newData = JSON.stringify(renamed);
+    return newData;
 }
 
 function loadFilter(elementPointer, values, fieldName, defaultValue = null, ...funcs) {
@@ -346,12 +342,14 @@ function loadFilterProtocol(json) {
 
 function loadFilterConsistency(json) {
     const consistencySet = new Set();
+    const params = new URLSearchParams(window.location.search);
+    const selectedConsistency = params.get("consistency") ?? "All";
 
     json.forEach(project => {
 	project["protocols"].forEach(protocol => consistencySet.add(protocol["consistency"]));
     });
 
-    loadFilter(consistencySelect, [...consistencySet, "All"], "consistency", "All", renderLatencyThroughputChart);
+    loadFilter(consistencySelect, [...consistencySet, "All"], "consistency", selectedConsistency, renderLatencyThroughputChart);
 }
 
 function loadFilterPersistency(json) {
@@ -965,7 +963,6 @@ function renderAbortRateThreadcountChart(json) {
 
 function loadTable(json) {
     const dataset = [];
-    console.log(filter);
     json.forEach(project => {
 	project.protocols.forEach(protocol => {
 	    const selectedWorkload = protocol.workloads.find(workload => {
@@ -1089,18 +1086,13 @@ function sortTable(n) {
 
 
 function main() {
-    document.addEventListener("DOMContentLoaded", () => {
-	console.log("dom loaded");
+    document.addEventListener("DOMContentLoaded", async () => {
 	let data = sessionStorage.getItem("data");
 
 	if (!data) {
-	    console.log("fetching from dom loaded");
-	    data = fetchData("data.json");
+	    data = await fetchData("data.json");
 	    sessionStorage.setItem("data", data);
-	} else {
-	    console.log("NOT fetching from dom loaded");
 	}
-
 	const json = JSON.parse(data);
 	loadSelectWorkload(json);
 	loadSelectWorkloadType(json);
@@ -1161,449 +1153,3 @@ function main() {
 }
 
 main();
-
-
-
-
-
-/*
-function loadWorkloadSelect(data) {
-
-    while (workloadSelect.firstChild)
-	workloadSelect.removeChild(workloadSelect.lastChild);
-
-    workloads.forEach(item => {
-	const opt = document.createElement("option");
-	opt.setAttribute("value", item);
-	opt.textContent = item["name"];
-	workloadSelect.appendChild(opt);
-    });
-    workloadSelect.value = selectedWorkload;
-
-    // Load Workload Types
-    const workloadTypes = [...new Set(workloads.map(w => w["type"]))];
-    while (workloadTypeSelect.firstChild)
-	workloadTypeSelect.removeChild(workloadTypeSelect.lastChild);
-
-    selectedWorkloadType = selectedWorkload["type"];
-    workloadTypes.forEach(item => {
-	const opt = document.createElement("option");
-	opt.setAttribute("value", item);
-	opt.textContent = item;
-	workloadTypeSelect.appendChild(opt);
-    });
-    workloadTypeSelect.value = selectedWorkloadType;
-
-    // Load Record Count
-    const recordcount = [...new Set(workloads.map(w => w["record_count"]))];
-
-    // Load Operation Count
-    const operationcount = [...new Set(workloads.map(w => w["operation_count"]))];
-
-    // Load Consistencies
-    const consistencies = [...new Set(json.map(item => item.consistency))];
-
-
-    // Load 
-    selectedConsistency = params.get("consistency")
-
-    if (
-	!selectedConsistency ||
-	!consistencies.includes(selectedConsistency)
-    ) selectedConsistency = "All";
-
-}
-
-function loadMetricSelect(data) {
-    if (!data) return;
-
-    const json = JSON.parse(data).filter(item => item.workload === selectedWorkload);
-
-    const keys = Object.keys(json[0].result);
-    selectedMetric = "OVERALL";
-
-    while (metricSelect.firstChild)
-	metricSelect.removeChild(metricSelect.lastChild);
-
-    keys.forEach(item => {
-	const opt = document.createElement("option");
-	opt.setAttribute("value", item);
-	opt.textContent = item.toLowerCase();
-	metricSelect.appendChild(opt);
-    });
-
-    metricSelect.value = selectedMetric;
-    renderChart(data);
-}
-
-metricSelect.addEventListener("change", (e) => {
-    selectedMetric = e.target.value;
-    const data = sessionStorage.getItem("data");
-    renderChart(data);
-});
-
-
-async function renderChart(data) {
-    selectedMetric;
-    const json = JSON.parse(data).filter(item => item.workload === selectedWorkload 
-	&& (selectedProtocol !== "All" ? item.protocol === selectedProtocol : true)
-	&& (selectedConsistency !== "All" ? item.consistency === selectedConsistency : true)
-	&& (selectedPersistency !== "All" ? item.persistency === selectedPersistency : true)
-    );
-
-    if (prevChart.length > 0) {
-	prevChart.forEach(chart => chart.destroy());
-	prevChart = [];
-    }
-
-    if (selectedMetric === "OVERALL") {
-	const chart1 = await createThroughputChart(json);
-	const chart2 = await createRuntimeChart(json);
-	chartSection.replaceChildren(chart1, chart2);
-    } else if (selectedMetric === "READ" 
-	| selectedMetric === "UPDATE") {
-	const chart1 = await createLatencyPercentileChart(json);
-	const chart2 = await createLatencyChart(json);
-	chartSection.replaceChildren(chart1, chart2);
-    }
-}
-
-async function createThroughputChart(json) {
-    const container = document.createElement("div");
-    container.classList.add("flex-1", "border", "border-gray-700", "rounded-lg", "overflow-hidden", "text-gray-950", "p-2");
-    const canvas = document.createElement("canvas");
-    canvas.id = "throughput";
-    container.appendChild(canvas);
-
-    const data = json.map(entry => {
-	const name = `${entry.project} (${entry.protocol})`;
-	const throughput = entry.result["OVERALL"]["Throughput(ops/sec)"];
-	return { name: name, value: throughput }
-    }).sort((a, b) => b.value - a.value);
-
-    const chart = new Chart(canvas, {
-	type: "bar",
-	options: {
-	    indexAxis: "y",
-	    scales: {
-		x: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-		y: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-	    },
-	},
-	data: {
-	    labels: data.map(item => item.name),
-	    datasets: [{
-		label: "Throughput (ops/sec)",
-		data: data.map(item => item.value),
-		backgroundColor: [colors.purple70]
-	    }]
-	},
-    });
-    prevChart.push(chart);
-
-    return container;
-}
-
-async function createRuntimeChart(json) {
-    const container = document.createElement("div");
-    container.classList.add("flex-1", "border", "border-gray-700", "rounded-lg", "overflow-hidden", "text-gray-950", "p-2");
-    const canvas = document.createElement("canvas");
-    canvas.id = "runtime";
-    container.appendChild(canvas);
-
-    const data = json.map(entry => {
-	const name = `${entry.project} (${entry.protocol})`;
-	const runtime = entry.result["OVERALL"]["RunTime(ms)"];
-	return { name: name, value: runtime }
-    }).sort((a, b) => a.value - b.value);
-
-    const chart = new Chart(canvas, {
-	type: "bar",
-	options: {
-	    indexAxis: "y",
-	    scales: {
-		x: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-		y: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-	    },
-	},
-	data: {
-	    labels: data.map(item => item.name),
-	    datasets: [{
-		label: "RunTime (ms)",
-		data: data.map(item => item.value),
-		backgroundColor: [colors.red90]
-	    }]
-	},
-    });
-    prevChart.push(chart);
-    return container;
-}
-
-async function createLatencyPercentileChart(json) {
-    const container = document.createElement("div");
-    container.classList.add("flex-1", "border", "border-gray-700", "rounded-lg", "overflow-hidden", "text-gray-950", "p-2");
-    const canvas = document.createElement("canvas");
-    canvas.id = "latency-percentile";
-    container.appendChild(canvas);
-
-    const data = json.map(entry => {
-	const name = `${entry.project} (${entry.protocol})`;
-	const p50 = entry.result[selectedMetric]["50thPercentileLatency(us)"];
-	const p95 = entry.result[selectedMetric]["95thPercentileLatency(us)"];
-	const p99 = entry.result[selectedMetric]["99thPercentileLatency(us)"];
-
-	return { name: name, p50: p50, p95: p95, p99: p99 }
-    }).sort((a, b) => a.name.localeCompare(b));
-    const labels = ["50th Percentile", "95th Percentile", "99th Percentile"];
-
-    const chart = new Chart(canvas, {
-	type: "line",
-	options: {
-	    plugins: { 
-		title: { text: "Latency Percentile (μs)", display: true, position: "bottom", font: { size: 18} },
-		legend: { labels: { usePointStyle: true } }
-	    },
-	    scales: {
-		x: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-		y: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-	    },
-	},
-	data: {
-	    labels: labels,
-	    datasets: data.map((item, index) => {
-		return {
-		    label: item.name,
-		    data: [item.p50, item.p95, item.p99],
-		    fill: false,
-		    tension: 0.3,
-		    pointStyle: 'rectRot',
-		    pointRadius: 10,
-		    borderColor: colorPalette[index % colorPalette.length],
-		}
-	    }),
-	},
-    });
-    prevChart.push(chart);
-
-    return container;
-}
-
-async function createLatencyChart(json) {
-    const container = document.createElement("div");
-    container.classList.add("flex-1", "border", "border-gray-700", "rounded-lg", "overflow-hidden", "text-gray-950", "p-2");
-    const canvas = document.createElement("canvas");
-    canvas.id = "latency";
-    container.appendChild(canvas);
-
-    const data = json.map(entry => {
-	const name = `${entry.project} (${entry.protocol})`;
-	const avg = entry.result[selectedMetric]["AverageLatency(us)"];
-	const min = entry.result[selectedMetric]["MinLatency(us)"];
-	const max = entry.result[selectedMetric]["MaxLatency(us)"];
-
-	return { name: name, avg: avg, min: min, max: max }
-    }).sort((a, b) => a.name.localeCompare(b));
-    const labels = ["Minimum", "Average", "Maximum"];
-
-    const chart = new Chart(canvas, {
-	type: "line",
-	options: {
-	    plugins: { 
-		title: { text: "Latency (μs)", display: true, position: "bottom", font: { size: 18}  },
-		legend: { labels: { usePointStyle: true } } 
-	    },
-	    scales: {
-		x: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-		y: { grid: { color: bgColors.gray700, lineWidth: 1 } }, 
-	    },
-	},
-	data: {
-	    labels: labels,
-	    datasets: data.map((item, index) => {
-		return {
-		    label: item.name,
-		    data: [item.min, item.avg, item.max],
-		    fill: true,
-		    tension: 0.3,
-		    pointStyle: 'rectRot',
-		    pointRadius: 10,
-		    borderColor: colorPalette[index % colorPalette.length],
-		}
-	    }),
-	},
-    });
-    prevChart.push(chart);
-
-    return container;
-}
-
-function loadFilters(data) {
-    const json = JSON.parse(data);
-    loadProtocolFilter(json);
-    loadConsistencyFilter(json);
-    loadPersistencyFilter(json);
-}
-
-function loadProtocolFilter(json) {
-    let protocols = [...new Set(json.map(item => item.protocol).filter(item => item !== ""))];
-    protocols.push("All"); 
-    const radios = [];
-    const labels = [];
-
-    while (protocolSelect.firstChild) protocolSelect.removeChild(protocolSelect.lastChild)
-    protocols.forEach(item => {
-	const label = document.createElement("label");
-	label.classList.add("flex", "rounded-md", "px-2", "align-center", "border");
-	label.setAttribute("data-val", item);
-	if (selectedProtocol === item) {
-	    label.classList.add("bg-sky-500", "text-gray-900", "border-sky-500");
-	} else {
-	    label.classList.add("border-gray-700", "text-gray-950", "hover:bg-gray-300");
-	}
-
-	const input = document.createElement("input");
-	input.classList.add("cursor-pointer", "sr-only");
-	input.setAttribute("type", "radio");
-	input.setAttribute("name", "protocol");
-	input.setAttribute("value", item);
-
-	const span = document.createElement("span");
-	span.classList.add("text-xs");
-	span.textContent = item;
-
-	label.append(input, span);
-	protocolSelect.appendChild(label);
-	radios.push(input);
-	labels.push(label);
-    });
-
-    radios.forEach(radio => {
-	radio.addEventListener("click", (e) => {
-	    if (selectedProtocol === e.target.value) return;
-
-	    let prev = labels.find(item => item.getAttribute("data-val") === selectedProtocol); 
-	    console.log("prev", prev);
-	    prev.classList.add("border-gray-700", "text-gray-950", "hover:bg-gray-300");
-	    prev.classList.remove("bg-sky-500", "text-gray-950", "border-sky-500");
-
-	    selectedProtocol = e.target.value;
-	    let current = labels.find(item => item.getAttribute("data-val") === e.target.value); 
-	    console.log("current", current);
-	    current.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
-	    current.classList.remove("border-gray-700", "text-gray-950", "hover:bg-gray-300");
-
-	    const data = sessionStorage.getItem("data");
-	    loadTable(data);
-	    renderChart(data);
-	});
-    });
-}
-
-function loadConsistencyFilter(json) {
-    let consistency = [...new Set(json.map(item => item.consistency).filter(item => item !== ""))];
-    consistency.push("All"); 
-    const radios = [];
-    const labels = [];
-
-    while (consistencySelect.firstChild) consistencySelect.removeChild(consistencySelect.lastChild)
-    consistency.forEach(item => {
-	const label = document.createElement("label");
-	label.classList.add("flex", "rounded-md", "px-2", "align-center", "border");
-	label.setAttribute("data-val", item);
-	if (selectedConsistency === item) {
-	    label.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
-	} else {
-	    label.classList.add("border-gray-700", "text-gray-950", "hover:bg-gray-800");
-	}
-
-	const input = document.createElement("input");
-	input.classList.add("cursor-pointer", "sr-only");
-	input.setAttribute("type", "radio");
-	input.setAttribute("name", "consistency");
-	input.setAttribute("value", item);
-
-	const span = document.createElement("span");
-	span.classList.add("text-xs");
-	span.textContent = item;
-
-	label.append(input, span);
-	consistencySelect.appendChild(label);
-	radios.push(input);
-	labels.push(label);
-    });
-
-    radios.forEach(radio => {
-	radio.addEventListener("click", (e) => {
-	    if (selectedConsistency === e.target.value) return;
-
-	    let prev = labels.find(item => item.getAttribute("data-val") === selectedConsistency); 
-	    console.log("prev", prev);
-	    prev.classList.add("border-gray-700", "text-gray-950", "hover:bg-gray-800");
-	    prev.classList.remove("bg-sky-500", "text-gray-950", "border-sky-500");
-
-	    selectedConsistency = e.target.value;
-	    let current = labels.find(item => item.getAttribute("data-val") === e.target.value); 
-	    console.log("current", current);
-	    current.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
-	    current.classList.remove("border-gray-700", "text-gray-950", "hover:bg-gray-800");
-
-	    const data = sessionStorage.getItem("data");
-	    loadTable(data);
-	    renderChart(data);
-	});
-    });
-}
-
-function loadPersistencyFilter(json) {
-    let persistency = [...new Set(json.map(item => item.persistency).filter(item => item !== ""))];
-    persistency.push("All"); 
-    const radios = [];
-    const labels = [];
-
-    while (persistencySelect.firstChild) persistencySelect.removeChild(persistencySelect.lastChild)
-    persistency.forEach(item => {
-	const label = document.createElement("label");
-	label.classList.add("flex", "rounded-md", "px-2", "align-center", "border");
-	label.setAttribute("data-val", item);
-	if (selectedPersistency === item) {
-	    label.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
-	} else {
-	    label.classList.add("border-gray-700", "text-gray-950", "hover:bg-gray-800");
-	}
-
-	const input = document.createElement("input");
-	input.classList.add("cursor-pointer", "sr-only");
-	input.setAttribute("type", "radio");
-	input.setAttribute("name", "persistency");
-	input.setAttribute("value", item);
-
-	const span = document.createElement("span");
-	span.classList.add("text-xs");
-	span.textContent = item;
-
-	label.append(input, span);
-	persistencySelect.appendChild(label);
-	radios.push(input);
-	labels.push(label);
-    });
-
-    radios.forEach(radio => {
-	radio.addEventListener("click", (e) => {
-	    if (selectedPersistency === e.target.value) return;
-
-	    let prev = labels.find(item => item.getAttribute("data-val") === selectedPersistency); 
-	    prev.classList.add("border-gray-700", "text-gray-950", "hover:bg-gray-800");
-	    prev.classList.remove("bg-sky-500", "text-gray-950", "border-sky-500");
-
-	    selectedPersistency = e.target.value;
-	    let current = labels.find(item => item.getAttribute("data-val") === e.target.value); 
-	    current.classList.add("bg-sky-500", "text-gray-950", "border-sky-500");
-	    current.classList.remove("border-gray-700", "text-gray-950", "hover:bg-gray-800");
-
-	    const data = sessionStorage.getItem("data");
-	    loadTable(data);
-	    renderChart(data);
-	});
-    });
-}
-*/

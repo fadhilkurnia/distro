@@ -17820,5 +17820,431 @@
         ]
       }
     ]
+  },
+  {
+    "project": "fadhilkurnia.statediffbench",
+    "repo": "https://github.com/fadhilkurnia/statediffbench",
+    "protocols": [
+      {
+        "name": "local docker",
+        "language": "Rust",
+        "consistency": "None",
+        "persistency": "On-Disk",
+        "commit": "d18a5f54360323e181ab7fcc417f356d899c3901",
+        "workloads": [
+          {
+            "name": "Workload A: Update heavy workload",
+            "type": "single-client",
+            "operation_count": 500000,
+            "record_count": 1000000,
+            "request_distribution": "zipfian",
+            "read_proportion": 0.5,
+            "update_proportion": 0.5,
+            "read_modify_write_proportion": 0,
+            "insert_proportion": 0,
+            "num_of_nodes": 3,
+            "seed": "42",
+            "results": [
+              {
+                "thread_count": 2,
+                "result": {
+                  "OVERALL": {
+                    "RunTime(ms)": 228798,
+                    "Throughput(ops/sec)": 2185.333787882761
+                  },
+                  "UPDATE": {
+                    "Operations": 249536,
+                    "AverageLatency(us)": 1179.2804805719416,
+                    "MinLatency(us)": 740,
+                    "MaxLatency(us)": 208255,
+                    "50thPercentileLatency(us)": 1099,
+                    "95thPercentileLatency(us)": 1690,
+                    "99thPercentileLatency(us)": 2097,
+                    "Return=OK": 249536
+                  },
+                  "READ": {
+                    "Operations": 250464,
+                    "AverageLatency(us)": 641.8378329819855,
+                    "MinLatency(us)": 269,
+                    "MaxLatency(us)": 37407,
+                    "50thPercentileLatency(us)": 586,
+                    "95thPercentileLatency(us)": 1120,
+                    "99thPercentileLatency(us)": 1499,
+                    "Return=OK": 250464
+                  }
+                }
+              },
+              {
+                "thread_count": 4,
+                "result": {
+                  "OVERALL": {
+                    "RunTime(ms)": 156541,
+                    "Throughput(ops/sec)": 3194.0513986751075
+                  },
+                  "UPDATE": {
+                    "Operations": 250721,
+                    "AverageLatency(us)": 1509.1609079414968,
+                    "MinLatency(us)": 738,
+                    "MaxLatency(us)": 156031,
+                    "50thPercentileLatency(us)": 1534,
+                    "95thPercentileLatency(us)": 2153,
+                    "99thPercentileLatency(us)": 2525,
+                    "Return=OK": 250721
+                  },
+                  "READ": {
+                    "Operations": 249279,
+                    "AverageLatency(us)": 980.9741935742682,
+                    "MinLatency(us)": 289,
+                    "MaxLatency(us)": 44159,
+                    "50thPercentileLatency(us)": 997,
+                    "95thPercentileLatency(us)": 1631,
+                    "99thPercentileLatency(us)": 1903,
+                    "Return=OK": 249279
+                  }
+                }
+              },
+              {
+                "thread_count": 8,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 250040,
+                    "AverageLatency(us)": 2683.3739281714925,
+                    "MinLatency(us)": 784,
+                    "MaxLatency(us)": 281087,
+                    "50thPercentileLatency(us)": 2701,
+                    "95thPercentileLatency(us)": 3813,
+                    "99thPercentileLatency(us)": 4375,
+                    "Return=OK": 250040
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 149593,
+                    "Throughput(ops/sec)": 3342.402385138342
+                  },
+                  "READ": {
+                    "Operations": 249960,
+                    "AverageLatency(us)": 2083.6424787966075,
+                    "MinLatency(us)": 294,
+                    "MaxLatency(us)": 41247,
+                    "50thPercentileLatency(us)": 2059,
+                    "95thPercentileLatency(us)": 3275,
+                    "99thPercentileLatency(us)": 3837,
+                    "Return=OK": 249960
+                  }
+                }
+              },
+              {
+                "thread_count": 16,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 249784,
+                    "AverageLatency(us)": 5919.82188210614,
+                    "MinLatency(us)": 774,
+                    "MaxLatency(us)": 263167,
+                    "50thPercentileLatency(us)": 5887,
+                    "95thPercentileLatency(us)": 8143,
+                    "99thPercentileLatency(us)": 10255,
+                    "Return=OK": 249784
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 174348,
+                    "Throughput(ops/sec)": 2867.8275632642763
+                  },
+                  "READ": {
+                    "Operations": 250216,
+                    "AverageLatency(us)": 5206.907411996035,
+                    "MinLatency(us)": 306,
+                    "MaxLatency(us)": 56319,
+                    "50thPercentileLatency(us)": 5243,
+                    "95thPercentileLatency(us)": 7503,
+                    "99thPercentileLatency(us)": 9711,
+                    "Return=OK": 250216
+                  }
+                }
+              },
+              {
+                "thread_count": 32,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 250042,
+                    "AverageLatency(us)": 11379.215291830973,
+                    "MinLatency(us)": 773,
+                    "MaxLatency(us)": 340479,
+                    "50thPercentileLatency(us)": 11263,
+                    "95thPercentileLatency(us)": 15039,
+                    "99thPercentileLatency(us)": 21503,
+                    "Return=OK": 250042
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 172456,
+                    "Throughput(ops/sec)": 2899.290253745883
+                  },
+                  "READ": {
+                    "Operations": 249958,
+                    "AverageLatency(us)": 10607.831459685227,
+                    "MinLatency(us)": 301,
+                    "MaxLatency(us)": 73279,
+                    "50thPercentileLatency(us)": 10623,
+                    "95thPercentileLatency(us)": 14399,
+                    "99thPercentileLatency(us)": 20991,
+                    "Return=OK": 249958
+                  }
+                }
+              },
+              {
+                "thread_count": 64,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 250339,
+                    "AverageLatency(us)": 26480.15408705795,
+                    "MinLatency(us)": 990,
+                    "MaxLatency(us)": 382719,
+                    "50thPercentileLatency(us)": 26207,
+                    "95thPercentileLatency(us)": 38111,
+                    "99thPercentileLatency(us)": 46879,
+                    "Return=OK": 250339
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 204585,
+                    "Throughput(ops/sec)": 2443.971943202092
+                  },
+                  "READ": {
+                    "Operations": 249661,
+                    "AverageLatency(us)": 25688.477619652247,
+                    "MinLatency(us)": 351,
+                    "MaxLatency(us)": 105407,
+                    "50thPercentileLatency(us)": 25535,
+                    "95thPercentileLatency(us)": 37247,
+                    "99thPercentileLatency(us)": 45855,
+                    "Return=OK": 249661
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Workload B: Read mostly workload",
+            "type": "single-client",
+            "operation_count": 500000,
+            "record_count": 1000000,
+            "request_distribution": "zipfian",
+            "read_proportion": 0.95,
+            "update_proportion": 0.05,
+            "read_modify_write_proportion": 0,
+            "insert_proportion": 0,
+            "num_of_nodes": 3,
+            "seed": "42",
+            "results": [
+              {
+                "thread_count": 8,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 24979,
+                    "AverageLatency(us)": 1574.2145001801514,
+                    "MinLatency(us)": 764,
+                    "MaxLatency(us)": 172543,
+                    "50thPercentileLatency(us)": 1403,
+                    "95thPercentileLatency(us)": 2481,
+                    "99thPercentileLatency(us)": 3079,
+                    "Return=OK": 24979
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 56175,
+                    "Throughput(ops/sec)": 8900.756564307967
+                  },
+                  "READ": {
+                    "Operations": 475021,
+                    "AverageLatency(us)": 854.1813919805651,
+                    "MinLatency(us)": 275,
+                    "MaxLatency(us)": 52959,
+                    "50thPercentileLatency(us)": 703,
+                    "95thPercentileLatency(us)": 1693,
+                    "99thPercentileLatency(us)": 2225,
+                    "Return=OK": 475021
+                  }
+                }
+              },
+              {
+                "thread_count": 16,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 25146,
+                    "AverageLatency(us)": 3035.760518571542,
+                    "MinLatency(us)": 821,
+                    "MaxLatency(us)": 212351,
+                    "50thPercentileLatency(us)": 2809,
+                    "95thPercentileLatency(us)": 4935,
+                    "99thPercentileLatency(us)": 6299,
+                    "Return=OK": 25146
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 67484,
+                    "Throughput(ops/sec)": 7409.163653606781
+                  },
+                  "READ": {
+                    "Operations": 474854,
+                    "AverageLatency(us)": 2096.2048271679296,
+                    "MinLatency(us)": 295,
+                    "MaxLatency(us)": 52191,
+                    "50thPercentileLatency(us)": 1985,
+                    "95thPercentileLatency(us)": 4023,
+                    "99thPercentileLatency(us)": 5375,
+                    "Return=OK": 474854
+                  }
+                }
+              },
+              {
+                "thread_count": 32,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 25172,
+                    "AverageLatency(us)": 5401.594549499444,
+                    "MinLatency(us)": 824,
+                    "MaxLatency(us)": 276991,
+                    "50thPercentileLatency(us)": 5083,
+                    "95thPercentileLatency(us)": 9415,
+                    "99thPercentileLatency(us)": 12903,
+                    "Return=OK": 25172
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 68780,
+                    "Throughput(ops/sec)": 7269.555103227683
+                  },
+                  "READ": {
+                    "Operations": 474828,
+                    "AverageLatency(us)": 4305.4732892752745,
+                    "MinLatency(us)": 293,
+                    "MaxLatency(us)": 88383,
+                    "50thPercentileLatency(us)": 4159,
+                    "95thPercentileLatency(us)": 8415,
+                    "99thPercentileLatency(us)": 11535,
+                    "Return=OK": 474828
+                  }
+                }
+              },
+              {
+                "thread_count": 64,
+                "result": {
+                  "UPDATE": {
+                    "Operations": 25186,
+                    "AverageLatency(us)": 10279.037838481696,
+                    "MinLatency(us)": 1027,
+                    "MaxLatency(us)": 269055,
+                    "50thPercentileLatency(us)": 9855,
+                    "95thPercentileLatency(us)": 16135,
+                    "99thPercentileLatency(us)": 20703,
+                    "Return=OK": 25186
+                  },
+                  "OVERALL": {
+                    "RunTime(ms)": 72621,
+                    "Throughput(ops/sec)": 6885.060795086821
+                  },
+                  "READ": {
+                    "Operations": 474814,
+                    "AverageLatency(us)": 9158.47272195007,
+                    "MinLatency(us)": 321,
+                    "MaxLatency(us)": 94207,
+                    "50thPercentileLatency(us)": 9023,
+                    "95thPercentileLatency(us)": 15119,
+                    "99thPercentileLatency(us)": 19279,
+                    "Return=OK": 474814
+                  }
+                }
+              }           
+	    ]
+          },
+          {
+            "name": "Workload C: Read only",
+            "type": "single-client",
+            "operation_count": 500000,
+            "record_count": 1000000,
+            "request_distribution": "zipfian",
+            "read_proportion": 1,
+            "update_proportion": 0,
+            "read_modify_write_proportion": 0,
+            "insert_proportion": 0,
+            "num_of_nodes": 3,
+            "seed": "42",
+            "results": [
+              {
+                "thread_count": 8,
+                "result": {
+                  "OVERALL": {
+                    "RunTime(ms)": 51587,
+                    "Throughput(ops/sec)": 9692.364355360847
+                  },
+                  "READ": {
+                    "Operations": 500000,
+                    "AverageLatency(us)": 816.7646,
+                    "MinLatency(us)": 273,
+                    "MaxLatency(us)": 47743,
+                    "50thPercentileLatency(us)": 794,
+                    "95thPercentileLatency(us)": 1220,
+                    "99thPercentileLatency(us)": 1794,
+                    "Return=OK": 500000
+                  }
+                }
+              },
+              {
+                "thread_count": 16,
+                "result": {
+                  "OVERALL": {
+                    "RunTime(ms)": 53481,
+                    "Throughput(ops/sec)": 9349.114638843701
+                  },
+                  "READ": {
+                    "Operations": 500000,
+                    "AverageLatency(us)": 1687.273882,
+                    "MinLatency(us)": 290,
+                    "MaxLatency(us)": 56511,
+                    "50thPercentileLatency(us)": 1686,
+                    "95thPercentileLatency(us)": 2877,
+                    "99thPercentileLatency(us)": 3931,
+                    "Return=OK": 500000
+                  }
+                }
+              },
+              {
+                "thread_count": 32,
+                "result": {
+                  "OVERALL": {
+                    "RunTime(ms)": 54275,
+                    "Throughput(ops/sec)": 9212.34454168586
+                  },
+                  "READ": {
+                    "Operations": 500000,
+                    "AverageLatency(us)": 3430.10096,
+                    "MinLatency(us)": 307,
+                    "MaxLatency(us)": 84927,
+                    "50thPercentileLatency(us)": 3435,
+                    "95thPercentileLatency(us)": 6383,
+                    "99thPercentileLatency(us)": 9151,
+                    "Return=OK": 500000
+                  }
+                }
+              },
+              {
+                "thread_count": 64,
+                "result": {
+                  "OVERALL": {
+                    "RunTime(ms)": 53807,
+                    "Throughput(ops/sec)": 9292.471239801513
+                  },
+                  "READ": {
+                    "Operations": 500000,
+                    "AverageLatency(us)": 6817.539582,
+                    "MinLatency(us)": 349,
+                    "MaxLatency(us)": 82047,
+                    "50thPercentileLatency(us)": 6819,
+                    "95thPercentileLatency(us)": 9119,
+                    "99thPercentileLatency(us)": 11783,
+                    "Return=OK": 500000
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 ]
