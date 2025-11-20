@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import time
+import sys
 
 from sut.abstract import Launcher
 from src.utils import helper
@@ -17,10 +18,14 @@ OPTIONS = [{"num": 0, "text": "Start XDN"},
            {"num": 1, "text": "Stop XDN"},
            {"num": 2, "text": "Run Benchmark"}]
 
-'''
 SERVICE_TYPE = [{"num": 1, "text": "deterministic"},
                 {"num": 2, "text": "non-deterministic"}]
-'''
+
+CONSISTENCY = [{"num": 1, "text": "Linearizability",    "deterministic": "restkv-d-linearizability.yaml",   "non-deterministic": "restkv-nd-linearizability.yaml"},
+               {"num": 2, "text": "Sequential",         "deterministic": "restkv-d-sequential.yaml",        "non-deterministic": None},
+               {"num": 3, "text": "Causal",             "deterministic": "restkv-d-causal.yaml",            "non-deterministic": None},
+               {"num": 4, "text": "PRAM",               "deterministic": "restkv-d-pram.yaml",              "non-deterministic": None},
+               {"num": 5, "text": "Eventual",           "deterministic": "restkv-d-eventual.yaml",          "non-deterministic": None}]
 
 
 class XdnLauncher(Launcher):
@@ -52,6 +57,11 @@ class XdnLauncher(Launcher):
 
     def launch(self):
         logging.info("Launching XdnLauncher")
+        prot_num = helper.get_option(1, len(SERVICE_TYPE), SERVICE_TYPE, "\nSelect Service Type:")
+        cons_num = helper.get_option(1, len(CONSISTENCY), CONSISTENCY, "\nSelect a Consistency Model:")
+
+        service_name = SERVICE_TYPE[prot_num-1]["text"]
+        consistency = CONSISTENCY[cons_num-1]
 
         self.project_name = "ThePlatypus-Person.xdn"
         self.remote_dir = f"~/distro/{self.project_name}"
@@ -59,12 +69,17 @@ class XdnLauncher(Launcher):
         self.project_commit = COMMIT_HASH
         self.ycsb_interface = "xdn"
         self.ycsb_endpoint = "url.prefix"
+        self.launch_filename = consistency[service_name]
         self.selected_protocol = {
-            "name": "xdn",
+            "name": f"xdn-{service_name}",
             "language": "Java",
-            "consistency": "Linearizability + Primary Integrity",
+            "consistency": f"{consistency["text"]}{" + Primary Integrity" if service_name == "non-deterministic" else ""}",
             "persistency": "On-Disk"
         }
+
+        if self.launch_filename is None:
+            logging.error(f"{self.project_name} currently does not support {service_name} {consistency["text"]} application")
+            sys.exit()
 
         nodes_map = self.map_ip_port()
         self.build()
@@ -228,48 +243,48 @@ class XdnLauncher(Launcher):
         time.sleep(15)
         env = os.environ.copy()
         env["XDN_CONTROL_PLANE"] = nodes_map[0]["public_ip"]
-        yaml_path = f"{self.local_dir}/restkv-nd.yaml"
+        yaml_path = f"{self.local_dir}/{self.launch_filename}"
         cmd_service = [f"{self.repo_dir_path}/bin/xdn", "launch", "restkv", f"--file={yaml_path}"]
         subprocess.run(cmd_service, text=True, env=env)
         logging.info("All XDN instances successfully started")
 
     def stop(self, nodes_map):
-        core_cleanup_cmd = (
-            "pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
-            "for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
-
-            "container_ids=$(docker ps -a -q --filter 'name=c0.e0.restkv.ar*.xdn.io'); "
-            "if [ -n \"$container_ids\" ]; then "
-            "  echo \"Stopping and removing containers: $container_ids\"; "
-            "  docker stop $container_ids; "
-            "  docker rm -f $container_ids; "
-            "fi; "
-
-            "docker network prune --force;"
-
-            "for mountpoint in $(find /tmp/xdn/state/fuselog/ -type d -name 'ar*' | xargs -I{{}} echo {{}}/mnt/restkv/e0); do "
-            "  echo \"Unmounting $mountpoint\"; fusermount -u $mountpoint || true; done; "
-            "rm -rf /tmp/xdn /tmp/gigapaxos"
-        )
-
         for i, node in enumerate(nodes_map):
+            core_cleanup_cmd = (
+                "pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
+                "for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+
+                f"container_ids=$(docker ps -a -q --filter 'name=c0.e0.restkv.ar{i}.xdn.io'); "
+                "if [ -n \"$container_ids\" ]; then "
+                "  echo \"Stopping and removing containers: $container_ids\"; "
+                "  docker stop $container_ids; "
+                "  docker rm -f $container_ids; "
+                "fi; "
+
+                "docker network prune --force;"
+
+                f"for mountpoint in $(find /tmp/xdn/state/fuselog/ -type d -name 'ar{i}' | xargs -I{{}} echo {{}}/mnt/restkv/e0); do "
+                "  echo \"Unmounting $mountpoint\"; fusermount -u $mountpoint || true; done; "
+                "rm -rf /tmp/xdn /tmp/gigapaxos || true"
+            )
+
             logging.info(f"Stopping XDN instance on {node["public_ip"]}")
             if node["private_ip"] == "127.0.0.1" and node["public_ip"] == "127.0.0.1":
                 stop_cmd = (
                     f"{core_cleanup_cmd}; "
-                    f"rm -rf {self.repo_dir_path}/node_{i}.log {self.repo_dir_path}/reconf_{i}.log"
+                    f"rm -rf {self.repo_dir_path}/node_{i}.log {self.repo_dir_path}/reconf_{i}.log || true"
                 )
                 self.local_run_cmd(stop_cmd)
             else:
                 remote_config = f"{self.remote_dir}/config.properties"
                 stop_cmd = (
                     f"{core_cleanup_cmd}; "
-                    f"rm -rf {self.remote_dir}/node_{i}.log {self.remote_dir}/reconf_{i}.log {remote_config}"
+                    f"rm -rf {self.remote_dir}/node_{i}.log {self.remote_dir}/reconf_{i}.log {remote_config} || true"
                 )
                 self.remote_run_cmd(node["public_ip"], stop_cmd, False)
 
         local_config = f"{self.local_dir}/config.properties"
-        rm_config_cmd = f"rm {local_config}"
+        rm_config_cmd = f"rm {local_config} || true "
         self.local_run_cmd(rm_config_cmd)
         logging.info("All XDN instances successfully stopped")
 
@@ -336,17 +351,9 @@ class XdnLauncher(Launcher):
             )
             self.local_run_cmd(build_cmd)
 
-        binary_exists_path = True
-        for bin in fuse_binaries:
-            bin_path = f"/usr/local/bin/{bin}"
-            if not os.path.exists(bin_path) or not os.path.isfile(bin_path):
-                binary_exists_path = False
-
-        if not binary_exists_path:
-            copy_cmd = (
-                f"sudo cp {self.local_dir}/fuselog /usr/local/bin/fuselog && "
-                f"sudo cp {self.local_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
-            )
-            self.local_run_cmd(copy_cmd)
-
+        copy_cmd = (
+            f"sudo cp {self.local_dir}/fuselog /usr/local/bin/fuselog && "
+            f"sudo cp {self.local_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
+        )
+        self.local_run_cmd(copy_cmd)
         logging.info("XDN & Fuselog build complete")
