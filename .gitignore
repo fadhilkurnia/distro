@@ -1,5 +1,6 @@
 __pycache__
 *.py[cod]
+out/
 
 docs/liveness_data/*.csv
 *.log

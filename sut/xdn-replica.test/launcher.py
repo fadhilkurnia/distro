@@ -23,7 +23,7 @@ class RestKVLauncher(Launcher):
 
         data.append({
             "public_ip": node["public_ip"],
-            "port": 2300})
+            "port": 8080})
         return data
 
     def launch(self):
@@ -36,7 +36,7 @@ class RestKVLauncher(Launcher):
         self.ycsb_interface = "xdn"
         self.ycsb_endpoint = "url.prefix"
         self.selected_protocol = {
-            "name": "local",
+            "name": "nginx docker",
             "language": "Rust",
             "consistency": "None",
             "persistency": "On-Disk"
@@ -55,15 +55,9 @@ class RestKVLauncher(Launcher):
                     self.stop(nodes_map)
                 case 2:
                     endpoints = [
-                        f"http://{node["public_ip"]}:{node["port"]}/api/todo/tasks"
-                        for node in nodes_map
-                    ]
-                    '''
-                    endpoints = [
                         f"http://{node["public_ip"]}:{node["port"]}/api/kv/"
                         for node in nodes_map
                     ]
-                    '''
                     self.ycsb(endpoints)
 
     def generate_config(self):

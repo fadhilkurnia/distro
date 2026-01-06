@@ -53,6 +53,8 @@ const filter = {
     threads: 0,
     operationCount: 0,
     recordCount: 0,
+    max_thread: 128,
+    min_thread: 0,
 };
 
 const renderedChart = {};
@@ -210,6 +212,7 @@ function getFilteredYcsbResult(json) {
 		    project: project["project"],
 		    protocol: protocol["name"],
 		    commit: protocol["commit"],
+		    consistency: protocol["consistency"],
 		}
 
 		const foundResult = workload["results"].find(result => result["thread_count"] === Number(filter["threads"]));
@@ -519,6 +522,7 @@ function renderLatencyThroughputChart(json) {
 		project: project["project"],
 		protocol: protocol["name"],
 		commit: protocol["commit"],
+		consistency: protocol["consistency"],
 	    }
 
 	    protocol["workloads"].forEach(workload => {
@@ -535,6 +539,10 @@ function renderLatencyThroughputChart(json) {
 
 		    const latencyData = operationData[filter["latency"]] / 1000.0;
 		    const throughputData = result["result"]["OVERALL"]["Throughput(ops/sec)"];
+
+		    const threadCount = Number(result["thread_count"]);
+		    if (threadCount < filter["min_thread"] || threadCount > filter["max_thread"])
+			return;
 
 		    projectItem["result"].push({
 			threads: Number(result["thread_count"]),
@@ -557,8 +565,9 @@ function renderLatencyThroughputChart(json) {
 	canvas.removeChild(canvas.lastChild);
 
     const datasets = filtered.map((item, index) => {
+	console.log(item);
 	return {
-	    label: `${item["project"]}-${item["protocol"]} (${item["commit"].slice(0, 7)})`,
+	    label: `${item["protocol"]}-${item["consistency"]} (${item["commit"].slice(0, 7)})`,
 	    data: item["result"].map(r => {
 		return {
 		    x: r["throughput"],
@@ -796,7 +805,7 @@ function renderOperationCountChart(json) {
 	    },
 	},
 	data: {
-	    labels: filtered.map(item => `${item.project}-${item.protocol} (${item.commit.slice(0, 7)})`),
+	    labels: filtered.map(item => `${item.protocol}-${item.consistency} (${item.commit.slice(0, 7)})`),
 	    datasets: dataset,
 	},
     });
@@ -831,6 +840,7 @@ function renderAbortRateThreadcountChart(json) {
 		    project: project["project"],
 		    protocol: protocol["name"],
 		    commit: protocol["commit"],
+		    consistency: protocol["consistency"],
 		}
 
 		projectItem["results"] = workload["results"];
@@ -859,7 +869,7 @@ function renderAbortRateThreadcountChart(json) {
     const threadList = [...threadSet].sort((a, b) => a-b);
     const datasets = filtered.map((item, index) => {
 	return {
-	    label: `${item["project"]}-${item["protocol"]} (${item["commit"].slice(0, 7)})`,
+	    label: `${item["protocol"]}-${item["consistency"]} (${item["commit"].slice(0, 7)})`,
 	    data: threadList.map(threadCount => {
 		const resultItem = item["results"].find(r => r["thread_count"] === Number(threadCount));
 		if (!resultItem) return { x: threadCount, y: 0 };

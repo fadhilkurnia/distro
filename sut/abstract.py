@@ -77,6 +77,26 @@ WORKLOADS = [
         "update_proportion": 0,
         "read_modify_write_proportion": 0.05,
         "insert_proportion": 0,
+    }, {
+        "num": 6,
+        "type": "single-client",
+        "name": "Update only workload",
+        "filename": "updateonly",
+        "request_distribution": "zipfian",
+        "read_proportion": 0,
+        "update_proportion": 1,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
+    }, {
+        "num": 7,
+        "type": "single-client",
+        "name": "Read mostly V2 workload",
+        "filename": "readmostlyv2",
+        "request_distribution": "zipfian",
+        "read_proportion": 0.8,
+        "update_proportion": 0.2,
+        "read_modify_write_proportion": 0,
+        "insert_proportion": 0,
     }
 ]
 
@@ -213,16 +233,16 @@ class Launcher(ABC):
             success, output = run_remote_probe(entry["probe"], host, self.user, self.ssh_key)
 
         if not success:
-            logging.error(f"Missing dependency '{entry["name"]}' in {host} (requires version {requirement})")
+            logging.error(f"Missing dependency '{entry['name']}' in {host} (requires version {requirement})")
             raise RuntimeError(output)
 
         host_version = extract_version(output, entry["version_regex"])
         if host_version is None:
-            logging.error(f"Unable to get version for dependency '{entry["name"]}' in {host}")
+            logging.error(f"Unable to get version for dependency '{entry['name']}' in {host}")
             raise RuntimeError()
 
         if version_satisfies(host_version, requirement):
-            logging.info(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
+            logging.info(f"{host} has dependency '{entry['name']}' version {host_version} (requires version {requirement})")
             return True
 
         logging.error(f"{host} has dependency '{entry["name"]}' version {host_version} (requires version {requirement})")
@@ -542,8 +562,12 @@ class Launcher(ABC):
 
         default_record_count = int(os.getenv("DEFAULT_RECORD_COUNT", 1000000))
         default_operation_count = int(os.getenv("DEFAULT_OPERATION_COUNT", 500000))
+        '''
         record_count = helper.get_positive_num("Enter Record Count", default_record_count)
         operation_count = helper.get_positive_num("Enter Operation Count", default_operation_count)
+        '''
+        record_count = default_record_count
+        operation_count = default_operation_count
 
         # Load key-value pairs first before running benchmark
         #self._load_ycsb(addr_list, record_count, args)
@@ -575,7 +599,13 @@ class Launcher(ABC):
             if num == 0:
                 return
         '''
-        for num in range(1, 6):
+        #for num in range(1, 6):
+        #for num in range(1, 3):
+        #for num in [6, 7]:
+        #for num in [7]:
+        #for num in [3, 6, 7]:
+        #for num in [3, 7]:
+        for num in [6]:
             selected_workload = WORKLOADS[num-1]
             selected_workload["operation_count"] = operation_count
             selected_workload["record_count"] = record_count

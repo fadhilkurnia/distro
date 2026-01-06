@@ -41,7 +41,7 @@ DEPENDENCIES: ProbeConfig = {
     },
     "fuse": {
         "name": "libfuse3",
-        "probe": "fusermount --version",
+        "probe": "fusermount3 --version",
         "version_regex": "fusermount3 version: (?P<version>[0-9.]+)"
     },
     "rust": {

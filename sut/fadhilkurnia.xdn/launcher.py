@@ -8,17 +8,8 @@ from sut.abstract import Launcher
 from src.utils import helper
 from src.utils.dependency_probes import DEPENDENCIES
 
-REPO = "https://github.com/ThePlatypus-Person/xdn.git"
-FUSE_REPO = "https://github.com/ThePlatypus-Person/fuse_rust.git"
-''' Old Ver
-COMMIT_HASH = "fbd416c60403fbaeddddf6909ff28d0d0abe9542"
-FUSE_COMMIT_HASH = "6c4007998d7da0cf7eaa6bee3c0d0c01d606f17d"
-'''
-TEMP_NAME = "Disk-Full_Batching"
-
-# COMMIT_HASH = "dec0c2e9efe4502584896e3fbea25ad3c792965c"
-COMMIT_HASH = "187270ee826dbae190aa215dc9b1111cec3fa245"
-FUSE_COMMIT_HASH = "e0c99a5bbb1a9aff6f771d18cd05499e7452809f"
+REPO = "https://github.com/fadhilkurnia/xdn.git"
+COMMIT_HASH = "dd39bccdf150e3bea94d95131994df6a81a5fbe0"
 
 OPTIONS = [{"num": 0, "text": "Start XDN"},
            {"num": 1, "text": "Stop XDN"},
@@ -27,16 +18,11 @@ OPTIONS = [{"num": 0, "text": "Start XDN"},
 SERVICE_TYPE = [{"num": 1, "text": "deterministic"},
                 {"num": 2, "text": "non-deterministic"}]
 
-# DETERMINISTIC_APP = "restkv-d"
-DETERMINISTIC_APP = "xdn-service"
-
-CONSISTENCY = [{"num": 1, "text": "Linearizability",    "deterministic": f"xdn-service-linearizability.yaml",   "non-deterministic": "restkv-nd-linearizability.yaml"},
-               {"num": 2, "text": "Sequential",         "deterministic": f"xdn-service-sequential.yaml",        "non-deterministic": None},
-               {"num": 3, "text": "Causal",             "deterministic": f"xdn-service-causal.yaml",            "non-deterministic": None},
-               {"num": 4, "text": "PRAM",               "deterministic": f"xdn-service-pram.yaml",              "non-deterministic": None},
-               {"num": 5, "text": "Eventual",           "deterministic": f"xdn-service-eventual.yaml",          "non-deterministic": None}]
-
-FUSE = "fuselog"
+CONSISTENCY = [{"num": 1, "text": "Linearizability",    "deterministic": "restkv-d-linearizability.yaml",   "non-deterministic": "bookcatalog-nd.my.yaml"},
+               {"num": 2, "text": "Sequential",         "deterministic": "restkv-d-sequential.yaml",        "non-deterministic": None},
+               {"num": 3, "text": "Causal",             "deterministic": "restkv-d-causal.yaml",            "non-deterministic": None},
+               {"num": 4, "text": "PRAM",               "deterministic": "restkv-d-pram.yaml",              "non-deterministic": None},
+               {"num": 5, "text": "Eventual",           "deterministic": "restkv-d-eventual.yaml",          "non-deterministic": None}]
 
 
 class XdnLauncher(Launcher):
@@ -74,7 +60,7 @@ class XdnLauncher(Launcher):
         service_name = SERVICE_TYPE[prot_num-1]["text"]
         consistency = CONSISTENCY[cons_num-1]
 
-        self.project_name = "ThePlatypus-Person.xdn"
+        self.project_name = "fadhilkurnia.xdn"
         self.remote_dir = f"~/distro/{self.project_name}"
         self.project_repository = REPO
         self.project_commit = COMMIT_HASH
@@ -82,7 +68,7 @@ class XdnLauncher(Launcher):
         self.ycsb_endpoint = "url.prefix"
         self.launch_filename = consistency[service_name]
         self.selected_protocol = {
-            "name": f"{TEMP_NAME}",
+            "name": f"xdn-{service_name}",
             "language": "Java",
             "consistency": f"{consistency["text"]}{" + Primary Integrity" if service_name == "non-deterministic" else ""}",
             "persistency": "On-Disk"
@@ -106,11 +92,10 @@ class XdnLauncher(Launcher):
                     self.stop(nodes_map)
                 case 2:
                     endpoints = [
-                        f"http://{node["public_ip"]}:{node["client_port"]}/api/todo/tasks"
+                        f"http://{node["public_ip"]}:{node["client_port"]}/api/kv/"
                         for node in nodes_map
                     ]
-
-                    self.ycsb(endpoints, f"headers='XDN todo'")
+                    self.ycsb(endpoints, "headers='XDN restkv'")
 
     def generate_config(self, nodes_map):
         logging.info("Generating config.properties file")
@@ -127,11 +112,6 @@ class XdnLauncher(Launcher):
             reconf = nodes_map[0]
             config.append(f"reconfigurator.RC0={reconf["private_ip"]}:{reconf["port"] + 1000}")
 
-            if nodes_map[0]["private_ip"] == "127.0.0.1" and nodes_map[0]["public_ip"] == "127.0.0.1":
-                config.append(f"SSH_KEY_PATH={self.ssh_key}")
-            else:
-                config.append(f"SSH_KEY_PATH={self.remote_dir}/{self.ssh_filename}")
-
         config_path = f"{self.local_dir}/config.properties"
         with open(config_path, "w") as f:
             for line in config:
@@ -146,10 +126,10 @@ class XdnLauncher(Launcher):
         build_dir = f"{self.repo_dir_path}/build"
         jar_dir = f"{self.repo_dir_path}/jars"
         conf_dir = f"{self.repo_dir_path}/conf"
-        fuserust = f"{self.local_dir}/{FUSE}"
-        fuserust_apply = f"{self.local_dir}/{FUSE}-apply"
+        fuselog = f"{self.local_dir}/fuselog"
+        fuselog_apply = f"{self.local_dir}/fuselog-apply"
 
-        source_files = f"{build_dir} {jar_dir} {conf_dir} {config_path} {fuserust} {fuserust_apply} {self.ssh_filename}"
+        source_files = f"{build_dir} {jar_dir} {conf_dir} {config_path} {fuselog} {fuselog_apply}"
 
         for node in self.nodes:
             if node["public_ip"] == "127.0.0.1":
@@ -164,12 +144,12 @@ class XdnLauncher(Launcher):
             self.remote_run_cmd(node["public_ip"], mkdir_cmd)
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
             cp_cmd = (
-                f"sudo rm -rf /usr/local/bin/{FUSE} && "
-                f"sudo rm -rf /usr/local/bin/{FUSE}-apply && "
-                f"sudo cp {self.remote_dir}/{FUSE} /usr/local/bin/{FUSE} && "
-                f"sudo cp {self.remote_dir}/{FUSE}-apply /usr/local/bin/{FUSE}-apply"
+                f"sudo rm -rf /usr/local/bin/fuselog && "
+                f"sudo rm -rf /usr/local/bin/fuselog-apply && "
+                f"sudo cp {self.remote_dir}/fuselog /usr/local/bin/fuselog && "
+                f"sudo cp {self.remote_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
             )
-            self.remote_run_cmd(node["public_ip"], cp_cmd, False)
+            self.remote_run_cmd(node["public_ip"], cp_cmd, True)
 
         jar_files = []
         for item in os.listdir(f"{self.repo_dir_path}/jars"):
@@ -212,7 +192,7 @@ class XdnLauncher(Launcher):
                     f"edu.umass.cs.reconfiguration.ReconfigurableNode AR{i} "
                     f"> node_{i}.log 2>&1 &"
                 )
-                self.remote_run_cmd(node["public_ip"], run_cmd, False)
+                self.remote_run_cmd(node["public_ip"], run_cmd, True)
 
         # Start Reconfigurator
         if nodes_map[0]["private_ip"] == "127.0.0.1" and nodes_map[0]["public_ip"] == "127.0.0.1":
@@ -250,13 +230,13 @@ class XdnLauncher(Launcher):
                 f"edu.umass.cs.reconfiguration.ReconfigurableNode RC0 "
                 f"> reconf_0.log 2>&1 &"
             )
-            self.remote_run_cmd(nodes_map[0]["public_ip"], run_cmd, False)
+            self.remote_run_cmd(nodes_map[0]["public_ip"], run_cmd, True)
 
         time.sleep(15)
         env = os.environ.copy()
         env["XDN_CONTROL_PLANE"] = nodes_map[0]["public_ip"]
         yaml_path = f"{self.local_dir}/{self.launch_filename}"
-        cmd_service = [f"{self.repo_dir_path}/bin/xdn", "launch", "todo", f"--file={yaml_path}"]
+        cmd_service = [f"{self.repo_dir_path}/bin/xdn", "launch", "bookcatalog-nd-app", f"--file={yaml_path}"]
         subprocess.run(cmd_service, text=True, env=env)
         logging.info("All XDN instances successfully started")
 
@@ -266,7 +246,7 @@ class XdnLauncher(Launcher):
                 "pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
                 "for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
 
-                f"container_ids=$(docker ps -a -q --filter 'name=c0.e0.todo.ar{i}.xdn.io'); "
+                f"container_ids=$(docker ps -a -q --filter 'name=c0.e0.restkv.ar{i}.xdn.io'); "
                 "if [ -n \"$container_ids\" ]; then "
                 "  echo \"Stopping and removing containers: $container_ids\"; "
                 "  docker stop $container_ids; "
@@ -275,7 +255,7 @@ class XdnLauncher(Launcher):
 
                 "docker network prune --force;"
 
-                f"for mountpoint in $(find /tmp/xdn/state/{FUSE}/ -type d -name 'ar{i}' | xargs -I{{}} echo {{}}/mnt/todo/e0); do "
+                f"for mountpoint in $(find /tmp/xdn/state/fuselog/ -type d -name 'ar{i}' | xargs -I{{}} echo {{}}/mnt/restkv/e0); do "
                 "  echo \"Unmounting $mountpoint\"; fusermount -u $mountpoint || true; done; "
                 "rm -rf /tmp/xdn /tmp/gigapaxos || true"
             )
@@ -319,60 +299,38 @@ class XdnLauncher(Launcher):
         for jar in jars:
             jar_path = f"{path}/jars/{jar}"
             if not os.path.exists(jar_path) or not os.path.isfile(jar_path):
-                logging.warn(f"{jar_path} doesnt exist")
                 binary_exists = False
-            else:
-                logging.info(f"{jar_path} exists")
 
         build_path = f"{path}/build"
         if not os.path.exists(build_path) or not os.path.isdir(build_path):
             binary_exists = False
 
-        build_cmd = (
-            f"cd {path} && "
-            "bash ./bin/build_xdn_cli.sh"
-        )
-        self.local_run_cmd(build_cmd)
+        cli_binary = f"{path}/bin/xdn"
+        if not os.path.exists(cli_binary):
+            binary_exists = False
 
         # Rebuild if binary doesn't exist
         # or if repo commit doesn't match the default commit hash
-        if not matching_commit:
-            logging.info("commit does not match")
-
         if not binary_exists or not matching_commit:
             logging.info("Building XDN binary...")
             build_cmd = (
                 f"cd {path} && "
-                "bash ./bin/build_xdn_jar.sh"
+                "./bin/build_xdn_jar.sh"
             )
             self.local_run_cmd(build_cmd)
+
+        # Build CLI
+        build_cmd = (
+            f"cd {path} && "
+            "./bin/build_xdn_cli.sh"
+        )
+        self.local_run_cmd(build_cmd)
 
         # Check Fuselog
-        self.check_dependency(DEPENDENCIES["rust"], ">=1.87")
-        self.check_dependency(DEPENDENCIES["cargo"], ">=1.87")
-        path, matching_commit = self.ensure_repo_exists(self.local_dir,
-                                                        FUSE_REPO,
-                                                        FUSE_COMMIT_HASH)
-        fuse_binaries = [FUSE, f"{FUSE}-apply"]
-        binary_exists = True
-        for bin in fuse_binaries:
-            bin_path = f"{self.local_dir}/{bin}"
-            if not os.path.exists(bin_path) or not os.path.isfile(bin_path):
-                binary_exists = False
-
-        if not binary_exists or not matching_commit:
-            logging.info("Building Fuserust binary...")
-            build_cmd = (
-                f"cd {path}/fuselog_core && cargo build --release && "
-                f"cd {path}/fuselog_apply && cargo build --release && "
-                f"mv {path}/target/release/fuselog_core {self.local_dir}/{FUSE} && "
-                f"mv {path}/target/release/fuselog_apply {self.local_dir}/{FUSE}-apply"
-            )
-            self.local_run_cmd(build_cmd)
-
+        fuse_binaries = ["fuselog", "fuselog-apply"]
         copy_cmd = (
-            f"sudo cp {self.local_dir}/{FUSE} /usr/local/bin/{FUSE} && "
-            f"sudo cp {self.local_dir}/{FUSE}-apply /usr/local/bin/{FUSE}-apply"
+            f"sudo cp {self.local_dir}/fuselog /usr/local/bin/fuselog && "
+            f"sudo cp {self.local_dir}/fuselog-apply /usr/local/bin/fuselog-apply"
         )
         self.local_run_cmd(copy_cmd)
-        logging.info(f"XDN & {FUSE} build complete")
+        logging.info("XDN build complete")
