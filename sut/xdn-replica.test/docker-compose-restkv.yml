@@ -10,7 +10,7 @@ services:
       - RUST_BACKTRACE=full
     volumes:
       - type: bind
-        source: ./restkv-volume
+        source: ./volume
         target: /data/
       - /etc/passwd:/etc/passwd:ro
 

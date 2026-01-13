@@ -604,7 +604,6 @@ class Launcher(ABC):
         #for num in [6, 7]:
         #for num in [7]:
         #for num in [3, 6, 7]:
-        #for num in [3, 7]:
         for num in [6]:
             selected_workload = WORKLOADS[num-1]
             selected_workload["operation_count"] = operation_count
@@ -630,6 +629,8 @@ class Launcher(ABC):
                         print("Continuing the process...")
                         break
                 '''
+        cmd = "notify-send 'benchmark done' --urgency=critical"
+        subprocess.run(cmd, check=True, shell=True)
 
     def local_run_cmd(self, cmd):
         logging.debug(f"Running: {cmd}")

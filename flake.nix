@@ -2,7 +2,7 @@
     description = "Distrobench Python development environment";
 
     inputs = {
-	nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+	nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     };
 
     outputs = { self, nixpkgs }:
@@ -12,14 +12,21 @@
     in
     {
 	devShells.${system}.default = pkgs.mkShell {
-	    packages = [
-		(pkgs.python3.withPackages (ps: [
-					    ps.python-dotenv
-					    ps.packaging
+	    packages = with pkgs; [
+		(python3.withPackages (ps: [
+				       ps.python-dotenv
+				       ps.packaging
 		]))
+		    rustc
+		    cargo
+		    javaPackages.compiler.openjdk21
+		    maven
 	    ];
 
 	    shellHook = ''
+		# Use a local .m2 folder instead of the global home one
+		export MAVEN_OPTS="-Dmaven.repo.local=$(pwd)/.m2/repository"
+
 		echo "Distrobench Python Dev Environment Loaded"
 		python --version
 		'';

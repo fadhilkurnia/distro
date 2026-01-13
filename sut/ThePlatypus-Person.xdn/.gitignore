@@ -1,6 +1,7 @@
 xdn/
 flamegraph*/
 fuse_rust/
+flamegraph*/
 
 config.properties
 

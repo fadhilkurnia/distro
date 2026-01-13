@@ -23,7 +23,7 @@ class RestKVLauncher(Launcher):
 
         data.append({
             "public_ip": node["public_ip"],
-            "port": 8080})
+            "port": 2300})
         return data
 
     def launch(self):
@@ -36,7 +36,7 @@ class RestKVLauncher(Launcher):
         self.ycsb_interface = "xdn"
         self.ycsb_endpoint = "url.prefix"
         self.selected_protocol = {
-            "name": "nginx docker",
+            "name": "local",
             "language": "Rust",
             "consistency": "None",
             "persistency": "On-Disk"
@@ -55,7 +55,7 @@ class RestKVLauncher(Launcher):
                     self.stop(nodes_map)
                 case 2:
                     endpoints = [
-                        f"http://{node["public_ip"]}:{node["port"]}/api/kv/"
+                        f"http://{node["public_ip"]}:{node["port"]}/api/todo/tasks"
                         for node in nodes_map
                     ]
                     self.ycsb(endpoints)
@@ -77,7 +77,7 @@ class RestKVLauncher(Launcher):
             self.remote_rsync(node["public_ip"], source_files, self.remote_dir)
 
         # Start restkv
-        if node == "127.0.0.1":
+        if node["public_ip"] == "127.0.0.1":
             run_cmd = (
                 f"cd {self.local_dir}; "
                 "docker compose up -d"

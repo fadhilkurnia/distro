@@ -14,7 +14,7 @@ FUSE_REPO = "https://github.com/ThePlatypus-Person/fuse_rust.git"
 COMMIT_HASH = "fbd416c60403fbaeddddf6909ff28d0d0abe9542"
 FUSE_COMMIT_HASH = "6c4007998d7da0cf7eaa6bee3c0d0c01d606f17d"
 '''
-TEMP_NAME = "Disk-Full_Batching"
+TEMP_NAME = "Disk-No_Batching"
 
 # COMMIT_HASH = "dec0c2e9efe4502584896e3fbea25ad3c792965c"
 COMMIT_HASH = "187270ee826dbae190aa215dc9b1111cec3fa245"
@@ -190,6 +190,7 @@ class XdnLauncher(Launcher):
                     "-Djava.util.logging.config.file=conf/logging.properties "
                     "-Dlog4j.configuration=conf/log4j.properties "
                     "-Djdk.httpclient.allowRestrictedHeaders=connection,content-length,host "
+                    f"-XX:StartFlightRecording=name=Node{i}-{self.selected_protocol["consistency"]},filename=node_{i}-{self.selected_protocol["consistency"]}.jfr,settings=profile,dumponexit=true "
                     f"-cp build/classes:{jars} "
                     f"edu.umass.cs.reconfiguration.ReconfigurableNode AR{i} "
                     f"> node_{i}.log 2>&1 &"
@@ -264,7 +265,7 @@ class XdnLauncher(Launcher):
         for i, node in enumerate(nodes_map):
             core_cleanup_cmd = (
                 "pids=$(ps aux | grep 'edu.umass.cs.reconfiguration.ReconfigurableNode' | grep -v grep | awk '{{print $2}}'); "
-                "for pid in $pids; do echo \"Killing $pid\"; kill -9 $pid; done; "
+                "for pid in $pids; do echo \"Killing $pid\"; kill -15 $pid; done; "
 
                 f"container_ids=$(docker ps -a -q --filter 'name=c0.e0.todo.ar{i}.xdn.io'); "
                 "if [ -n \"$container_ids\" ]; then "
