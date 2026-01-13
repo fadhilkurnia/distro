@@ -562,15 +562,13 @@ class Launcher(ABC):
 
         default_record_count = int(os.getenv("DEFAULT_RECORD_COUNT", 1000000))
         default_operation_count = int(os.getenv("DEFAULT_OPERATION_COUNT", 500000))
-        '''
         record_count = helper.get_positive_num("Enter Record Count", default_record_count)
         operation_count = helper.get_positive_num("Enter Operation Count", default_operation_count)
-        '''
         record_count = default_record_count
         operation_count = default_operation_count
 
         # Load key-value pairs first before running benchmark
-        #self._load_ycsb(addr_list, record_count, args)
+        self._load_ycsb(addr_list, record_count, args)
 
         # Run Workload
         workload_text = [{
@@ -592,19 +590,7 @@ class Launcher(ABC):
         thread_count_str = os.getenv("BENCHMARK_THREAD_COUNTS", "8,16,32,64,128")
         thread_counts = [int(item.strip()) for item in thread_count_str.split(',')]
 
-        '''
-        while True:
-            num = helper.get_option(0, len(workload_text), workload_text)
-
-            if num == 0:
-                return
-        '''
-        #for num in range(1, 6):
-        #for num in range(1, 3):
-        #for num in [6, 7]:
-        #for num in [7]:
-        #for num in [3, 6, 7]:
-        for num in [6]:
+        for num in range(1, 7):
             selected_workload = WORKLOADS[num-1]
             selected_workload["operation_count"] = operation_count
             selected_workload["record_count"] = record_count
@@ -618,8 +604,7 @@ class Launcher(ABC):
                 result = self._run_ycsb(addr_list, selected_workload, args)
                 self._store_ycsb_result(result, selected_workload)
 
-                break_duration = 20
-                #break_duration = 5
+                break_duration = 5
                 logging.info(f"Taking {break_duration} second break after running {selected_workload["name"]} with {thread_count} thread(s)")
                 time.sleep(break_duration)
                 '''
