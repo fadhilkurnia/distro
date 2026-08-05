@@ -18,7 +18,11 @@ import (
 // check that config -> Pool -> Runner -> nix -> registry all fit
 // together correctly before any real protocol is ported.
 func init() {
-	registry.Register("dummy", func() launcher.Launcher { return &DummyLauncher{} })
+	registry.Register("dummy",
+		func() launcher.Launcher { return &DummyLauncher{} },
+		nil, // no Variants. dummy has nothing meaningful to catalog
+		nil, // no Versions. same
+	)
 }
 
 // workdir is this package's own directory, matching the sut/<protocol>

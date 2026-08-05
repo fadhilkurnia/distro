@@ -15,6 +15,7 @@ import (
 	// registry. main.go blank-imports each sut/<protocol> package, and
 	// adding a new protocol never requires touching the registry itself
 	_ "github.com/fadhilkurnia/distro/internal/testutil"
+	_ "github.com/fadhilkurnia/distro/sut/ailidani.paxi"
 )
 
 func main() {
