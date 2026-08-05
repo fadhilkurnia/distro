@@ -1,9 +1,0 @@
-services:
-  todo:
-    image: michael2718/todo:1
-    container_name: todo
-    ports:
-      - "2300:3000"
-    restart: unless-stopped
-    volumes:
-      - /home/mori/Work/distro/sut/xdn-replica.test/volume:/app/data
