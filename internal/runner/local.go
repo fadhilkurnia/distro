@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-// Runner to handle scripts that runs locally (in the same machine as the driver)
+// Runner to handle commands that run locally (in the same machine as the driver)
 type LocalRunner struct {
 	// The protocol's base directory. Example:
 	// - sut/ailidani.paxi
@@ -24,44 +24,45 @@ func NewLocalRunner(workdir string) *LocalRunner {
 }
 
 // Create an *exec.Cmd:
-// - What to run
+// - What to run (cmd, executed via "bash -c" since it's a 
+// full command line - ex: `nix-shell shell.nix --run '...'`)
 // - Where to run it
-// - What environments to give it
-func (r *LocalRunner) buildCommand(ctx context.Context, script string, env map[string]string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "bash", script)
-	cmd.Dir = r.workdir
+// - What environment to give it
+func (r *LocalRunner) buildCommand(ctx context.Context, cmd string, env map[string]string) *exec.Cmd {
+	c := exec.CommandContext(ctx, "bash", "-c", cmd)
+	c.Dir = r.workdir
 	// Makes sure the command has PATH, HOME, etc
-	cmd.Env = append(os.Environ(), mapToEnvSlice(env)...)
-	return cmd
+	c.Env = append(os.Environ(), mapToEnvSlice(env)...)
+	return c
 }
 
 // Use this if you don't need live output
-func (r *LocalRunner) Run(ctx context.Context, script string, env map[string]string) error {
-	cmd := r.buildCommand(ctx, script, env)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+func (r *LocalRunner) Run(ctx context.Context, cmd string, env map[string]string) error {
+	c := r.buildCommand(ctx, cmd, env)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("local: %s failed: %w", script, err)
+	if err := c.Run(); err != nil {
+		return fmt.Errorf("local: %s failed: %w", cmd, err)
 	}
 	return nil
 }
 
 // Use this if you need live output
-func (r *LocalRunner) Stream(ctx context.Context, script string, env map[string]string) (*StreamHandle, error) {
-	cmd := r.buildCommand(ctx, script, env)
+func (r *LocalRunner) Stream(ctx context.Context, cmd string, env map[string]string) (*StreamHandle, error) {
+	c := r.buildCommand(ctx, cmd, env)
 
 	pr, pw, err := os.Pipe()
 	if err != nil {
-		return nil, fmt.Errorf("local: creating output pipe for %s: %w", script, err)
+		return nil, fmt.Errorf("local: creating output pipe for %s: %w", cmd, err)
 	}
-	cmd.Stdout = pw
-	cmd.Stderr = pw
+	c.Stdout = pw
+	c.Stderr = pw
 
-	if err := cmd.Start(); err != nil {
+	if err := c.Start(); err != nil {
 		pw.Close()
 		pr.Close()
-		return nil, fmt.Errorf("local: starting %s: %w", script, err)
+		return nil, fmt.Errorf("local: starting %s: %w", cmd, err)
 	}
 
 	var (
@@ -71,8 +72,8 @@ func (r *LocalRunner) Stream(ctx context.Context, script string, env map[string]
 	done := make(chan struct{})
 
 	go func() {
-		waitErr = cmd.Wait() // Call Wait() once only, otherwise will panic
-		pw.Close()           // unblocks any pending read on pr with io.EOF
+		waitErr = c.Wait() // Call Wait() once only, otherwise will panic
+		pw.Close()         // unblocks any pending read on pr with io.EOF
 		close(done)
 	}()
 
@@ -85,8 +86,8 @@ func (r *LocalRunner) Stream(ctx context.Context, script string, env map[string]
 	}, nil
 }
 
-// Note: will automatically create targetPath's parent directory 
-// 	 if it doesn't exist yet.
+// Note: will automatically create targetPath's parent directory
+//	if it doesn't exist yet.
 func (r *LocalRunner) Copy(ctx context.Context, sourcePath, targetPath string) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -118,8 +119,8 @@ func (r *LocalRunner) Host() string {
 	return "127.0.0.1"
 }
 
-// Converts a map of environment variables into "KEY=VALUE" string slices
-// Keys are sorted purely so output/behavior is deterministic across runs 
+// Converts a map of environment variables into "KEY=VALUE" string slices.
+// Keys are sorted purely so output/behavior is deterministic across runs
 func mapToEnvSlice(env map[string]string) []string {
 	keys := make([]string, 0, len(env))
 	for k := range env {

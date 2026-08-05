@@ -7,11 +7,12 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/fadhilkurnia/distro/internal/config"
+	"github.com/fadhilkurnia/distro/internal/nix"
 	"github.com/fadhilkurnia/distro/internal/registry"
 	"github.com/fadhilkurnia/distro/internal/runner"
 
 	// Blank-imported so its init() runs and registers "dummy" into the
-	// registry. main.go blank-imports each sut/<protocol> package, and 
+	// registry. main.go blank-imports each sut/<protocol> package, and
 	// adding a new protocol never requires touching the registry itself
 	_ "github.com/fadhilkurnia/distro/internal/testutil"
 )
@@ -40,13 +41,26 @@ func main() {
 		}
 	}()
 
+	ctx := context.Background()
+
+	// Check if every node has nix-shell available.
+	// A node missing this will cause hard failure in distrobench
+	for _, n := range cfg.Nodes {
+		r, err := pool.For(n, ".")
+		if err != nil {
+			log.Fatalf("runner: %v", err)
+		}
+		if err := nix.CheckAvailable(ctx, r); err != nil {
+			log.Fatalf("nix: %v", err)
+		}
+	}
+	log.Printf("nix-shell available on all %d node(s)", len(cfg.Nodes))
+
 	// Test dummy
 	l, err := registry.Get("dummy")
 	if err != nil {
 		log.Fatalf("registry: %v", err)
 	}
-
-	ctx := context.Background()
 
 	log.Printf("[%s] building...", l.Name())
 	if err := l.Build(ctx, pool, cfg.Nodes); err != nil {

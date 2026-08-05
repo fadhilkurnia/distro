@@ -12,12 +12,14 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/fadhilkurnia/distro/internal/shellquote"
 )
 
-// Runner to handle scripts that runs on a remote machine over SSH
+// Runner to handle commands that run on a remote machine over SSH
 type SSHRunner struct {
 	// the node's public IP, returned by Host()
-	host    string
+	host string
 
 	// The protocol's directory in the remote machine. Example:
 	// - ~/distro/ailidani.paxi
@@ -33,39 +35,34 @@ func NewSSHRunner(host, workdir string, client *ssh.Client) *SSHRunner {
 	return &SSHRunner{host: host, workdir: workdir, client: client}
 }
 
-// Assembles the script and environment variable into a plain string 
-// to be run as a command through the SSH protocol.
-// This is needed because SSH doesn't let a client hand arbitrary 
-// environment variables to the remote shell like in local shell
+// Assembles cmd and environment variables into a plain string
+// to be run through the SSH protocol.
+// This is needed because SSH doesn't let a client hand arbitrary
+// environment variables to the remote shell like in a local shell.
 // Example:
-// "cd sut/ailidani.paxi && NODE_ID=1.2 bash scripts/start.sh"
-//  ^-- workdir              ^-- env       ^-- script
-func (r *SSHRunner) buildCommand(script string, env map[string]string) string {
+// "cd sut/ailidani.paxi && NODE_ID=1.2 nix-shell shell.nix --run './scripts/start.sh'"
+//	^-- workdir              ^-- env       ^-- cmd (already fully composed by the caller)
+func (r *SSHRunner) buildCommand(cmd string, env map[string]string) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "cd %s && ", shellQuote(r.workdir))
+	fmt.Fprintf(&b, "cd %s && ", shellquote.Quote(r.workdir))
 
 	// Sorted purely for deterministic output (see mapToEnvSlice in
-	// local.go for the same reasoning) - has no effect on the script.
+	// local.go for the same reasoning) - has no effect on the command.
 	keys := make([]string, 0, len(env))
 	for k := range env {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		fmt.Fprintf(&b, "%s=%s ", k, shellQuote(env[k]))
+		fmt.Fprintf(&b, "%s=%s ", k, shellquote.Quote(env[k]))
 	}
 
-	fmt.Fprintf(&b, "bash %s", script)
+	b.WriteString(cmd)
 	return b.String()
 }
 
-// Wraps a string in single quotes and converting all ' in that string into \'
-func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
-
 // Use this if you don't need live output
-func (r *SSHRunner) Run(ctx context.Context, script string, env map[string]string) error {
+func (r *SSHRunner) Run(ctx context.Context, cmd string, env map[string]string) error {
 	session, err := r.client.NewSession()
 	if err != nil {
 		return fmt.Errorf("ssh[%s]: opening session: %w", r.host, err)
@@ -76,12 +73,12 @@ func (r *SSHRunner) Run(ctx context.Context, script string, env map[string]strin
 	session.Stderr = os.Stderr
 
 	done := make(chan error, 1)
-	go func() { done <- session.Run(r.buildCommand(script, env)) }()
+	go func() { done <- session.Run(r.buildCommand(cmd, env)) }()
 
 	select {
 	case err := <-done:
 		if err != nil {
-			return fmt.Errorf("ssh[%s]: %s failed: %w", r.host, script, err)
+			return fmt.Errorf("ssh[%s]: %s failed: %w", r.host, cmd, err)
 		}
 		return nil
 	case <-ctx.Done():
@@ -96,7 +93,7 @@ func (r *SSHRunner) Run(ctx context.Context, script string, env map[string]strin
 }
 
 // Use this if you need live output
-func (r *SSHRunner) Stream(ctx context.Context, script string, env map[string]string) (*StreamHandle, error) {
+func (r *SSHRunner) Stream(ctx context.Context, cmd string, env map[string]string) (*StreamHandle, error) {
 	session, err := r.client.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("ssh[%s]: opening session: %w", r.host, err)
@@ -105,16 +102,16 @@ func (r *SSHRunner) Stream(ctx context.Context, script string, env map[string]st
 	pr, pw, err := os.Pipe()
 	if err != nil {
 		session.Close()
-		return nil, fmt.Errorf("ssh[%s]: creating output pipe for %s: %w", r.host, script, err)
+		return nil, fmt.Errorf("ssh[%s]: creating output pipe for %s: %w", r.host, cmd, err)
 	}
 	session.Stdout = pw
 	session.Stderr = pw
 
-	if err := session.Start(r.buildCommand(script, env)); err != nil {
+	if err := session.Start(r.buildCommand(cmd, env)); err != nil {
 		pw.Close()
 		pr.Close()
 		session.Close()
-		return nil, fmt.Errorf("ssh[%s]: starting %s: %w", r.host, script, err)
+		return nil, fmt.Errorf("ssh[%s]: starting %s: %w", r.host, cmd, err)
 	}
 
 	var (
@@ -130,10 +127,10 @@ func (r *SSHRunner) Stream(ctx context.Context, script string, env map[string]st
 		close(done)
 	}()
 
-	// SSH session has no built-in ctx support, so if ctx is cancelled 
-	// before the command finishes on its own, this closes the session 
-	// to force it to stop. 
-	// If the command already finished, done is already closed and 
+	// SSH session has no built-in ctx support, so if ctx is cancelled
+	// before the command finishes on its own, this closes the session
+	// to force it to stop.
+	// If the command already finished, done is already closed and
 	// this goroutine exits immediately without doing anything.
 	go func() {
 		select {
@@ -168,8 +165,8 @@ func (r *SSHRunner) sftpClient() (*sftp.Client, error) {
 	return client, nil
 }
 
-// Note: will automatically create targetPath's parent directory 
-// 	 if it doesn't exist yet.
+// Note: will automatically create targetPath's parent directory
+//	 if it doesn't exist yet.
 func (r *SSHRunner) Copy(ctx context.Context, sourcePath, targetPath string) error {
 	if err := ctx.Err(); err != nil {
 		return err
