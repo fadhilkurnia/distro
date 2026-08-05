@@ -3,6 +3,7 @@ package runner
 import (
 	"fmt"
 	"os"
+	"path"
 	"sync"
 	"time"
 
@@ -61,7 +62,10 @@ func (p *Pool) For(node config.Node, workdir string) (Runner, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewSSHRunner(node.PublicIP, workdir, client), nil
+	// Remote nodes nest workdir under a fixed "distro/" base directory.
+	// (local) sut/ailidani.paxi/ -> (remote) ~/distro/sut/ailidani.paxi/
+	remoteWorkdir := path.Join("distro", workdir)
+	return NewSSHRunner(node.PublicIP, remoteWorkdir, client), nil
 }
 
 // Returns an existing SSH connection to host if one is already

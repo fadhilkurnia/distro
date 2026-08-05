@@ -21,10 +21,13 @@ type SSHRunner struct {
 	// the node's public IP, returned by Host()
 	host string
 
-	// The protocol's directory in the remote machine. Example:
-	// - ~/distro/ailidani.paxi
-	// - ~/distro/fadhilkurnia.xdn
+	// The protocol's directory in the remote machine, relative to that
+	// node's home directory. Pool.For prepends "distro/" automatically.
+	// Ex: passing "sut/ailidani.paxi" results in this field holding
+	// "distro/sut/ailidani.paxi", landing at
+	// ~/distro/sut/ailidani.paxi on the remote machine.
 	workdir string
+
 	client  *ssh.Client
 
 	sftpMu sync.Mutex
@@ -171,6 +174,10 @@ func (r *SSHRunner) Copy(ctx context.Context, sourcePath, targetPath string) err
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+
+	// Resolve targetPath relative to this Runner's workdir, same as
+	// Run/Stream already do for cmd's script paths.
+	targetPath = path.Join(r.workdir, targetPath)
 
 	sftpClient, err := r.sftpClient()
 	if err != nil {
