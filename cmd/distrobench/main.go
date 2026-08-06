@@ -8,14 +8,15 @@ import (
 
 	"github.com/fadhilkurnia/distro/internal/config"
 	"github.com/fadhilkurnia/distro/internal/nix"
-	"github.com/fadhilkurnia/distro/internal/registry"
 	"github.com/fadhilkurnia/distro/internal/runner"
+	"github.com/fadhilkurnia/distro/internal/launcher"
 
 	// Blank-imported so its init() runs and registers "dummy" into the
 	// registry. main.go blank-imports each sut/<protocol> package, and
 	// adding a new protocol never requires touching the registry itself
 	_ "github.com/fadhilkurnia/distro/internal/testutil"
-	_ "github.com/fadhilkurnia/distro/sut/ailidani.paxi"
+	paxi "github.com/fadhilkurnia/distro/sut/ailidani.paxi"
+
 )
 
 func main() {
@@ -57,11 +58,12 @@ func main() {
 	}
 	log.Printf("nix-shell available on all %d node(s)", len(cfg.Nodes))
 
-	// Test dummy
-	l, err := registry.Get("dummy")
-	if err != nil {
-		log.Fatalf("registry: %v", err)
-	}
+	l := &paxi.PaxiLauncher{
+	VariantVersion: launcher.VariantVersion{
+		Algorithm: "paxos",
+		Version:   "baseline",
+	},
+}
 
 	log.Printf("[%s] building...", l.Name())
 	if err := l.Build(ctx, pool, cfg.Nodes); err != nil {
@@ -77,6 +79,12 @@ func main() {
 	if err := l.Stop(ctx, pool, cfg.Nodes); err != nil {
 		log.Fatalf("stop failed: %v", err)
 	}
+
+	log.Printf("[%s] cleaning...", l.Name())
+	if err := l.Clean(ctx, pool, cfg.Nodes, false); err != nil {
+		log.Fatalf("clean failed: %v", err)
+	}
+
 
 	log.Println("done")
 }

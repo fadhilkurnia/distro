@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+set -x  # trace every command as it runs, so nothing is ambiguous
 # HASH is passed in by launcher.go via env.
 
-# Paxi's own repo already has a build.sh under bin/ that produces a
-# "server" binary in that same directory. We just run it, then copy 
-# the result out into this version's own .build/<hash>/bin/ directory
-cd repo/bin
-./build.sh
+mkdir -p ".build/$HASH/bin"
+cd repo/server
+go build -o "../../.build/$HASH/bin/server" .
 
-mkdir -p "../../.build/$HASH/bin"
-cp server "../../.build/$HASH/bin/server"
+# Explicit, unambiguous confirmation of what was actually produced —
+# no more inferring success from exit code alone.
+ls -la "../../.build/$HASH/bin/server"

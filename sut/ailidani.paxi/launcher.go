@@ -242,14 +242,13 @@ func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []con
 }
 
 
-// Kills the running process on every node and deletes the generated
-// config (both remote copies, via stop.sh, and the local copy). The
-// binary is left in place.
+// Kills the running process on every node
 func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
 	_, version, err := l.Resolve(Variants, Versions)
 	if err != nil {
 		return fmt.Errorf("paxi: %w", err)
 	}
+
 	short := gitrepo.ShortHash(version.Ref)
 	script := launcher.ResolveOverride(workdir, "scripts/stop.sh", version.Name)
  
@@ -258,18 +257,69 @@ func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []conf
 		if err != nil {
 			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
 		}
+
 		env := map[string]string{"HASH": short}
 		if err := nix.Run(ctx, r, script, env); err != nil {
 			return fmt.Errorf("paxi: stopping on %s: %w", n.ID, err)
 		}
 	}
- 
-	localConfigPath := filepath.Join(workdir, ".build", short, "run_config.json")
-	if err := os.Remove(localConfigPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("paxi: removing local config %s: %w", localConfigPath, err)
-	}
 	return nil
 }
+
+
+// removes build output (binary, generated config, logs) from every node
+// (if removeRepo is true) removes the shared git clone
+// Note: refuses to run if the process still appears to be running on any node.
+// 	 Stop must be called first	
+func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool) error {
+	_, version, err := l.Resolve(Variants, Versions)
+	if err != nil {
+		return fmt.Errorf("paxi: %w", err)
+	}
+
+	short := gitrepo.ShortHash(version.Ref)
+	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
+	relVersionDir := fmt.Sprintf(".build/%s", short)
+
+	// Check if any process is still running
+	for _, n := range nodes {
+		r, err := pool.For(n, workdir)
+		if err != nil {
+			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
+		}
+
+		checkCmd := fmt.Sprintf(`! (ps aux | grep %s | grep -v grep > /dev/null)`, relBinPath)
+		if err := r.Run(ctx, checkCmd, nil); err != nil {
+			return fmt.Errorf("paxi: process still running on %s, stop it first", n.ID)
+		}
+	}
+
+	for _, n := range nodes {
+		r, err := pool.For(n, workdir)
+		if err != nil {
+			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
+		}
+
+		if err := r.Run(ctx, fmt.Sprintf("rm -rf %s", relVersionDir), nil); err != nil {
+			return fmt.Errorf("paxi: cleaning %s on %s: %w", relVersionDir, n.ID, err)
+		}
+	}
+
+	localVersionDir := filepath.Join(workdir, ".build", short)
+	if err := os.RemoveAll(localVersionDir); err != nil {
+		return fmt.Errorf("paxi: removing local %s: %w", localVersionDir, err)
+	}
+
+	if removeRepo {
+		repoDir := filepath.Join(workdir, "repo")
+		if err := os.RemoveAll(repoDir); err != nil {
+			return fmt.Errorf("paxi: removing %s: %w", repoDir, err)
+		}
+	}
+
+	return nil
+}
+
 
 
 // compile-time check that PaxiLauncher satisfies Launcher.

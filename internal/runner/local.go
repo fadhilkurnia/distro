@@ -93,8 +93,14 @@ func (r *LocalRunner) Copy(ctx context.Context, sourcePath, targetPath string) e
 		return err
 	}
 
-	// Resolve targetPath relative to this Runner's workdir
 	targetPath = filepath.Join(r.workdir, targetPath)
+
+	// Guard against source and target resolving to the exact same file.
+	if absSrc, err := filepath.Abs(sourcePath); err == nil {
+		if absDst, err := filepath.Abs(targetPath); err == nil && absSrc == absDst {
+			return nil
+		}
+	}
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return fmt.Errorf("local: creating directory for %s: %w", targetPath, err)

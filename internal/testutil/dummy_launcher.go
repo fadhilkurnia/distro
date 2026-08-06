@@ -48,6 +48,10 @@ func (d *DummyLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []con
 	return d.runOnEach(ctx, pool, nodes, "stopping")
 }
 
+func (d *DummyLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool) error {
+	return nil
+}
+
 func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes []config.Node, verb string) error {
 	for _, n := range nodes {
 		r, err := pool.For(n, workdir)
@@ -63,13 +67,4 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 		}
 	}
 	return nil
-}
-
-func (d *DummyLauncher) Metadata() launcher.Metadata {
-	return launcher.Metadata{
-		Name:        "dummy",
-		Language:    "Bash",
-		Consistency: "N/A",
-		Persistency: "N/A",
-	}
 }

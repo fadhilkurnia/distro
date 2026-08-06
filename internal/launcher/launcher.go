@@ -10,19 +10,13 @@ import (
 	"github.com/fadhilkurnia/distro/internal/runner"
 )
 
+
 // Checks if a path exists on the local filesystem
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-
-// ResolveOverride checks for a "<versionName>-<filename>" override inside
-// workdir first, falling back to plain filename if no override exists.
-// Returns a path relative to workdir, suitable for passing straight to
-// nix.Run (which resolves script paths against the Runner's own workdir)
-// or for joining with workdir yourself for local filesystem access.
-// 
 
 // Checks for a "<versionName>-<filename>.sh" override inside workdir.
 // Falls back to plain <filename>.sh if no override exists.
@@ -52,18 +46,21 @@ func (vv VariantVersion) Resolve(variants []Variant, versions []Version) (Varian
 	if vv.Algorithm == "" {
 		return Variant{}, Version{}, fmt.Errorf("launcher: Algorithm must be set")
 	}
+
 	if vv.Version == "" {
 		return Variant{}, Version{}, fmt.Errorf("launcher: Version must be set")
 	}
- 
+
 	variant, err := ResolveVariant(variants, vv.Algorithm)
 	if err != nil {
 		return Variant{}, Version{}, err
 	}
+
 	version, err := ResolveVersion(versions, vv.Version)
 	if err != nil {
 		return Variant{}, Version{}, err
 	}
+
 	return variant, version, nil
 }
 
@@ -150,9 +147,11 @@ type Launcher interface {
 
 	// Stops the protocol in each node:
 	// - Stops start.sh script and kill protocol process PID
-	// - Delete configs
-	// - Clean up /tmp and state files (if exists)
-	// Note: the binary is left in place, so a later Start doesn't
-	//       require rebuilding.
 	Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node) error
+
+	// Clean up the protocol in each node:
+	// - Delete configs
+	// - Clean up binary, /tmp and state files (if exists)
+	// - (if removeRepo is true) remove git repository
+	Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool) error
 }
