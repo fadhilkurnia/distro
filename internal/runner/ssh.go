@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -72,8 +73,9 @@ func (r *SSHRunner) Run(ctx context.Context, cmd string, env map[string]string) 
 	}
 	defer session.Close()
 
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
+	var buf bytes.Buffer
+	session.Stdout = &buf
+	session.Stderr = &buf
 
 	done := make(chan error, 1)
 	go func() { done <- session.Run(r.buildCommand(cmd, env)) }()
@@ -81,7 +83,7 @@ func (r *SSHRunner) Run(ctx context.Context, cmd string, env map[string]string) 
 	select {
 	case err := <-done:
 		if err != nil {
-			return fmt.Errorf("ssh[%s]: %s failed: %w", r.host, cmd, err)
+			return fmt.Errorf("ssh[%s]: %s failed: %w\noutput:\n%s", r.host, cmd, err, buf.String())
 		}
 		return nil
 	case <-ctx.Done():

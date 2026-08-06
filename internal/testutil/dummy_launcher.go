@@ -11,32 +11,30 @@ import (
 	"github.com/fadhilkurnia/distro/internal/runner"
 )
 
-// Registers "dummy" for this Launcher inside the Registry
-// Note: DummyLauncher does nothing real. Build is a no-op, Start and Stop
-// just run testdata/echo.sh (via nix.Run, wrapped in this package's own
-// shell.nix) on every node via that node's Runner. It exists purely to
-// check that config -> Pool -> Runner -> nix -> registry all fit
-// together correctly before any real protocol is ported.
-func init() {
-	registry.Register("dummy",
-		func() launcher.Launcher { return &DummyLauncher{} },
-		nil, // no Variants. dummy has nothing meaningful to catalog
-		nil, // no Versions. same
-	)
-}
-
-// workdir is this package's own directory, matching the sut/<protocol>
-// convention every real protocol will follow: shell.nix and scripts/
-// (here, testdata/) both live directly under it.
+const projectName = "dummy"
 const workdir = "internal/testutil"
 
+func init() {
+	registry.AddProject(registry.Project{
+		Name:       projectName,
+		Repository: "",
+		NewLauncher: func(spec launcher.Specification, version launcher.Version) launcher.Launcher {
+			return &DummyLauncher{}
+		},
+		Specifications: nil, // empty catalog — contributes zero rows to GetInstances
+		Versions:       nil,
+	})
+}
+
+// DummyLauncher does nothing real: Build is a no-op, Start and Stop just
+// run testdata/echo.sh on every node via that node's Runner.
 type DummyLauncher struct{}
 
-func (d *DummyLauncher) Name() string { return "dummy" }
+func (d *DummyLauncher) ProjectName() string                   { return projectName }
+func (d *DummyLauncher) Specification() launcher.Specification { return launcher.Specification{} }
+func (d *DummyLauncher) Version() launcher.Version             { return launcher.Version{} }
 
 func (d *DummyLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
-	// Nothing to build. This is what a protocol with no build step
-	// (or one already built) would look like.
 	return nil
 }
 
@@ -56,14 +54,13 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 	for _, n := range nodes {
 		r, err := pool.For(n, workdir)
 		if err != nil {
-			return fmt.Errorf("dummy: getting runner for %s: %w", n.ID, err)
+			return fmt.Errorf("%s: getting runner for %s: %w", projectName, n.ID, err)
 		}
 
 		msg := fmt.Sprintf("%s %s (%s)", verb, n.ID, r.Host())
 		env := map[string]string{"MESSAGE": msg}
-
 		if err := nix.Run(ctx, r, "testdata/echo.sh", env); err != nil {
-			return fmt.Errorf("dummy: %s on %s: %w", verb, n.ID, err)
+			return fmt.Errorf("%s: %s on %s: %w", projectName, verb, n.ID, err)
 		}
 	}
 	return nil

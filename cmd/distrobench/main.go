@@ -8,31 +8,27 @@ import (
 
 	"github.com/fadhilkurnia/distro/internal/config"
 	"github.com/fadhilkurnia/distro/internal/nix"
+	"github.com/fadhilkurnia/distro/internal/registry"
 	"github.com/fadhilkurnia/distro/internal/runner"
-	"github.com/fadhilkurnia/distro/internal/launcher"
 
-	// Blank-imported so its init() runs and registers "dummy" into the
+	// Blank-imported so its init() runs and registers itself into the
 	// registry. main.go blank-imports each sut/<protocol> package, and
-	// adding a new protocol never requires touching the registry itself
+	// adding a new protocol never requires touching the registry itself.
 	_ "github.com/fadhilkurnia/distro/internal/testutil"
-	paxi "github.com/fadhilkurnia/distro/sut/ailidani.paxi"
-
+	_ "github.com/fadhilkurnia/distro/sut/ailidani.paxi"
 )
 
 func main() {
-	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Printf("no .env file loaded (%v) - relying on already-set environment variables", err)
 	}
 
-	// Load config from .env and validates the variables
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
 	log.Printf("loaded config: %d node(s), client=%s, output=%s", len(cfg.Nodes), cfg.ClientIP, cfg.OutputFile)
 
-	// Create Runner pool to all nodes
 	pool, err := runner.NewPool(cfg.SSH)
 	if err != nil {
 		log.Fatalf("runner: %v", err)
@@ -45,8 +41,6 @@ func main() {
 
 	ctx := context.Background()
 
-	// Check if every node has nix-shell available.
-	// A node missing this will cause hard failure in distrobench
 	for _, n := range cfg.Nodes {
 		r, err := pool.For(n, ".")
 		if err != nil {
@@ -58,33 +52,39 @@ func main() {
 	}
 	log.Printf("nix-shell available on all %d node(s)", len(cfg.Nodes))
 
-	l := &paxi.PaxiLauncher{
-	VariantVersion: launcher.VariantVersion{
-		Algorithm: "paxos",
-		Version:   "baseline",
-	},
-}
+	// Manual test: find the paxos/baseline instance from the full
+	// catalog and construct a Launcher for it. This is standing in for
+	// what the TUI's picker will do once it exists.
+	var chosen *registry.Instance
+	for _, inst := range registry.GetInstances() {
+		if inst.ProjectName == "ailidani.paxi" && inst.Specification.Protocol == "paxos" && inst.Version.Name == "baseline" {
+			chosen = &inst
+			break
+		}
+	}
+	if chosen == nil {
+		log.Fatalf("no matching instance found in catalog")
+	}
 
-	log.Printf("[%s] building...", l.Name())
+	l, err := registry.GetLauncher(*chosen)
+	if err != nil {
+		log.Fatalf("registry: %v", err)
+	}
+
+	log.Printf("[%s] building...", l.ProjectName())
 	if err := l.Build(ctx, pool, cfg.Nodes); err != nil {
 		log.Fatalf("build failed: %v", err)
 	}
 
-	log.Printf("[%s] starting...", l.Name())
+	log.Printf("[%s] starting...", l.ProjectName())
 	if err := l.Start(ctx, pool, cfg.Nodes); err != nil {
 		log.Fatalf("start failed: %v", err)
 	}
 
-	log.Printf("[%s] stopping...", l.Name())
+	log.Printf("[%s] stopping...", l.ProjectName())
 	if err := l.Stop(ctx, pool, cfg.Nodes); err != nil {
 		log.Fatalf("stop failed: %v", err)
 	}
-
-	log.Printf("[%s] cleaning...", l.Name())
-	if err := l.Clean(ctx, pool, cfg.Nodes, false); err != nil {
-		log.Fatalf("clean failed: %v", err)
-	}
-
 
 	log.Println("done")
 }

@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -39,11 +40,12 @@ func (r *LocalRunner) buildCommand(ctx context.Context, cmd string, env map[stri
 // Use this if you don't need live output
 func (r *LocalRunner) Run(ctx context.Context, cmd string, env map[string]string) error {
 	c := r.buildCommand(ctx, cmd, env)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
+	var buf bytes.Buffer
+	c.Stdout = &buf
+	c.Stderr = &buf
 
 	if err := c.Run(); err != nil {
-		return fmt.Errorf("local: %s failed: %w", cmd, err)
+		return fmt.Errorf("local: %s failed: %w\noutput:\n%s", cmd, err, buf.String())
 	}
 	return nil
 }

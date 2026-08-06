@@ -3,126 +3,100 @@ package registry
 import (
 	"fmt"
 	"sort"
-	"sync"
 
 	"github.com/fadhilkurnia/distro/internal/launcher"
 )
 
-type Factory func() launcher.Launcher
+// Complete information of a project with all available specs and versions
+type Project struct {
+	Name       string // ex: "ailidani.paxi"
+	Repository string // repo URL
 
+	// Constructs a fully-configured Launcher from given spec/version 
+	NewLauncher func(spec launcher.Specification, version launcher.Version) launcher.Launcher
 
-// entry bundles everything one protocol registers: how to construct its
-// Launcher, and its catalog data (every Variant and Version it supports)
-type entry struct {
-	factory  Factory
-	variants []launcher.Variant
-	versions []launcher.Version
+	Specifications []launcher.Specification
+	Versions       []launcher.Version
 }
 
+// A selectable {project, specification, version} combination (by the TUI)
+type Instance struct {
+	ProjectName    string
+	Repository     string
+	Specification  launcher.Specification
+	Version        launcher.Version
+}
 
-var (
-	mu    sync.Mutex
-	items = map[string]entry{}
-)
+var allProjects []Project
 
-
-// Registers a Launcher, along with its full catalog of Variants and
-// Versions, from all projects inside `sut/` at compile-time.
-// Example usage:
+// Registers a project (called from a protocol's package's init() function):
 //
 //	func init() {
-//	    registry.Register("ailidani.paxi",
-//	        func() launcher.Launcher { return &PaxiLauncher{} },
-//	        Variants,
-//	        Versions,
-//	    )
+//	    registry.AddProject(registry.Project{
+//	        Name:        "ailidani.paxi",
+//	        Repository:  repoURL,
+//	        NewLauncher: func(spec launcher.Specification, version launcher.Version) launcher.Launcher {
+//	            return &PaxiLauncher{spec: spec, version: version}
+//	        },
+//	        Specifications: Specs,
+//	        Versions:       Versions,
+//	    })
 //	}
 //
-// Note: will panic if a name is registered twice.
-//	All projects must have different registry name
-func Register(name string, factory Factory, variants []launcher.Variant, versions []launcher.Version) {
-	mu.Lock()
-	defer mu.Unlock()
- 
-	if _, exists := items[name]; exists {
-		panic(fmt.Sprintf("registry: %q is already registered", name))
+// Panics if Name is already registered. There must be no duplicate project names
+func AddProject(p Project) {
+	for _, existing := range allProjects {
+		if existing.Name == p.Name {
+			panic(fmt.Sprintf("registry: %q is already registered", p.Name))
+		}
 	}
-	items[name] = entry{factory: factory, variants: variants, versions: versions}
+	allProjects = append(allProjects, p)
 }
 
-
-// Returns a freshly constructed Launcher for a registered name
-func Get(name string) (launcher.Launcher, error) {
-	mu.Lock()
-	e, ok := items[name]
-	mu.Unlock()
- 
-	if !ok {
-		return nil, fmt.Errorf("registry: no launcher registered as %q", name)
-	}
-	return e.factory(), nil
-}
-
-
-// Returns all registered projects (sorted alphabetically)
-func Names() []string {
-	mu.Lock()
-	defer mu.Unlock()
- 
-	names := make([]string, 0, len(items))
-	for name := range items {
-		names = append(names, name)
+// Returns every registered project's name (sorted alphabetically)
+func GetProjects() []string {
+	names := make([]string, 0, len(allProjects))
+	for _, p := range allProjects {
+		names = append(names, p.Name)
 	}
 	sort.Strings(names)
 	return names
 }
 
-
-// A selectable row: a single protocol running as a single Variant at 
-// a single Version. This is the flattened shape the TUI renders and 
-// lets someone choose from. Everything needed to both display it:
-// - name (algorithm being used)
-// - language
-// - consistency
-// - persistency
-// - repository
-// - human-readable version label
-// and construct the corresponding Launcher afterward:
-// - Protocol
-// - Variant.Name
-// - Version.Name
-// are available via registry.Get
-type CatalogRow struct {
-	Protocol string // ex: "ailidani.paxi" (matches the registered name)
-	launcher.Variant
-	launcher.Version
+// Returns a newly constructed Launcher from a given Instance
+func GetLauncher(i Instance) (launcher.Launcher, error) {
+	for _, p := range allProjects {
+		if p.Name == i.ProjectName {
+			return p.NewLauncher(i.Specification, i.Version), nil
+		}
+	}
+	return nil, fmt.Errorf("registry: no project named %q", i.ProjectName)
 }
- 
 
-// Get list of all registered protocol and its variant + version combinations
-// (Sorted alphabetically based on protocol name)
-func Catalog() []CatalogRow {
-	mu.Lock()
-	defer mu.Unlock()
- 
-	names := make([]string, 0, len(items))
-	for name := range items {
-		names = append(names, name)
+// Returns all ProjectName * []Specifcation * []Version combinations
+// (Ordered by ProjectName)
+func GetInstances() []Instance {
+	names := make([]string, 0, len(allProjects))
+	byName := make(map[string]Project, len(allProjects))
+	for _, p := range allProjects {
+		names = append(names, p.Name)
+		byName[p.Name] = p
 	}
 	sort.Strings(names)
- 
-	var rows []CatalogRow
+
+	var instances []Instance
 	for _, name := range names {
-		e := items[name]
-		for _, variant := range e.variants {
-			for _, version := range e.versions {
-				rows = append(rows, CatalogRow{
-					Protocol: name,
-					Variant:  variant,
-					Version:  version,
+		p := byName[name]
+		for _, spec := range p.Specifications {
+			for _, version := range p.Versions {
+				instances = append(instances, Instance{
+					ProjectName:   p.Name,
+					Repository:    p.Repository,
+					Specification: spec,
+					Version:       version,
 				})
 			}
 		}
 	}
-	return rows
+	return instances
 }

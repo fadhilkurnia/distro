@@ -3,6 +3,7 @@ package gitrepo
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	git "github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
@@ -17,7 +18,6 @@ func ShortHash(fullHash string) string {
 	}
 	return fullHash[:n]
 }
-
 
 // Ensure repoDir exists as a git clone inside of workdir
 func EnsureCloned(repoDir, repoURL string) error {
@@ -59,4 +59,21 @@ func Checkout(repoDir, hash string) error {
 		return fmt.Errorf("gitrepo: checking out %s in %s: %w", hash, repoDir, err)
 	}
 	return nil
+}
+
+// Checks whether path exists on the local filesystem
+func FileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// Checks for a "<versionName>-<filename>" override inside workdir 
+// if not exists, falls back to plain filename
+// Returns a path relative to workdir
+func ResolveOverride(workdir, filename, versionName string) string {
+	override := fmt.Sprintf("%s-%s", versionName, filename)
+	if FileExists(filepath.Join(workdir, override)) {
+		return override
+	}
+	return filename
 }
