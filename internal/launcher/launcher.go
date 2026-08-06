@@ -23,6 +23,12 @@ type Version struct {
 	CommitHash string // full 40-character commit hash
 }
 
+// Reports a human-readable line of ongoing status from inside a
+// Build/Start/Stop/Clean call. Similar to a logger
+// The messages are sent directly to a background goroutine so 
+// Bubble Tea (TUI) can render them to the terminal
+type Progress func(message string)
+
 // Describes what functions are required for all project Launcher
 //
 // Build/Start/Stop/Clean follow a fixed division of responsibility:
@@ -42,8 +48,8 @@ type Launcher interface {
 	// Selected Version for this Launcher instance
 	Version() Version 
 
-	Build(ctx context.Context, pool *runner.Pool, nodes []config.Node) error
-	Start(ctx context.Context, pool *runner.Pool, nodes []config.Node) error
-	Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node) error
-	Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool) error
+	Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
+	Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
+	Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
+	Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress Progress) error
 }

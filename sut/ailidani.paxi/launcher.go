@@ -42,7 +42,7 @@ var Specs = []launcher.Specification{
 	{Protocol: "wankeeper", 	Language: "Go", Consistency: "Linearizability", Persistency: "In-Memory"},
 	{Protocol: "kpaxos", 		Language: "Go", Consistency: "Linearizability", Persistency: "In-Memory"},
 	{Protocol: "paxos_groups", 	Language: "Go", Consistency: "Linearizability", Persistency: "In-Memory"},
-	{Protocol: "dynamo", 		Language: "Go", Consistency: "Eventual", Persistency: "In-Memory"},
+	{Protocol: "dynamo", 		Language: "Go", Consistency: "Eventual", 	Persistency: "In-Memory"},
 	{Protocol: "blockchain", 	Language: "Go", Consistency: "Linearizability", Persistency: "In-Memory"},
 	{Protocol: "m2paxos", 		Language: "Go", Consistency: "Linearizability", Persistency: "In-Memory"},
 	{Protocol: "hpaxos", 		Language: "Go", Consistency: "Linearizability", Persistency: "In-Memory"},
@@ -69,39 +69,44 @@ func (l *PaxiLauncher) ProjectName() string                   { return projectNa
 func (l *PaxiLauncher) Specification() launcher.Specification { return l.spec }
 func (l *PaxiLauncher) Version() launcher.Version             { return l.version }
 
-func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
-	short := gitrepo.ShortHash(l.version.CommitHash)
+// used whenever a caller passes a nil Progress
+func noopProgress(string) {}
 
+func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	if progress == nil { progress = noopProgress }
+	short := gitrepo.ShortHash(l.version.CommitHash)
+ 
 	repoDir := filepath.Join(workdir, "repo")
 	if err := gitrepo.EnsureCloned(repoDir, repoURL); err != nil {
 		return fmt.Errorf("paxi: %w", err)
 	}
-
 	if err := gitrepo.Checkout(repoDir, l.version.CommitHash); err != nil {
 		return fmt.Errorf("paxi: %w", err)
 	}
-
+ 
 	localBinPath := filepath.Join(workdir, ".build", short, "bin", "server")
 	if !gitrepo.FileExists(localBinPath) {
+		progress("Executing build.sh to compile binaries...")
 		local := runner.NewLocalRunner(workdir)
 		script := gitrepo.ResolveOverride(workdir, "scripts/build.sh", l.version.Name)
 		env := map[string]string{"HASH": short}
 		if err := nix.Run(ctx, local, script, env); err != nil {
 			return fmt.Errorf("paxi: build failed: %w", err)
 		}
-
 		if !gitrepo.FileExists(localBinPath) {
 			return fmt.Errorf("paxi: build.sh completed but %s was not produced", localBinPath)
 		}
+	} else {
+		progress("Binary already built, skipping compile...")
 	}
-
+ 
 	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
 	for _, n := range nodes {
+		progress(fmt.Sprintf("Sending binaries to %s (%s)...", n.ID, n.PublicIP))
 		r, err := pool.For(n, workdir)
 		if err != nil {
 			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
 		}
-
 		if err := r.Copy(ctx, localBinPath, relBinPath); err != nil {
 			return fmt.Errorf("paxi: copying binary to %s: %w", n.ID, err)
 		}
@@ -169,7 +174,8 @@ func buildConfigJSON(templatePath string, portMap []portMapEntry) ([]byte, error
 	return out, nil
 }
 
-func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
+func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	if progress == nil { progress = noopProgress }
 	short := gitrepo.ShortHash(l.version.CommitHash)
 
 	templateRel := gitrepo.ResolveOverride(workdir, "template.json", l.version.Name)
@@ -191,6 +197,8 @@ func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []con
 	script := gitrepo.ResolveOverride(workdir, "scripts/start.sh", l.version.Name)
 
 	for i, n := range nodes {
+		progress(fmt.Sprintf("Starting protocol in %s (%s)...", n.ID, n.PublicIP))
+
 		r, err := pool.For(n, workdir)
 		if err != nil {
 			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
@@ -209,6 +217,7 @@ func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []con
 			"NODE_ID":   fmt.Sprintf("1.%d", i+1),
 			"ALGORITHM": l.spec.Protocol, // Paxi's own -algorithm flag name
 		}
+
 		if err := nix.Run(ctx, r, script, env); err != nil {
 			return fmt.Errorf("paxi: starting on %s: %w", n.ID, err)
 		}
@@ -216,15 +225,19 @@ func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []con
 	return nil
 }
 
-func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
+func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	if progress == nil { progress = noopProgress }
 	short := gitrepo.ShortHash(l.version.CommitHash)
 	script := gitrepo.ResolveOverride(workdir, "scripts/stop.sh", l.version.Name)
 
 	for _, n := range nodes {
+		progress(fmt.Sprintf("Stopping protocol in %s (%s)...", n.ID, n.PublicIP))
+
 		r, err := pool.For(n, workdir)
 		if err != nil {
 			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
 		}
+
 		env := map[string]string{"HASH": short}
 		if err := nix.Run(ctx, r, script, env); err != nil {
 			return fmt.Errorf("paxi: stopping on %s: %w", n.ID, err)
@@ -233,7 +246,8 @@ func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []conf
 	return nil
 }
 
-func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool) error {
+func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {
+	if progress == nil { progress = noopProgress }
 	short := gitrepo.ShortHash(l.version.CommitHash)
 	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
 	relVersionDir := fmt.Sprintf(".build/%s", short)
@@ -251,10 +265,13 @@ func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []con
 	}
 
 	for _, n := range nodes {
+		progress(fmt.Sprintf("Cleaning %s (%s)...", n.ID, n.PublicIP))
+ 
 		r, err := pool.For(n, workdir)
 		if err != nil {
 			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
 		}
+
 		if err := r.Run(ctx, fmt.Sprintf("rm -rf %s", relVersionDir), nil); err != nil {
 			return fmt.Errorf("paxi: cleaning %s on %s: %w", relVersionDir, n.ID, err)
 		}
@@ -266,6 +283,7 @@ func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []con
 	}
 
 	if removeRepo {
+		progress("Removing repo...")
 		repoDir := filepath.Join(workdir, "repo")
 		if err := os.RemoveAll(repoDir); err != nil {
 			return fmt.Errorf("paxi: removing %s: %w", repoDir, err)

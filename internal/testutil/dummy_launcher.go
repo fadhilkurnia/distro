@@ -34,33 +34,38 @@ func (d *DummyLauncher) ProjectName() string                   { return projectN
 func (d *DummyLauncher) Specification() launcher.Specification { return launcher.Specification{} }
 func (d *DummyLauncher) Version() launcher.Version             { return launcher.Version{} }
 
-func (d *DummyLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
+func noopProgress(string) {}
+
+func (d *DummyLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
 	return nil
 }
 
-func (d *DummyLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
-	return d.runOnEach(ctx, pool, nodes, "starting")
+func (d *DummyLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	return d.runOnEach(ctx, pool, nodes, progress, "starting")
 }
 
-func (d *DummyLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node) error {
-	return d.runOnEach(ctx, pool, nodes, "stopping")
+func (d *DummyLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	return d.runOnEach(ctx, pool, nodes, progress, "stopping")
 }
 
-func (d *DummyLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool) error {
+func (d *DummyLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {
 	return nil
 }
 
-func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes []config.Node, verb string) error {
+func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress, verb string) error {
+	if progress == nil { progress = noopProgress}
+
 	for _, n := range nodes {
+		progress(fmt.Sprintf("%s %s (%s)...", verb, n.ID, n.PublicIP))
 		r, err := pool.For(n, workdir)
 		if err != nil {
-			return fmt.Errorf("%s: getting runner for %s: %w", projectName, n.ID, err)
+			return fmt.Errorf("dummy: getting runner for %s: %w", n.ID, err)
 		}
 
 		msg := fmt.Sprintf("%s %s (%s)", verb, n.ID, r.Host())
 		env := map[string]string{"MESSAGE": msg}
 		if err := nix.Run(ctx, r, "testdata/echo.sh", env); err != nil {
-			return fmt.Errorf("%s: %s on %s: %w", projectName, verb, n.ID, err)
+			return fmt.Errorf("dummy: %s on %s: %w", verb, n.ID, err)
 		}
 	}
 	return nil
