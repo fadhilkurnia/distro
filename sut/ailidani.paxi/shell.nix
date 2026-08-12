@@ -3,5 +3,5 @@
 # doesn't need to be a declared dependency here.
 { pkgs ? import ../../nix/pkgs.nix }:
 pkgs.mkShell {
-  packages = [ pkgs.go ];
+  packages = [ pkgs.go pkgs.k6 ];
 }

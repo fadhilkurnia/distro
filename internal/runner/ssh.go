@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -172,7 +173,7 @@ func (r *SSHRunner) sftpClient() (*sftp.Client, error) {
 
 // Note: will automatically create targetPath's parent directory
 //	 if it doesn't exist yet.
-func (r *SSHRunner) Copy(ctx context.Context, sourcePath, targetPath string) error {
+func (r *SSHRunner) SendToNode(ctx context.Context, sourcePath, targetPath string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -204,6 +205,40 @@ func (r *SSHRunner) Copy(ctx context.Context, sourcePath, targetPath string) err
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return fmt.Errorf("ssh[%s]: copying %s to %s: %w", r.host, sourcePath, targetPath, err)
+	}
+	return nil
+}
+
+func (r *SSHRunner) FetchFromNode(ctx context.Context, sourcePath, targetPath string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	sourcePath = path.Join(r.workdir, sourcePath)
+
+	sftpClient, err := r.sftpClient()
+	if err != nil {
+		return fmt.Errorf("ssh[%s]: opening sftp client: %w", r.host, err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("ssh[%s]: creating local directory for %s: %w", r.host, targetPath, err)
+	}
+
+	src, err := sftpClient.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("ssh[%s]: opening remote file %s: %w", r.host, sourcePath, err)
+	}
+	defer src.Close()
+
+	dst, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("ssh[%s]: creating local file %s: %w", r.host, targetPath, err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return fmt.Errorf("ssh[%s]: fetching %s to %s: %w", r.host, sourcePath, targetPath, err)
 	}
 	return nil
 }

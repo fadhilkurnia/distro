@@ -32,7 +32,7 @@ func (m Model) viewEnvScreen() string {
 	}
 	fmt.Fprintf(&b, "  SSH user:   %s\n", m.cfg.SSH.Username)
 	fmt.Fprintf(&b, "  SSH key:    %s\n", m.cfg.SSH.KeyPath)
-	fmt.Fprintf(&b, "  Client IP:  %s\n", m.cfg.ClientIP)
+	fmt.Fprintf(&b, "  Client:     public=%s private=%s\n", m.cfg.Client.PublicIP, m.cfg.Client.PrivateIP)
 
 	fmt.Fprintf(&b, "\nOutput filename (leave empty to use %q):\n", m.cfg.OutputFile)
 	fmt.Fprintf(&b, "  %s\n", m.outputFilenameInput.View())

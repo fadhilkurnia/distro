@@ -90,7 +90,7 @@ func (r *LocalRunner) Stream(ctx context.Context, cmd string, env map[string]str
 
 // Note: will automatically create targetPath's parent directory
 //	if it doesn't exist yet.
-func (r *LocalRunner) Copy(ctx context.Context, sourcePath, targetPath string) error {
+func (r *LocalRunner) SendToNode(ctx context.Context, sourcePath, targetPath string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -122,6 +122,42 @@ func (r *LocalRunner) Copy(ctx context.Context, sourcePath, targetPath string) e
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return fmt.Errorf("local: copying %s to %s: %w", sourcePath, targetPath, err)
+	}
+	return nil
+}
+
+func (r *LocalRunner) FetchFromNode(ctx context.Context, sourcePath, targetPath string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	sourcePath = filepath.Join(r.workdir, sourcePath)
+
+	// Guard against source and target resolving to the exact same file.
+	if absSrc, err := filepath.Abs(sourcePath); err == nil {
+		if absDst, err := filepath.Abs(targetPath); err == nil && absSrc == absDst {
+			return nil
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("local: creating directory for %s: %w", targetPath, err)
+	}
+
+	src, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("local: opening %s: %w", sourcePath, err)
+	}
+	defer src.Close()
+
+	dst, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("local: creating %s: %w", targetPath, err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return fmt.Errorf("local: fetching %s to %s: %w", sourcePath, targetPath, err)
 	}
 	return nil
 }

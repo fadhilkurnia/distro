@@ -33,6 +33,7 @@ type DummyLauncher struct{}
 func (d *DummyLauncher) ProjectName() string                   { return projectName }
 func (d *DummyLauncher) Specification() launcher.Specification { return launcher.Specification{} }
 func (d *DummyLauncher) Version() launcher.Version             { return launcher.Version{} }
+func (d *DummyLauncher) Addresses() []launcher.NodeAddress { return nil }
 
 func noopProgress(string) {}
 
@@ -68,5 +69,9 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 			return fmt.Errorf("dummy: %s on %s: %w", verb, n.ID, err)
 		}
 	}
+	return nil
+}
+
+func (d *DummyLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params launcher.LatencyParams, progress launcher.Progress) error {
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/fadhilkurnia/distro/internal/config"
+	"github.com/fadhilkurnia/distro/internal/launcher"
 	"github.com/fadhilkurnia/distro/internal/registry"
 	"github.com/fadhilkurnia/distro/internal/runner"
 )
@@ -46,7 +47,13 @@ func (m Model) startExecution() (Model, tea.Cmd) {
 	m.execSucceeded = 0
 	m.execFailed = 0
 
-	go runExecution(m.ctx, m.pool, m.cfg.Nodes, m.selectedInstances(), m.actionChoice, m.removeRepo, ch)
+	params := launcher.LatencyParams{
+		WarmupDuration: m.cfg.WarmupDuration,
+		Duration:       m.cfg.Duration,
+		WriteRatio:     m.cfg.WriteRatio,
+	}
+
+	go runExecution(m.ctx, m.pool, m.cfg.Nodes, m.cfg.Client, m.selectedInstances(), m.actionChoice, m.removeRepo, params, ch)
 
 	return m, waitForExecMsg(ch)
 }
@@ -62,24 +69,25 @@ func waitForExecMsg(ch chan tea.Msg) tea.Cmd {
 }
 
 // runExecution processes every selected instance sequentially — full
-// Build->Start->Stop (or just Clean), one instance completely finished
-// before the next begins. Runs on its own goroutine; only ever
-// communicates back via ch, never touches the terminal directly (see
-// launcher.Progress's doc comment for why).
+// Build->Start->[latency benchmark]->Stop (or just Clean), one instance
+// completely finished before the next begins. Runs on its own goroutine;
+// only ever communicates back via ch, never touches the terminal directly
+// (see launcher.Progress's doc comment for why).
 func runExecution(
 	ctx context.Context,
 	pool *runner.Pool,
 	nodes []config.Node,
+	client config.Node,
 	instances []registry.Instance,
 	action actionChoice,
 	removeRepo bool,
+	params launcher.LatencyParams,
 	ch chan tea.Msg,
 ) {
 	succeeded, failed := 0, 0
 
 	for _, inst := range instances {
-		ch <- logLineMsg(fmt.Sprintf(
-			"Running benchmark for %s/%s/%s/%s/%s (%s)",
+		ch <- logLineMsg(fmt.Sprintf("Running benchmark for %s/%s/%s/%s/%s (%s)",
 			inst.ProjectName,
 			inst.Specification.Protocol,
 			inst.Specification.Language,
@@ -108,12 +116,12 @@ func runExecution(
 			continue
 		}
 
-		// action == actionRun
+		// action == actionRunOnly or actionRunWithLatency
 		ch <- logLineMsg("[Build] Building project binary and setting up dependencies")
 		if err := l.Build(ctx, pool, nodes, progress); err != nil {
 			ch <- logLineMsg(fmt.Sprintf("  BUILD FAILED: %v", err))
 			failed++
-			continue // Start/Stop never make sense without a successful Build
+			continue // Start/latency/Stop never make sense without a successful Build
 		}
 
 		ch <- logLineMsg("[Start] launching on nodes")
@@ -122,9 +130,19 @@ func runExecution(
 			ch <- logLineMsg(fmt.Sprintf("  START FAILED: %v", startErr))
 		}
 
-		// Stop always runs after Start, even if Start failed — this is
-		// what avoids leaving an orphaned process behind (the exact
-		// scenario that blocked a port on us earlier).
+		var latencyErr error
+		if startErr == nil && action == actionRunWithLatency {
+			ch <- logLineMsg("[Latency Benchmark] Running k6 latency benchmark from client")
+			latencyErr = l.RunLatencyBenchmark(ctx, pool, client, params, progress)
+			if latencyErr != nil {
+				ch <- logLineMsg(fmt.Sprintf("  LATENCY BENCHMARK FAILED: %v", latencyErr))
+			}
+		}
+
+		// Stop always runs after Start, even if Start or the latency
+		// benchmark failed — this is what avoids leaving an orphaned
+		// process behind (the exact scenario that blocked a port on us
+		// earlier).
 		ch <- logLineMsg("[Stop] Killing protocols on nodes (binaries and logs are untouched)")
 		if err := l.Stop(ctx, pool, nodes, progress); err != nil {
 			ch <- logLineMsg(fmt.Sprintf("  STOP FAILED: %v", err))
@@ -132,7 +150,7 @@ func runExecution(
 			continue
 		}
 
-		if startErr != nil {
+		if startErr != nil || latencyErr != nil {
 			failed++
 		} else {
 			succeeded++
@@ -151,7 +169,7 @@ func (m Model) updateExecutionScreen(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.execSucceeded = msg.succeeded
 		m.execFailed = msg.failed
 		m.execDone = true
-		if m.actionChoice == actionRun {
+		if m.actionChoice != actionClean {
 			m.screen = screenPostRunClean
 		}
 		// Clean run: stay here, showing the final summary.

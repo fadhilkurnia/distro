@@ -55,11 +55,19 @@ type Runner interface {
 	// Then use `Wait()` to check for exec status (blocking)
 	Stream(ctx context.Context, cmd string, env map[string]string) (*StreamHandle, error)
 
-	// Copy files from sourcePath to targetPath target
+	// Send files from sourcePath (driver machine) to targetPath (node)
 	// Some protocols need certain config files and binaries to run correctly
-	// - sourcePath is a relative path from the driver machine's workDir
-	// - targetPath can be either local or remote
-	Copy(ctx context.Context, sourcePath, targetPath string) error
+	// - sourcePath is NOT a relative path in the driver machine
+	// - targetPath is a relative path from the node's workdir
+	// Note: targetPath can be either local or remote node
+	SendToNode(ctx context.Context, sourcePath, targetPath string) error
+
+	// The reverse of SendToNode, it retrieves a file from node then
+	// sends it back to the driver machine
+	// - sourcePath is relative path from the node's workdir
+	// - targetPath is NOT a relative path in the driver machine
+	// Note: sourcePath can be either local or remote node
+	FetchFromNode(ctx context.Context, sourcePath, targetPath string) error
 
 	// The IP address of the node the Runner is handling
 	// - LocalRunner = "127.0.0.1"

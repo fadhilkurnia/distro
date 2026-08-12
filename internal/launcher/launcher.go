@@ -7,6 +7,22 @@ import (
 	"github.com/fadhilkurnia/distro/internal/runner"
 )
 
+// A node's actual address, as assigned during Start
+type NodeAddress struct {
+	NodeID      string
+	PublicIP    string
+	PrivateIP   string
+	PublicPort  int
+	PrivatePort int
+}
+
+// k6 latency benchmark configurations (read once from .env)
+type LatencyParams struct {
+	WarmupDuration string  // e.g. "60s"
+	Duration       string  // e.g. "180s"
+	WriteRatio     float64 // e.g. 0.2
+}
+
 // A combination of protocol, language, consistency, persistency 
 // the launcher for a project can run as
 type Specification struct {
@@ -48,8 +64,18 @@ type Launcher interface {
 	// Selected Version for this Launcher instance
 	Version() Version 
 
+	// Each node's actual address (assigned only at Start)
+	Addresses() []NodeAddress
+
 	Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
 	Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
 	Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
 	Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress Progress) error
+
+	// **********************
+	// Benchmark functions:
+	// **********************
+
+	// Runs a k6-based latency benchmark from client to all Adresses()
+	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params LatencyParams, progress Progress) error
 }

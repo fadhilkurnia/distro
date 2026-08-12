@@ -40,12 +40,17 @@ type SSHConfig struct {
 
 // The full set of settings distrobench needs to run
 type Config struct {
-	Nodes      []Node
-	SSH        SSHConfig
-	ClientIP   string
+	Nodes      	[]Node
+	SSH        	SSHConfig
+	Client 		Node
 
 	// The file in which the benchmark results are outputted
-	OutputFile string
+	OutputFile 	string
+
+	// k6 Latency benchmark defaults
+	WarmupDuration string  // ex: "60s"
+	Duration       string  // ex: "180s"
+	WriteRatio     float64 // ex: 0.2
 }
 
 // Converts loaded environment variables into correct data structure then validates them
@@ -56,31 +61,31 @@ func Load() (*Config, error) {
 	if numStr == "" {
 		return nil, fmt.Errorf("config: NUM_OF_NODES is required")
 	}
-
+ 
 	numNodes, err := strconv.Atoi(numStr)
 	if err != nil {
 		return nil, fmt.Errorf("config: NUM_OF_NODES must be an integer, got %q: %w", numStr, err)
 	}
-
+ 
 	if numNodes <= 0 {
 		return nil, fmt.Errorf("config: NUM_OF_NODES must be positive, got %d", numNodes)
 	}
-
+ 
 	nodes := make([]Node, 0, numNodes)
 	for i := 1; i <= numNodes; i++ {
 		privateKey := fmt.Sprintf("PRIVATE_IP%d", i)
 		publicKey := fmt.Sprintf("PUBLIC_IP%d", i)
-
+ 
 		privateIP := os.Getenv(privateKey)
 		if privateIP == "" {
 			return nil, fmt.Errorf("config: %s is required (NUM_OF_NODES=%d)", privateKey, numNodes)
 		}
-
+ 
 		publicIP := os.Getenv(publicKey)
 		if publicIP == "" {
 			return nil, fmt.Errorf("config: %s is required (NUM_OF_NODES=%d)", publicKey, numNodes)
 		}
-
+ 
 		nodes = append(nodes, Node{
 			ID:        fmt.Sprintf("node%d", i),
 			PublicIP:  publicIP,
@@ -88,48 +93,80 @@ func Load() (*Config, error) {
 			Local:     publicIP == "127.0.0.1",
 		})
 	}
-
+ 
 	sshKeyPath := os.Getenv("SSH_KEY")
 	if sshKeyPath == "" {
 		return nil, fmt.Errorf("config: SSH_KEY is required")
 	}
-
+ 
 	absKeyPath, err := filepath.Abs(sshKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("config: could not resolve SSH_KEY path %q: %w", sshKeyPath, err)
 	}
-
+ 
 	username := os.Getenv("REMOTE_USERNAME")
 	if username == "" {
 		return nil, fmt.Errorf("config: REMOTE_USERNAME is required")
 	}
-
-	clientIP := os.Getenv("CLIENT_IP")
-	if clientIP == "" {
-		return nil, fmt.Errorf("config: CLIENT_IP is required")
+ 
+	clientPublicIP := os.Getenv("CLIENT_PUBLIC_IP")
+	if clientPublicIP == "" {
+		return nil, fmt.Errorf("config: CLIENT_PUBLIC_IP is required")
 	}
-
+	clientPrivateIP := os.Getenv("CLIENT_PRIVATE_IP")
+	if clientPrivateIP == "" {
+		return nil, fmt.Errorf("config: CLIENT_PRIVATE_IP is required")
+	}
+	client := Node{
+		ID:        "client",
+		PublicIP:  clientPublicIP,
+		PrivateIP: clientPrivateIP,
+		Local:     clientPublicIP == "127.0.0.1",
+	}
+ 
 	// Note: there might be different benchmarks which requires different files.
 	// Consider implementing a proper output file
 	outputFile := os.Getenv("OUTPUT_FILE")
 	if outputFile == "" {
 		outputFile = "data.local.json"
 	}
-
+ 
+	warmupDuration := os.Getenv("WARMUP_DURATION")
+	if warmupDuration == "" {
+		warmupDuration = "60s"
+	}
+ 
+	duration := os.Getenv("DURATION")
+	if duration == "" {
+		duration = "180s"
+	}
+ 
+	writeRatioStr := os.Getenv("WRITE_RATIO")
+	if writeRatioStr == "" {
+		writeRatioStr = "0.2"
+	}
+	writeRatio, err := strconv.ParseFloat(writeRatioStr, 64)
+	if err != nil {
+		return nil, fmt.Errorf("config: WRITE_RATIO must be a number, got %q: %w", writeRatioStr, err)
+	}
+ 
 	cfg := &Config{
 		Nodes: nodes,
 		SSH: SSHConfig{
 			KeyPath:  absKeyPath,
 			Username: username,
 		},
-		ClientIP:   clientIP,
-		OutputFile: outputFile,
+		Client:         client,
+		OutputFile:     outputFile,
+		WarmupDuration: warmupDuration,
+		Duration:       duration,
+		WriteRatio:     writeRatio,
 	}
-
+ 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-
+ 
 	return cfg, nil
 }
 
@@ -157,6 +194,18 @@ func (c *Config) Validate() error {
 
 	if c.SSH.Username == "" {
 		return fmt.Errorf("config: SSH Username is required")
+	}
+
+	if c.Client.PublicIP == "" {
+		return fmt.Errorf("config: Client PublicIP is required")
+	}
+
+	if c.Client.PrivateIP == "" {
+		return fmt.Errorf("config: Client PrivateIP is required")
+	}
+
+	if c.WriteRatio < 0 || c.WriteRatio > 1 {
+		return fmt.Errorf("config: WriteRatio must be between 0 and 1, got %v", c.WriteRatio)
 	}
 
 	return nil
