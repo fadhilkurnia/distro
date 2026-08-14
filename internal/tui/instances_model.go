@@ -208,3 +208,17 @@ func (m instancesModel) visibleIndices() []int {
 	}
 	return idx
 }
+
+func (m instancesModel) SelectedInstances() []registry.Instance {
+	out := make([]registry.Instance, 0, len(m.selected))
+	for i := range m.rows {
+		if m.selected[i] {
+			out = append(out, m.rows[i].instance)
+		}
+	}
+	return out
+}
+
+func (m instancesModel) Locked() bool {
+	return m.locked
+}

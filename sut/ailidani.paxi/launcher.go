@@ -108,8 +108,12 @@ func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []con
  
 	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
 	for _, n := range nodes {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		progress(fmt.Sprintf("Sending binaries to %s (%s)...", n.ID, n.PublicIP))
 		r, err := pool.For(n, workdir)
+
 		if err != nil {
 			return fmt.Errorf("paxi: getting runner for %s: %w", n.ID, err)
 		}
@@ -308,12 +312,12 @@ func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []con
 // built from Addresses() via the shared k6 package, sends it to client, runs k6
 // there via scripts/run-latency.sh, and fetches the resulting summary
 // JSON back to this Version's .benchmarks/latency directory
-func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params launcher.LatencyParams, progress launcher.Progress) error {
+func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params launcher.LatencyParams, progress launcher.Progress) (string, error) {
 	if progress == nil {
 		progress = noopProgress
 	}
 	if len(l.addresses) == 0 {
-		return fmt.Errorf("paxi: no addresses recorded, run Start first")
+		return "", fmt.Errorf("paxi: no addresses recorded, run Start first")
 	}
 	short := gitrepo.ShortHash(l.version.CommitHash)
  
@@ -321,37 +325,43 @@ func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Poo
 	scriptAbs := filepath.Join(workdir, scriptRel)
 	templateBytes, err := os.ReadFile(scriptAbs)
 	if err != nil {
-		return fmt.Errorf("paxi: reading %s: %w", scriptAbs, err)
+		return "", fmt.Errorf("paxi: reading %s: %w", scriptAbs, err)
 	}
  
+	if params.RequestWorkload <= 0 {
+		return "", fmt.Errorf("paxi: RequestWorkload must be positive, got %d", params.RequestWorkload)
+	}
+	requestInterval := float64(len(l.addresses)) / float64(params.RequestWorkload)
+
 	scenarios := k6.BuildScenarios(l.addresses)
 	generated := strings.Replace(string(templateBytes), "/* SCENARIOS */", scenarios, 1)
  
 	genLocalPath := filepath.Join(workdir, ".build", short, "latency-generated.js")
 	if err := os.WriteFile(genLocalPath, []byte(generated), 0644); err != nil {
-		return fmt.Errorf("paxi: writing %s: %w", genLocalPath, err)
+		return "", fmt.Errorf("paxi: writing %s: %w", genLocalPath, err)
 	}
  
 	r, err := pool.For(client, workdir)
 	if err != nil {
-		return fmt.Errorf("paxi: getting runner for client: %w", err)
+		return "", fmt.Errorf("paxi: getting runner for client: %w", err)
 	}
  
 	relGenPath := fmt.Sprintf(".build/%s/latency-generated.js", short)
 	progress(fmt.Sprintf("Sending benchmark script to client (%s)...", client.PublicIP))
 	if err := r.SendToNode(ctx, genLocalPath, relGenPath); err != nil {
-		return fmt.Errorf("paxi: sending latency script to client: %w", err)
+		return "", fmt.Errorf("paxi: sending latency script to client: %w", err)
 	}
 
 	relResultPath := fmt.Sprintf(".build/%s/latency-result.json", short)
 	progress(fmt.Sprintf("Running k6 latency benchmark on client (%s)...", client.PublicIP))
 	runScript := gitrepo.ResolveOverride(workdir, "scripts/run-latency.sh", l.version.Name)
 	env := map[string]string{
-		"SCRIPT_PATH":     relGenPath,
-		"RESULT_PATH":     relResultPath,
-		"WARMUP_DURATION": params.WarmupDuration,
-		"DURATION":        params.Duration,
-		"WRITE_RATIO":     fmt.Sprintf("%v", params.WriteRatio),
+		"SCRIPT_PATH":      relGenPath,
+		"RESULT_PATH":      relResultPath,
+		"WARMUP_DURATION":  params.WarmupDuration,
+		"DURATION":         params.Duration,
+		"WRITE_RATIO":      fmt.Sprintf("%v", params.WriteRatio),
+		"REQUEST_INTERVAL": fmt.Sprintf("%v", requestInterval),
 	}
 
 	k6Err := nix.Run(ctx, r, runScript, env)
@@ -361,21 +371,24 @@ func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Poo
 
 	localResultDir := filepath.Join(workdir, ".benchmarks", "latency", short)
 	if err := os.MkdirAll(localResultDir, 0755); err != nil {
-		return fmt.Errorf("paxi: creating %s: %w", localResultDir, err)
+		return "", fmt.Errorf("paxi: creating %s: %w", localResultDir, err)
 	}
-	filename := fmt.Sprintf("%s-%s-%s-%s-%s-w%v.json",
-		l.spec.Protocol, l.spec.Language, l.spec.Consistency, l.spec.Persistency, params.Duration, params.WriteRatio)
+	filename := params.OutputFilename
+	if filename == "" {
+		filename = fmt.Sprintf("%s:%s:%s:%s:%s:w%v.json",
+			l.spec.Protocol, l.spec.Language, l.spec.Consistency, l.spec.Persistency, params.Duration, params.WriteRatio)
+	}
 	localResultPath := filepath.Join(localResultDir, filename)
 
 	progress(fmt.Sprintf("Fetching results from client (%s)...", client.PublicIP))
 	if err := r.FetchFromNode(ctx, relResultPath, localResultPath); err != nil {
-		return fmt.Errorf("paxi: fetching latency results: %w", err)
+		return "", fmt.Errorf("paxi: fetching latency results: %w", err)
 	}
 
 	if k6Err != nil {
-		return fmt.Errorf("paxi: k6 reported failure (results still saved to %s): %w", localResultPath, k6Err)
+		return localResultPath, fmt.Errorf("paxi: k6 reported failure (results still saved to %s): %w", localResultPath, k6Err)
 	}
-	return nil
+	return localResultPath, nil
 }
 
 // compile-time check that PaxiLauncher satisfies Launcher

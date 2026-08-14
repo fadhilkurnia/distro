@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/table"
@@ -118,10 +119,14 @@ func (m configsModel) View() string {
 }
 
 func (m configsModel) OutputFilename() string {
-	if v := m.filenameInput.Value(); v != "" {
-		return v
+	name := m.filenameInput.Value()
+	if name == "" {
+		name = m.filenameInput.Placeholder
 	}
-	return m.filenameInput.Placeholder
+	if !strings.HasSuffix(name, ".json") {
+		name += ".json"
+	}
+	return name
 }
 
 func (m configsModel) KeyBindings() []key.Binding {
@@ -145,4 +150,8 @@ func (m configsModel) HidesArrowNav() bool {
 
 func (m configsModel) HidesLetterNav() bool {
 	return true
+}
+
+func (m configsModel) Locked() bool {
+	return !m.editing
 }

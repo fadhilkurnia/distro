@@ -82,7 +82,15 @@ func (m rootModel) activeKeyBindings() []key.Binding {
 	return nil
 }
 
+
 func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg.(type) {
+	case runLogMsg, runFinishedMsg:
+		var cmd tea.Cmd
+		m.run, cmd = m.run.Update(msg)
+		return m, cmd
+	}
+
 	hideArrows := m.activeHidesArrowNav()
 	hideLetters := m.activeHidesLetterNav()
 
@@ -93,6 +101,9 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch keypress := msg.String(); keypress {
 		case "ctrl+c":
+			if m.run.Running() && m.run.cancel != nil {
+				m.run.cancel()
+			}
 			return m, tea.Quit
 		case "q":
 			if !hideLetters {
@@ -116,6 +127,52 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "h", "p":
 			if !hideLetters {
 				m.active = max(m.active-1, 0)
+				return m, nil
+			}
+		case "enter":
+			if m.active == 3 && m.run.Idle() {
+				allLocked := m.configs.Locked() && m.instances.Locked() && m.benchmarks.LatencyLocked()
+				hasSelection := len(m.instances.SelectedInstances()) > 0
+				if allLocked && hasSelection {
+					var cmd tea.Cmd
+					m.run, cmd = m.run.Start(
+						m.instances.SelectedInstances(),
+						m.benchmarks.LatencyParams(),
+						m.configs.OutputFilename(),
+					)
+					return m, cmd
+				}
+			}
+		case "esc":
+			if m.run.Running() {
+				if m.active == 3 {
+					var cmd tea.Cmd
+					m.run, cmd = m.run.Cancel()
+					return m, cmd
+				}
+				return m, nil // swallow esc on other tabs while running
+			}
+		case "c":
+			if m.active == 3 && !m.run.Running() {
+				selected := m.instances.SelectedInstances()
+				if len(selected) > 0 {
+					var cmd tea.Cmd
+					m.run, cmd = m.run.Clean(selected, false)
+					return m, cmd
+				}
+			}
+		case "C":
+			if m.active == 3 && !m.run.Running() {
+				selected := m.instances.SelectedInstances()
+				if len(selected) > 0 {
+					var cmd tea.Cmd
+					m.run, cmd = m.run.Clean(selected, true)
+					return m, cmd
+				}
+			}
+		case "ctrl+l":
+			if m.active == 3 {
+				m.run = m.run.ClearLog()
 				return m, nil
 			}
 		}

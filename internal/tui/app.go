@@ -24,6 +24,7 @@ func Run(ctx context.Context, cfg *config.Config, pool *runner.Pool) error {
 		configs: newConfigsModel(cfg.Nodes, cfg.Client, cfg.SSH, cfg.OutputFile, appStyles),
 		instances: newInstancesModel(appStyles),
 		benchmarks: newBenchmarksModel(cfg.Nodes, cfg.WarmupDuration, cfg.Duration, cfg.WriteRatio, appStyles),
+		run: newRunModel(ctx, pool, cfg.Nodes, cfg.Client),
 	}
 	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {

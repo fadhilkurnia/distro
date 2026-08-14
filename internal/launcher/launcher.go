@@ -18,9 +18,11 @@ type NodeAddress struct {
 
 // k6 latency benchmark configurations (read once from .env)
 type LatencyParams struct {
-	WarmupDuration string  // e.g. "60s"
-	Duration       string  // e.g. "180s"
-	WriteRatio     float64 // e.g. 0.2
+	WarmupDuration  string  // e.g. "60s"
+	Duration        string  // e.g. "180s"
+	WriteRatio      float64 // e.g. 0.2
+	RequestWorkload int     // total requests/sec across all nodes combined
+	OutputFilename  string  // optional; falls back to an auto-generated name if empty
 }
 
 // A combination of protocol, language, consistency, persistency 
@@ -77,5 +79,6 @@ type Launcher interface {
 	// **********************
 
 	// Runs a k6-based latency benchmark from client to all Adresses()
-	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params LatencyParams, progress Progress) error
+	// Returns the local path to the fetched result file on success
+	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params LatencyParams, progress Progress) (string, error)
 }

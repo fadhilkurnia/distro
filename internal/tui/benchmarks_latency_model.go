@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/fadhilkurnia/distro/internal/config"
+	"github.com/fadhilkurnia/distro/internal/launcher"
 )
 
 const (
@@ -233,6 +234,20 @@ func (m latencyModel) View() string {
 
 func (m latencyModel) Locked() bool {
 	return m.locked
+}
+
+func (m latencyModel) Params() launcher.LatencyParams {
+	warmup, _ := strconv.Atoi(m.currentValue(latencyFieldWarmup))
+	duration, _ := strconv.Atoi(m.currentValue(latencyFieldDuration))
+	writePct, _ := strconv.Atoi(m.currentValue(latencyFieldWritePct))
+	workload, _ := strconv.Atoi(m.currentValue(latencyFieldTotal))
+
+	return launcher.LatencyParams{
+		WarmupDuration:  fmt.Sprintf("%ds", warmup),
+		Duration:        fmt.Sprintf("%ds", duration),
+		WriteRatio:      float64(writePct) / 100,
+		RequestWorkload: workload,
+	}
 }
 
 func (m latencyModel) HidesArrowNav() bool {

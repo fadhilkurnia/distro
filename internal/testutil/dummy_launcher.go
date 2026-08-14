@@ -72,6 +72,6 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 	return nil
 }
 
-func (d *DummyLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params launcher.LatencyParams, progress launcher.Progress) error {
-	return nil
+func (d *DummyLauncher) RunLatencyBenchmark(context.Context, *runner.Pool, config.Node, launcher.LatencyParams, launcher.Progress) (string, error) {
+	return "", nil
 }

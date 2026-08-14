@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/fadhilkurnia/distro/internal/config"
+	"github.com/fadhilkurnia/distro/internal/launcher"
 )
 
 type benchmarkItem struct {
@@ -139,22 +140,6 @@ func (m benchmarksModel) View() string {
 	return "Select Benchmarks:\n\n" + m.list.View()
 }
 
-func (m benchmarksModel) activeLocked() bool {
-	switch m.selected {
-	case 0:
-		return m.latency.Locked()
-	case 1:
-		return m.placement.Locked()
-	case 2:
-		return m.capacity.Locked()
-	}
-	return false
-}
-
-func (m placeholderDetailModel) Locked() bool {
-	return false
-}
-
 func (m benchmarksModel) HidesTabNav() bool {
 	return false
 }
@@ -204,4 +189,28 @@ func (m benchmarksModel) KeyBindings() []key.Binding {
 		key.NewBinding(key.WithKeys("up", "down"), key.WithHelp("↑/↓", "up/down")),
 		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "view details")),
 	}
+}
+
+func (m benchmarksModel) LatencyParams() launcher.LatencyParams {
+	return m.latency.Params()
+}
+
+func (m benchmarksModel) LatencyLocked() bool {
+	return m.latency.locked
+}
+
+func (m benchmarksModel) activeLocked() bool {
+	switch m.selected {
+	case 0:
+		return m.latency.Locked()
+	case 1:
+		return m.placement.Locked()
+	case 2:
+		return m.capacity.Locked()
+	}
+	return false
+}
+
+func (m placeholderDetailModel) Locked() bool {
+	return false
 }
