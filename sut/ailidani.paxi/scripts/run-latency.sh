@@ -5,4 +5,4 @@ set -euo pipefail
 # read directly by the k6 script itself via __ENV — this wrapper only
 # needs to know which script to run and where to write the summary.
 
-k6 run --summary-export="$RESULT_PATH" "$SCRIPT_PATH"
+k6 run --out json="$RESULT_PATH" "$SCRIPT_PATH"

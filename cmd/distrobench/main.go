@@ -40,7 +40,7 @@ func main() {
 
 	ctx := context.Background()
 
-	for _, n := range cfg.Nodes {
+	for _, n := range append(cfg.Nodes, cfg.Client) {
 		r, err := pool.For(n, ".")
 		if err != nil {
 			log.Fatalf("runner: %v", err)

@@ -1,49 +1,110 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
-
-// Color scheme. All screens reference these instead of hardcoding colors
-// themselves — change a look-and-feel decision once, here, rather than
-// hunting through every screen file.
-var (
-	colorBackground = lipgloss.Color("236") // off-screen area outside the centered box
-	colorBorder     = lipgloss.Color("240") // box border
-	colorMuted      = lipgloss.Color("245") // hints/footers
-	colorError      = lipgloss.Color("196") // failed steps, warnings
+import (
+	"charm.land/bubbles/v2/table"
+	"charm.land/lipgloss/v2"
 )
 
-// Shared styles built from the palette above.
 var (
-	boxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(colorBorder).
-			Padding(1, 2)
-
-	// Reverse(true) swaps whatever the terminal's current fg/bg already
-	// are, rather than picking explicit colors — this way the
-	// highlighted row looks reasonable regardless of the user's terminal
-	// theme (light or dark), instead of us guessing a color that might
-	// clash. Swap this for explicit Foreground/Background colors later
-	// if a specific look is wanted instead.
-	highlightStyle = lipgloss.NewStyle().Reverse(true)
-
-	mutedStyle = lipgloss.NewStyle().Foreground(colorMuted)
-	errorStyle = lipgloss.NewStyle().Foreground(colorError)
+	purpleLight = lipgloss.Color("#874BFD")
+	purpleDark = lipgloss.Color("#7D56F4")
+	lightGray = lipgloss.Color("#585858")
+	white = lipgloss.Color("#FFFFFF")
 )
 
-// renderCentered wraps content in a bordered box and centers it within a
-// width x height canvas, filling everything outside the box with
-// colorBackground. Falls back to plain content if the terminal size isn't
-// known yet (WindowSizeMsg hasn't arrived on the very first render).
-func renderCentered(content string, width, height int) string {
-	if width == 0 || height == 0 {
-		return content
+type styles struct {
+	doc         	lipgloss.Style
+	inactiveTab 	lipgloss.Style
+	activeTab   	lipgloss.Style
+	body      	lipgloss.Style
+
+	// configsModel
+	table       	table.Styles
+	tableFrame  	lipgloss.Style
+	kvLabel    	lipgloss.Style
+	kvValue    	lipgloss.Style
+
+	// instancesModel
+	selectedRow 	lipgloss.Style
+	listHeader  	lipgloss.Style
+}
+
+func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
+	border := lipgloss.RoundedBorder()
+	border.BottomLeft = left
+	border.Bottom = middle
+	border.BottomRight = right
+	return border
+}
+
+func newStyles(bgIsDark bool) *styles {
+	lightDark := lipgloss.LightDark(bgIsDark)
+
+	inactiveTabBorder := tabBorderWithBottom("┴", "─", "┴")
+	activeTabBorder := tabBorderWithBottom("┘", " ", "└")
+	highlightColor := lightDark(purpleLight, purpleDark)
+
+	s := new(styles)
+	s.doc = lipgloss.NewStyle().
+		Padding(1, 2, 1, 2)
+	s.inactiveTab = lipgloss.NewStyle().
+		Border(inactiveTabBorder, true).
+		BorderForeground(highlightColor).
+		Padding(0, 1)
+	s.activeTab = s.inactiveTab.
+		Border(activeTabBorder, true)
+	s.body = lipgloss.NewStyle().
+		BorderForeground(highlightColor).
+		Align(lipgloss.Left).
+		Border(lipgloss.NormalBorder()).
+		Padding(1).
+		UnsetBorderTop()
+
+	s.table = table.DefaultStyles()
+	s.table.Header = s.table.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lightGray).
+		BorderBottom(true).
+		Bold(false)
+	s.table.Selected = lipgloss.NewStyle()
+	s.tableFrame = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lightGray)
+	s.kvLabel = lipgloss.NewStyle().Padding(0, 1)
+	s.kvValue = lipgloss.NewStyle().Padding(0, 1)
+
+	s.selectedRow = lipgloss.NewStyle().
+		Background(highlightColor).
+		Foreground(white).
+		Bold(true)
+	s.listHeader = lipgloss.NewStyle().Bold(true)
+
+	return s
+}
+
+// renderKeyValue renders a bordered label|value table, sized to fit its
+// content, with no truncation on either column.
+func renderKeyValue(rows [][2]string, s *styles) string {
+	labelWidth := 0
+	valueWidth := 0
+	for _, r := range rows {
+		if l := len(r[0]) + columnPadding; l > labelWidth {
+			labelWidth = l
+		}
+		if l := len(r[1]) + columnPadding; l > valueWidth {
+			valueWidth = l
+		}
 	}
-	box := boxStyle.Render(content)
-	return lipgloss.Place(
-		width, height,
-		lipgloss.Center, lipgloss.Center,
-		box,
-		lipgloss.WithWhitespaceBackground(colorBackground),
-	)
+
+	divider := lipgloss.NewStyle().Foreground(lightGray).Render("│")
+
+	var lines []string
+	for _, r := range rows {
+		label := s.kvLabel.Width(labelWidth).Render(r[0])
+		value := s.kvValue.Width(valueWidth).Render(r[1])
+		lines = append(lines, lipgloss.JoinHorizontal(lipgloss.Top, label, divider, value))
+	}
+
+	body := lipgloss.JoinVertical(lipgloss.Left, lines...)
+	return s.tableFrame.Render(body)
 }

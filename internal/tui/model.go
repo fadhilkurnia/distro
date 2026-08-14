@@ -1,141 +1,278 @@
 package tui
 
 import (
-	"context"
-	"fmt"
+	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/fadhilkurnia/distro/internal/config"
-	"github.com/fadhilkurnia/distro/internal/registry"
-	"github.com/fadhilkurnia/distro/internal/runner"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/lipgloss/v2"
 )
 
-// screen identifies which of the fixed, forward-only screens is active.
-type screen int
-
-const (
-	screenEnv screen = iota
-	screenPicker
-	screenAction
-	screenCleanConfirm // only reached when Action = Clean
-	screenExecution
-	screenPostRunClean // only reached after a successful Run
+var (
+	keyQuit = key.NewBinding(
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q", "quit"),
+	)
+	keyQuitEditing = key.NewBinding(
+		key.WithKeys("ctrl+c"),
+		key.WithHelp("ctrl+c", "quit"),
+	)
+	keyTabSwitch = key.NewBinding(
+		key.WithKeys("left", "right", "h", "l", "p", "n"),
+		key.WithHelp("←/→", "prev/next"),
+	)
+	keyTabArrowOnly = key.NewBinding(
+		key.WithKeys("left", "right"),
+		key.WithHelp("←/→", "prev/next"),
+	)
 )
 
-// Model is the single root Bubble Tea model. All screen state lives here
-// (rather than one model per screen) since navigation is a simple linear
-// state machine and screens share context (ctx/cfg/pool) throughout.
-type Model struct {
-	ctx  context.Context
-	cfg  *config.Config
-	pool *runner.Pool
+type rootModel struct {
+	tabTitles []string
+	active    int
+	styles    *styles
+	help      help.Model
+	width, height int
 
-	screen screen
-	width  int
-	height int
-
-	// Populated once at startup; read-only after that.
-	instances []registry.Instance
-
-	// Env screen state
-	outputFilenameInput  textinput.Model
-	chosenOutputFilename string // finalized once the env screen is left
-
-	// Picker screen state
-	cursor   int    // which row is currently highlighted
-	selected []bool // parallel to instances; true = checked
-
-	// Action screen state.
-	actionChoice actionChoice // Run or Clean; defaults to Run
-
-	// Clean-confirm screen state.
-	removeRepo bool // whether to also remove the shared git clone
-
-	// Execution screen state.
-	execCh        chan tea.Msg // background goroutine streams log lines/completion into this
-	execLog       []string
-	execDone      bool
-	execSucceeded int
-	execFailed    int
-
-	// Post-run-clean screen state.
-	postRunStage postRunStage // which of the two questions is active; zero value = first question
-
-	// Filled in by later steps, as each screen's real behavior is added.
+	configs    configsModel
+	instances  instancesModel
+	benchmarks benchmarksModel
+	run        runModel
 }
 
-// NewModel constructs the initial model, starting at the env screen.
-func NewModel(ctx context.Context, cfg *config.Config, pool *runner.Pool) Model {
-	ti := textinput.New()
-	ti.Placeholder = cfg.OutputFile
-	ti.Focus()
-	ti.CharLimit = 128
-	ti.Width = 40
- 
-	instances := registry.GetInstances()
- 
-	return Model{
-		ctx:                 ctx,
-		cfg:                 cfg,
-		pool:                pool,
-		screen:              screenEnv,
-		instances:           instances,
-		outputFilenameInput: ti,
-		selected:            make([]bool, len(instances)),
-	}
+
+func (m rootModel) Init() tea.Cmd {
+	return tea.Batch(
+		m.configs.Init(),
+		m.instances.Init(),
+		m.benchmarks.Init(),
+		m.run.Init(),
+	)
 }
 
-func (m Model) Init() tea.Cmd {
-	return textinput.Blink
+// activeHidesTabNav reports whether the currently active sub-model wants
+// left/right released for its own use instead of tab-switching.
+func (m rootModel) activeHidesTabNav() bool {
+	switch m.active {
+	case 0:
+		return m.configs.HidesTabNav()
+	case 1:
+		return m.instances.HidesTabNav()
+	case 2:
+		return m.benchmarks.HidesTabNav()
+	case 3:
+		return m.run.HidesTabNav()
+	}
+	return false
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if key, ok := msg.(tea.KeyMsg); ok && key.String() == "ctrl+c" {
-		return m, tea.Quit
+// activeKeyBindings returns the currently active sub-model's own key hints.
+func (m rootModel) activeKeyBindings() []key.Binding {
+	switch m.active {
+	case 0:
+		return m.configs.KeyBindings()
+	case 1:
+		return m.instances.KeyBindings()
+	case 2:
+		return m.benchmarks.KeyBindings()
+	case 3:
+		return m.run.KeyBindings()
 	}
-
-	if size, ok := msg.(tea.WindowSizeMsg); ok {
-		m.width = size.Width
-		m.height = size.Height
-		return m, nil
-	}
- 
-	switch m.screen {
-	case screenEnv:
-		return m.updateEnvScreen(msg)
-	case screenPicker:
-		return m.updatePickerScreen(msg)
-	case screenAction:
-		return m.updateActionScreen(msg)
-	case screenCleanConfirm:
-		return m.updateCleanConfirmScreen(msg)
-	case screenExecution:
-		return m.updateExecutionScreen(msg)
-	case screenPostRunClean:
-		return m.updatePostRunCleanScreen(msg)
-	}
-	return m, nil
+	return nil
 }
 
-func (m Model) View() string {
-	var content string
-	switch m.screen {
-	case screenEnv:
-		content = m.viewEnvScreen()
-	case screenPicker:
-		content = m.viewPickerScreen()
-	case screenAction:
-		content = m.viewActionScreen()
-	case screenCleanConfirm:
-		content = m.viewCleanConfirmScreen()
-	case screenExecution:
-		content = m.viewExecutionScreen()
-	case screenPostRunClean:
-		content = m.viewPostRunCleanScreen()
+func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	hideArrows := m.activeHidesArrowNav()
+	hideLetters := m.activeHidesLetterNav()
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+	case tea.KeyPressMsg:
+		switch keypress := msg.String(); keypress {
+		case "ctrl+c":
+			return m, tea.Quit
+		case "q":
+			if !hideLetters {
+				return m, tea.Quit
+			}
+		case "right":
+			if !hideArrows {
+				m.active = min(m.active+1, len(m.tabTitles)-1)
+				return m, nil
+			}
+		case "left":
+			if !hideArrows {
+				m.active = max(m.active-1, 0)
+				return m, nil
+			}
+		case "l", "n":
+			if !hideLetters {
+				m.active = min(m.active+1, len(m.tabTitles)-1)
+				return m, nil
+			}
+		case "h", "p":
+			if !hideLetters {
+				m.active = max(m.active-1, 0)
+				return m, nil
+			}
+		}
+	}
+
+	var cmd tea.Cmd
+	switch m.active {
+	case 0:
+		m.configs, cmd = m.configs.Update(msg)
+	case 1:
+		m.instances, cmd = m.instances.Update(msg)
+	case 2:
+		m.benchmarks, cmd = m.benchmarks.Update(msg)
+	case 3:
+		m.run, cmd = m.run.Update(msg)
+	}
+	return m, cmd
+}
+
+func (m rootModel) View() tea.View {
+	if m.styles == nil {
+		return tea.NewView("")
+	}
+
+	content := strings.Builder{}
+	s := m.styles
+
+	type tabInfo struct {
+		title string
+		style lipgloss.Style
+	}
+
+	var tabs []tabInfo
+	naturalTotal := 0
+
+	for i, t := range m.tabTitles {
+		var style lipgloss.Style
+		isFirst, isLast, isActive := i == 0, i == len(m.tabTitles)-1, i == m.active
+		if isActive {
+			style = s.activeTab
+		} else {
+			style = s.inactiveTab
+		}
+		border, _, _, _, _ := style.GetBorder()
+		if isFirst && isActive {
+			border.BottomLeft = "│"
+		} else if isFirst && !isActive {
+			border.BottomLeft = "├"
+		} else if isLast && isActive {
+			border.BottomRight = "│"
+		} else if isLast && !isActive {
+			border.BottomRight = "┤"
+		}
+		style = style.Border(border)
+
+		tabs = append(tabs, tabInfo{title: t, style: style})
+		naturalTotal += lipgloss.Width(style.Render(t))
+	}
+
+	views := []string{
+		m.configs.View(),
+		m.instances.View(),
+		m.benchmarks.View(),
+		m.run.View(),
+	}
+	activeView := views[m.active]
+
+	bodyWidth := naturalTotal
+	for _, v := range views {
+		if w := lipgloss.Width(v); w > bodyWidth {
+			bodyWidth = w
+		}
+	}
+
+	renderedBody := s.body.Width(bodyWidth + 4).Render(activeView)
+	targetWidth := lipgloss.Width(renderedBody)
+
+	deficit := targetWidth - naturalTotal
+	if deficit < 0 {
+		deficit = 0
+	}
+	share := deficit / len(tabs)
+	remainder := deficit % len(tabs)
+
+	var renderedTabs []string
+	for i, ti := range tabs {
+		extra := share
+		if i < remainder {
+			extra++
+		}
+		title := ti.title
+		if extra > 0 {
+			title += strings.Repeat(" ", extra)
+		}
+		renderedTabs = append(renderedTabs, ti.style.Render(title))
+	}
+	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
+
+	content.WriteString(row)
+	content.WriteString("\n")
+	content.WriteString(renderedBody)
+
+	hideArrows := m.activeHidesArrowNav()
+	hideLetters := m.activeHidesLetterNav()
+
+	var bindings []key.Binding
+	switch {
+	case !hideArrows && !hideLetters:
+		bindings = append(bindings, keyTabSwitch)
 	default:
-		content = fmt.Sprintf("unknown screen: %d", m.screen)
+		bindings = append(bindings, keyTabArrowOnly)
 	}
-	return renderCentered(content, m.width, m.height)
+	bindings = append(bindings, m.activeKeyBindings()...)
+	if hideLetters {
+		bindings = append(bindings, keyQuitEditing)
+	} else {
+		bindings = append(bindings, keyQuit)
+	}
+	content.WriteString("\n\n" + m.help.ShortHelpView(bindings))
+
+	const topMargin = 2
+
+	rendered := s.doc.Render(content.String())
+	if m.width > 0 && m.height > 0 {
+		rendered = lipgloss.Place(m.width, m.height-topMargin, lipgloss.Center, lipgloss.Top, rendered)
+		rendered = strings.Repeat("\n", topMargin) + rendered
+	}
+
+	v := tea.NewView(rendered)
+	v.AltScreen = true
+	return v
+}
+
+func (m rootModel) activeHidesArrowNav() bool {
+	switch m.active {
+	case 0:
+		return m.configs.HidesArrowNav()
+	case 1:
+		return m.instances.HidesArrowNav()
+	case 2:
+		return m.benchmarks.HidesArrowNav()
+	case 3:
+		return m.run.HidesArrowNav()
+	}
+	return false
+}
+
+func (m rootModel) activeHidesLetterNav() bool {
+	switch m.active {
+	case 0:
+		return m.configs.HidesLetterNav()
+	case 1:
+		return m.instances.HidesLetterNav()
+	case 2:
+		return m.benchmarks.HidesLetterNav()
+	case 3:
+		return m.run.HidesLetterNav()
+	}
+	return false
 }

@@ -26,7 +26,7 @@ const repoURL = "https://github.com/ailidani/paxi.git"
 
 // Paxi's curated list of benchmarkable revisions
 var Versions = []launcher.Version{
-	{Name: "baseline", CommitHash: "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd"},
+	{Name: "master", CommitHash: "6823d0b0fb1690a906391bcd5b4e0b01486ea2bd"},
 	// Add more entries here, ex:
 	// {Name: "post-optimization", CommitHash: "<full 40-char hash>"},
 }
