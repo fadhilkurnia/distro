@@ -11,15 +11,18 @@ import (
 	"github.com/fadhilkurnia/distro/internal/runner"
 )
 
-const projectName = "dummy"
-const workdir = "internal/testutil"
+var meta = launcher.ProjectMeta{
+	Name:    "dummy",
+	WorkDir: "internal/testutil",
+	RepoURL: "",
+}
 
 func init() {
 	registry.AddProject(registry.Project{
-		Name:       projectName,
-		Repository: "",
+		Name:       meta.Name,
+		Repository: meta.RepoURL,
 		NewLauncher: func(spec launcher.Specification, version launcher.Version) launcher.Launcher {
-			return &DummyLauncher{}
+			return &DummyLauncher{ProjectMeta: meta}
 		},
 		Specifications: nil, // empty catalog — contributes zero rows to GetInstances
 		Versions:       nil,
@@ -28,14 +31,13 @@ func init() {
 
 // DummyLauncher does nothing real: Build is a no-op, Start and Stop just
 // run testdata/echo.sh on every node via that node's Runner.
-type DummyLauncher struct{}
+type DummyLauncher struct {
+	launcher.ProjectMeta // gives ProjectName(), d.WorkDir, d.RepoURL
+}
 
-func (d *DummyLauncher) ProjectName() string                   { return projectName }
 func (d *DummyLauncher) Specification() launcher.Specification { return launcher.Specification{} }
 func (d *DummyLauncher) Version() launcher.Version             { return launcher.Version{} }
-func (d *DummyLauncher) Addresses() []launcher.NodeAddress { return nil }
-
-func noopProgress(string) {}
+func (d *DummyLauncher) Addresses() []launcher.NodeAddress     { return nil }
 
 func (d *DummyLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
 	return nil
@@ -54,19 +56,20 @@ func (d *DummyLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []co
 }
 
 func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress, verb string) error {
-	if progress == nil { progress = noopProgress}
-
 	for _, n := range nodes {
-		progress(fmt.Sprintf("%s %s (%s)...", verb, n.ID, n.PublicIP))
-		r, err := pool.For(n, workdir)
+		progress.Info("%s %s (%s)...", verb, n.ID, n.PublicIP)
+
+		r, err := launcher.GetRunner(pool, n, d.ProjectMeta, progress)
 		if err != nil {
-			return fmt.Errorf("dummy: getting runner for %s: %w", n.ID, err)
+			return err
 		}
 
 		msg := fmt.Sprintf("%s %s (%s)", verb, n.ID, r.Host())
 		env := map[string]string{"MESSAGE": msg}
 		if err := nix.Run(ctx, r, "testdata/echo.sh", env); err != nil {
-			return fmt.Errorf("dummy: %s on %s: %w", verb, n.ID, err)
+			errMsg := fmt.Errorf("%s on %s: %w", verb, n.ID, err)
+			progress.Error(errMsg)
+			return errMsg
 		}
 	}
 	return nil
@@ -75,3 +78,6 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 func (d *DummyLauncher) RunLatencyBenchmark(context.Context, *runner.Pool, config.Node, launcher.LatencyParams, launcher.Progress) (string, error) {
 	return "", nil
 }
+
+// compile-time check that DummyLauncher satisfies Launcher
+var _ launcher.Launcher = (*DummyLauncher)(nil)

@@ -3,6 +3,8 @@ package tui
 import (
 	"charm.land/bubbles/v2/table"
 	"charm.land/lipgloss/v2"
+
+	"github.com/fadhilkurnia/distro/internal/launcher"
 )
 
 var (
@@ -10,6 +12,14 @@ var (
 	purpleDark = lipgloss.Color("#7D56F4")
 	lightGray = lipgloss.Color("#585858")
 	white = lipgloss.Color("#FFFFFF")
+
+	// Progress log level
+	redLight    = lipgloss.Color("#D14343")
+	redDark     = lipgloss.Color("#FF6B6B")
+	yellowLight = lipgloss.Color("#A67C00")
+	yellowDark  = lipgloss.Color("#F1C40F")
+	blueLight   = lipgloss.Color("#2563EB")
+	blueDark    = lipgloss.Color("#60A5FA")
 )
 
 type styles struct {
@@ -27,6 +37,12 @@ type styles struct {
 	// instancesModel
 	selectedRow 	lipgloss.Style
 	listHeader  	lipgloss.Style
+
+	// runModel log levels
+	logError   lipgloss.Style
+	logWarning lipgloss.Style
+	logInfo    lipgloss.Style
+	logDebug   lipgloss.Style
 }
 
 func tabBorderWithBottom(left, middle, right string) lipgloss.Border {
@@ -80,6 +96,21 @@ func newStyles(bgIsDark bool) *styles {
 	s.listHeader = lipgloss.NewStyle().Bold(true)
 
 	return s
+}
+
+// logStyle returns the style to render a log line's "[LEVEL]" tag in,
+// based on its severity.
+func (s *styles) logStyle(level launcher.Level) lipgloss.Style {
+	switch level {
+	case launcher.LevelError:
+		return s.logError
+	case launcher.LevelWarning:
+		return s.logWarning
+	case launcher.LevelDebug:
+		return s.logDebug
+	default:
+		return s.logInfo
+	}
 }
 
 // renderKeyValue renders a bordered label|value table, sized to fit its

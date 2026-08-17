@@ -29,11 +29,11 @@ var (
 )
 
 type rootModel struct {
-	tabTitles []string
-	active    int
-	styles    *styles
-	help      help.Model
-	width, height int
+	tabTitles 	[]string
+	active    	int
+	styles    	*styles
+	help      	help.Model
+	width, height 	int
 
 	configs    configsModel
 	instances  instancesModel
@@ -175,6 +175,11 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.run = m.run.ClearLog()
 				return m, nil
 			}
+			case ".": // toggle DEBUG log in run_model
+			if m.active == 3 {
+				m.run = m.run.ToggleDebug()
+				return m, nil
+			}
 		}
 	}
 
@@ -291,7 +296,8 @@ func (m rootModel) View() tea.View {
 	} else {
 		bindings = append(bindings, keyQuit)
 	}
-	content.WriteString("\n\n" + m.help.ShortHelpView(bindings))
+	m.help.SetWidth(bodyWidth + 4)
+	content.WriteString("\n\n" + m.help.FullHelpView([][]key.Binding{bindings}))
 
 	const topMargin = 2
 

@@ -2,6 +2,9 @@ package launcher
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/fadhilkurnia/distro/internal/config"
 	"github.com/fadhilkurnia/distro/internal/runner"
@@ -18,11 +21,11 @@ type NodeAddress struct {
 
 // k6 latency benchmark configurations (read once from .env)
 type LatencyParams struct {
-	WarmupDuration  string  // e.g. "60s"
-	Duration        string  // e.g. "180s"
-	WriteRatio      float64 // e.g. 0.2
+	WarmupDuration  string  // ex: "60s"
+	Duration        string  // ex: "180s"
+	WriteRatio      float64 // ex: 0.2
 	RequestWorkload int     // total requests/sec across all nodes combined
-	OutputFilename  string  // optional; falls back to an auto-generated name if empty
+	OutputFilename  string  // (optional) falls back to an auto-generated name if empty
 }
 
 // A combination of protocol, language, consistency, persistency 
@@ -41,11 +44,81 @@ type Version struct {
 	CommitHash string // full 40-character commit hash
 }
 
-// Reports a human-readable line of ongoing status from inside a
-// Build/Start/Stop/Clean call. Similar to a logger
-// The messages are sent directly to a background goroutine so 
-// Bubble Tea (TUI) can render them to the terminal
-type Progress func(message string)
+// Identity data every launcher needs: 
+// - its registered name
+// - its working directory convention
+// - the repository URL it's built from
+type ProjectMeta struct {
+	Name    string // ex: "ailidani.paxi"
+	WorkDir string // ex: "sut/ailidani.paxi"
+	RepoURL string
+}
+ 
+// Satisfies the Launcher interface's ProjectName() method
+func (m ProjectMeta) ProjectName() string { return m.Name }
+
+
+//************************
+// Logging and Progress
+//************************
+// Level identifies the severity of a Progress message.
+type Level int
+ 
+const (
+	LevelDebug Level = iota
+	LevelInfo
+	LevelWarning
+	LevelError
+)
+ 
+func (l Level) String() string {
+	switch l {
+	case LevelDebug:
+		return "DEBUG"
+	case LevelInfo:
+		return "INFO"
+	case LevelWarning:
+		return "WARNING"
+	case LevelError:
+		return "ERROR"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+// Prints status log from inside a Build/Start/Stop/Clean/benchmark call.
+// Used by bubbletea to show live log
+type Progress struct {
+	emit func(level Level, message string)
+}
+ 
+// NewProgress builds a Progress that forwards every leveled message to emit.
+func NewProgress(emit func(level Level, message string)) Progress {
+	return Progress{emit: emit}
+}
+ 
+// Don't print anything if the logger is set to nil
+func (p Progress) log(level Level, msg string) {
+	if p.emit == nil { return }
+	p.emit(level, msg)
+}
+ 
+func (p Progress) Debug(format string, args ...any) { p.log(LevelDebug, fmt.Sprintf(format, args...)) }
+func (p Progress) Info(format string, args ...any)  { p.log(LevelInfo, fmt.Sprintf(format, args...)) }
+func (p Progress) Warning(format string, args ...any) { p.log(LevelWarning, fmt.Sprintf(format, args...)) }
+
+// This function ONLY logs the error message. It doesn't return the error.
+// Example usage:
+//	if err != nil {
+//	    errMsg := fmt.Errorf("getting runner for %s: %w", n.ID, err)
+//	    progress.Error(errMsg)
+//	    return errMsg
+//	}
+func (p Progress) Error(err error) { p.log(LevelError, err.Error()) }
+
+//************************
+// Launcher Interface
+//************************
 
 // Describes what functions are required for all project Launcher
 //
@@ -81,4 +154,58 @@ type Launcher interface {
 	// Runs a k6-based latency benchmark from client to all Adresses()
 	// Returns the local path to the fetched result file on success
 	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params LatencyParams, progress Progress) (string, error)
+}
+
+
+// **********************
+// Helper Functions
+// **********************
+// Check if a binary file acually exists in a path
+func CheckBinaryExists(ctx context.Context, r runner.Runner, relBinPath string) error {
+	if err := r.Run(ctx, fmt.Sprintf("test -f %s", relBinPath), nil); err != nil {
+		return fmt.Errorf("binary not found at %s, run Build first: %w", relBinPath, err)
+	}
+	return nil
+}
+ 
+// Get Runner (scoped to meta.WorkDir) for a launcher
+func GetRunner(pool *runner.Pool, n config.Node, meta ProjectMeta, progress Progress) (runner.Runner, error) {
+	r, err := pool.For(n, meta.WorkDir)
+	if err != nil {
+		errMsg := fmt.Errorf("getting runner for %s: %w", n.ID, err)
+		progress.Error(errMsg)
+		return nil, errMsg
+	}
+	return r, nil
+}
+ 
+// Get latency benchmark output filename (in driver machine)
+// Format:
+// <protocol>:<language>:<consistency>:<persistency>:<duration>:w<writeRatio>.json
+func LatencyBenchmarkResultFilename(spec Specification, params LatencyParams) string {
+	if params.OutputFilename != "" { return params.OutputFilename }
+	return fmt.Sprintf("%s:%s:%s:%s:%s:w%v.json",
+		spec.Protocol, spec.Language, spec.Consistency, spec.Persistency, params.Duration, params.WriteRatio)
+}
+ 
+// Get benchmark result file from remote machine to driver machine.
+// NOTE: Currently only supports latency benchmark output
+// Local Directory Path:
+// sut/<project>/.benchmarks/<benchmarkType>/<short>
+func FetchBenchmarkResult(ctx context.Context, r runner.Runner, workdir, short, benchmarkType, relResultPath string, spec Specification, params LatencyParams, progress Progress) (string, error) {
+	localResultDir := filepath.Join(workdir, ".benchmarks", benchmarkType, short)
+	if err := os.MkdirAll(localResultDir, 0755); err != nil {
+		errMsg := fmt.Errorf("creating %s: %w", localResultDir, err)
+		progress.Error(errMsg)
+		return "", errMsg
+	}
+	localResultPath := filepath.Join(localResultDir, LatencyBenchmarkResultFilename(spec, params))
+ 
+	progress.Info("Fetching results from client...")
+	if err := r.FetchFromNode(ctx, relResultPath, localResultPath); err != nil {
+		errMsg := fmt.Errorf("fetching results: %w", err)
+		progress.Error(errMsg)
+		return "", errMsg
+	}
+	return localResultPath, nil
 }
