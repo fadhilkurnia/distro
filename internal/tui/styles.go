@@ -95,6 +95,11 @@ func newStyles(bgIsDark bool) *styles {
 		Bold(true)
 	s.listHeader = lipgloss.NewStyle().Bold(true)
 
+	s.logError = lipgloss.NewStyle().Foreground(lightDark(redLight, redDark)).Bold(true)
+	s.logWarning = lipgloss.NewStyle().Foreground(lightDark(yellowLight, yellowDark))
+	s.logInfo = lipgloss.NewStyle().Foreground(lightDark(blueLight, blueDark))
+	s.logDebug = lipgloss.NewStyle().Foreground(lightGray)
+
 	return s
 }
 

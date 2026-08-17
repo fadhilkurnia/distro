@@ -245,8 +245,12 @@ func (m rootModel) View() tea.View {
 	}
 	activeView := views[m.active]
 
+	// after
+	// bodyWidth is driven only by Configs/Instances/Benchmarks
+	// run_model's content will be wrapped down to fit that width 
+	// by s.body.Render() instead of changing the bodyWidth
 	bodyWidth := naturalTotal
-	for _, v := range views {
+	for _, v := range views[:3] {
 		if w := lipgloss.Width(v); w > bodyWidth {
 			bodyWidth = w
 		}
