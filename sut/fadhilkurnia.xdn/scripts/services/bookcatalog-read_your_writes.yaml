@@ -1,0 +1,19 @@
+---
+name: bookcatalog
+image: fadhilkurnia/xdn-bookcatalog
+stateful: true
+entry: true
+port: 80
+state: /app/data/
+deterministic: true
+consistency: read_your_writes
+requests:
+  - path_prefix: "/"
+    methods: "GET,OPTIONS,HEAD"
+    behavior: read_only
+  - path_prefix: "/"
+    methods: "PUT,POST,DELETE"
+    behavior: write_only
+  - path_prefix: "/"
+    methods: "PUT,POST,DELETE"
+    behavior: monotonic

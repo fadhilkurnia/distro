@@ -31,7 +31,7 @@ const (
 func BuildScenarios(addresses []launcher.NodeAddress) string {
 	var b strings.Builder
 	for _, a := range addresses {
-		addr := fmt.Sprintf("%s:%d", a.PublicIP, a.PublicPort)
+		addr := fmt.Sprintf("%s:%d", a.PrivateIP, a.PublicPort)
 		fmt.Fprintf(
 			&b, `		%s_warmup: {
 				executor: "constant-vus",

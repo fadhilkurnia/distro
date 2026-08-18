@@ -32,14 +32,13 @@ func columnWidth(title string, rows []table.Row, col int) int {
 	return max + columnPadding
 }
 
-func newConfigsModel(nodes []config.Node, client config.Node, ssh config.SSHConfig, outputFile string, s *styles) configsModel {
-	rows := make([]table.Row, 0, len(nodes)+1)
+func newConfigsModel(nodes []config.Node, ssh config.SSHConfig, outputFile string, s *styles) configsModel {
+	rows := make([]table.Row, 0, len(nodes))
 	for _, n := range nodes {
 		rows = append(rows, table.Row{n.ID, n.PublicIP, n.PrivateIP})
 	}
-	rows = append(rows, table.Row{client.ID, client.PublicIP, client.PrivateIP})
 
-	machinesTitle := fmt.Sprintf("Machines (%d)", len(nodes)+1)
+	machinesTitle := fmt.Sprintf("Machines (%d)", len(nodes))
 	columns := []table.Column{
 		{Title: machinesTitle, Width: columnWidth(machinesTitle, rows, 0)},
 		{Title: "Public IP", Width: columnWidth("Public IP", rows, 1)},

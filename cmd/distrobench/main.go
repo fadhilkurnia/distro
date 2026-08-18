@@ -16,6 +16,7 @@ import (
 	// adding a new protocol never requires touching the registry itself.
 	_ "github.com/fadhilkurnia/distro/internal/testutil"
 	_ "github.com/fadhilkurnia/distro/sut/ailidani.paxi"
+	_ "github.com/fadhilkurnia/distro/sut/fadhilkurnia.xdn"
 )
 
 func main() {
@@ -40,7 +41,7 @@ func main() {
 
 	ctx := context.Background()
 
-	for _, n := range append(cfg.Nodes, cfg.Client) {
+	for _, n := range cfg.Nodes {
 		r, err := pool.For(n, ".")
 		if err != nil {
 			log.Fatalf("runner: %v", err)

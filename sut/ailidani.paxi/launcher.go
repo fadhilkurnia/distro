@@ -70,7 +70,8 @@ func (l *PaxiLauncher) Specification() launcher.Specification { return l.spec }
 func (l *PaxiLauncher) Version() launcher.Version             { return l.version }
 func (l *PaxiLauncher) Addresses() []launcher.NodeAddress     { return l.addresses }
 
-func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig, progress launcher.Progress) error {
+	replicas := config.ReplicaNodes(nodes)
 	short := gitrepo.ShortHash(l.version.CommitHash)
 	repoDir := filepath.Join(l.WorkDir, "repo")
 
@@ -79,24 +80,26 @@ func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []con
 		progress.Error(err)
 		return err
 	}
+
 	progress.Debug("Checking out to %s", l.version.CommitHash)
 	if err := gitrepo.Checkout(repoDir, l.version.CommitHash); err != nil {
 		progress.Error(err)
 		return err
 	}
- 
+
 	localBinPath := filepath.Join(l.WorkDir, ".build", short, "bin", "server")
 	if !gitrepo.FileExists(localBinPath) {
 		local := runner.NewLocalRunner(l.WorkDir)
 		script := gitrepo.ResolveOverride(l.WorkDir, "scripts/build.sh", l.version.Name)
-		progress.Info("Executing %s to compile binaries...", script)
-
 		env := map[string]string{"HASH": short}
+
+		progress.Info("Executing %s to compile binaries...", script)
 		if err := nix.Run(ctx, local, script, env); err != nil {
 			errMsg := fmt.Errorf("build failed: %w", err)
 			progress.Error(errMsg)
 			return errMsg
 		}
+
 		if !gitrepo.FileExists(localBinPath) {
 			errMsg := fmt.Errorf("%s completed but %s was not produced", script, localBinPath)
 			progress.Error(errMsg)
@@ -107,16 +110,13 @@ func (l *PaxiLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []con
 	}
  
 	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
-	for _, n := range nodes {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		progress.Info("Sending %s to %s (%s): %s", localBinPath, n.ID, n.PublicIP, relBinPath)
- 
+	for _, n := range replicas {
+		if err := ctx.Err(); err != nil { return err }
+
 		r, err := launcher.GetRunner(pool, n, l.ProjectMeta, progress)
-		if err != nil {
-			return err
-		}
+		if err != nil { return err }
+
+		progress.Info("Sending %s to %s (%s): %s", localBinPath, n.ID, n.PublicIP, relBinPath)
 		if err := r.SendToNode(ctx, localBinPath, relBinPath); err != nil {
 			errMsg := fmt.Errorf("Copying binary to %s: %w", n.ID, err)
 			progress.Error(errMsg)
@@ -171,7 +171,7 @@ func buildConfigJSON(templatePath string, addresses []launcher.NodeAddress) ([]b
 	for i, a := range addresses {
 		id := fmt.Sprintf("1.%d", i+1)
 		address[id] = fmt.Sprintf("tcp://%s:%d", a.PrivateIP, a.PrivatePort)
-		httpAddress[id] = fmt.Sprintf("http://%s:%d", a.PublicIP, a.PublicPort)
+		httpAddress[id] = fmt.Sprintf("http://%s:%d", a.PrivateIP, a.PublicPort)
 	}
 	data["address"] = address
 	data["http_address"] = httpAddress
@@ -184,6 +184,7 @@ func buildConfigJSON(templatePath string, addresses []launcher.NodeAddress) ([]b
 }
 
 func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	replicas := config.ReplicaNodes(nodes)
 	short := gitrepo.ShortHash(l.version.CommitHash)
  
 	templateRel := gitrepo.ResolveOverride(l.WorkDir, "template.json", l.version.Name)
@@ -209,31 +210,29 @@ func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []con
 	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
 	script := gitrepo.ResolveOverride(l.WorkDir, "scripts/start.sh", l.version.Name)
  
-	for i, n := range nodes {
-		progress.Debug("Getting launcher runner in %s (%s)...", n.ID, n.PublicIP)
+	for i, n := range replicas {
 		r, err := launcher.GetRunner(pool, n, l.ProjectMeta, progress)
-		// NOTE: Handles error implicitly. Consider making it explicit
 		if err != nil { return err }
- 
+
 		progress.Debug("Check if %s exists in %s (%s)", relBinPath, n.ID, n.PublicIP)
 		if err := launcher.CheckBinaryExists(ctx, r, relBinPath); err != nil {
 			progress.Error(err)
 			return err
 		}
- 
+
 		progress.Debug("Sending %s to %s (%s): %s", localConfigPath, n.ID, n.PublicIP, relConfigPath)
 		if err := r.SendToNode(ctx, localConfigPath, relConfigPath); err != nil {
 			errMsg := fmt.Errorf("Copying config to %s: %w", n.ID, err)
 			progress.Error(errMsg)
 			return errMsg
 		}
- 
+
 		env := map[string]string{
 			"HASH":      short,
 			"NODE_ID":   fmt.Sprintf("1.%d", i+1),
 			"ALGORITHM": l.spec.Protocol, // Paxi's own -algorithm flag name
 		}
- 
+
 		progress.Info("Executing %s to start protocol in %s (%s)...", script, n.ID, n.PublicIP)
 		if err := nix.Run(ctx, r, script, env); err != nil {
 			errMsg := fmt.Errorf("starting on %s: %w", n.ID, err)
@@ -247,11 +246,11 @@ func (l *PaxiLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []con
 }
 
 func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+	replicas := config.ReplicaNodes(nodes)
 	short := gitrepo.ShortHash(l.version.CommitHash)
 	script := gitrepo.ResolveOverride(l.WorkDir, "scripts/stop.sh", l.version.Name)
  
-	for _, n := range nodes {
-		progress.Debug("Getting launcher runner in %s (%s)...", n.ID, n.PublicIP)
+	for _, n := range replicas {
 		r, err := launcher.GetRunner(pool, n, l.ProjectMeta, progress)
 		if err != nil { return err }
  
@@ -259,7 +258,7 @@ func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []conf
 
 		progress.Info("Stopping protocol in %s (%s)...", n.ID, n.PublicIP)
 		if err := nix.Run(ctx, r, script, env); err != nil {
-			errMsg := fmt.Errorf("stopping on %s: %w", n.ID, err)
+			errMsg := fmt.Errorf("Stopping on %s: %w", n.ID, err)
 			progress.Error(errMsg)
 			return errMsg
 		}
@@ -268,12 +267,12 @@ func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []conf
 }
  
 func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {
+	replicas := config.ReplicaNodes(nodes)
 	short := gitrepo.ShortHash(l.version.CommitHash)
 	relBinPath := fmt.Sprintf(".build/%s/bin/server", short)
 	relVersionDir := fmt.Sprintf(".build/%s", short)
  
-	for _, n := range nodes {
-		progress.Debug("Getting launcher runner in %s (%s)...", n.ID, n.PublicIP)
+	for _, n := range replicas {
 		r, err := launcher.GetRunner(pool, n, l.ProjectMeta, progress)
 		if err != nil { return err }
  
@@ -286,8 +285,7 @@ func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []con
 		}
 	}
  
-	for _, n := range nodes {
-		progress.Debug("Getting launcher runner in %s (%s)...", n.ID, n.PublicIP)
+	for _, n := range replicas {
 		r, err := launcher.GetRunner(pool, n, l.ProjectMeta, progress)
 		if err != nil { return err }
  
@@ -324,7 +322,8 @@ func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []con
 // built from Addresses() via the shared k6 package, sends it to client, runs k6
 // there via scripts/run-latency.sh, and fetches the resulting summary
 // JSON back to this Version's .benchmarks/latency directory
-func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params launcher.LatencyParams, progress launcher.Progress) (string, error) {
+func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, params launcher.LatencyParams, progress launcher.Progress) (string, error) {
+	client := config.ClientNode(nodes)
 	if len(l.addresses) == 0 {
 		errMsg := fmt.Errorf("no addresses recorded, run Start first")
 		progress.Error(errMsg)
@@ -342,9 +341,7 @@ func (l *PaxiLauncher) RunLatencyBenchmark(ctx context.Context, pool *runner.Poo
 	}
 
 	r, err := launcher.GetRunner(pool, client, l.ProjectMeta, progress)
-	if err != nil {
-		return "", err
-	}
+	if err != nil { return "", err }
 
 	runScript := gitrepo.ResolveOverride(l.WorkDir, "scripts/run-latency.sh", l.version.Name)
 	return k6.RunAndFetchLatencyResult(ctx, r, genLocalPath, runScript, l.WorkDir, short, params, requestInterval, l.spec, progress)

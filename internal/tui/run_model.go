@@ -28,20 +28,21 @@ const (
 
 // logLine is one leveled progress or completion message, ready to render.
 type logLine struct {
-	level launcher.Level
-	text  string
+    level launcher.Level
+    name  string // ex: "ailidani.paxi/paxos (master)"
+    msg   string // ex: "(If not exists) Cloning ... repository..."
 }
 
 type runLogMsg logLine
 type runFinishedMsg struct{}
 
 type runModel struct {
-	pool   *runner.Pool
-	nodes  []config.Node
-	client config.Node
+	pool    *runner.Pool
+	nodes   []config.Node
+	sshCfg  config.SSHConfig
 	baseCtx context.Context
 	styles  *styles
-
+ 
 	status     runStatus
 	log        []logLine
 	progressCh chan logLine
@@ -49,11 +50,11 @@ type runModel struct {
 	showDebug  bool
 }
 
-func newRunModel(ctx context.Context, pool *runner.Pool, nodes []config.Node, client config.Node, s *styles) runModel {
+func newRunModel(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig, s *styles) runModel {
 	return runModel{
 		pool:    pool,
 		nodes:   nodes,
-		client:  client,
+		sshCfg:  sshCfg,
 		baseCtx: ctx,
 		styles:  s,
 		status:  runIdle,
@@ -85,11 +86,11 @@ func (m runModel) Start(selected []registry.Instance, params launcher.LatencyPar
 	}
 	manifestPath := filepath.Join("benchmark", outputFilename)
  
-	go runAllInstances(ctx, m.pool, m.nodes, m.client, selected, params, manifestPath, ch)
+	go runAllInstances(ctx, m.pool, m.nodes, m.sshCfg, selected, params, manifestPath, ch)
  
 	return m, listenForProgress(ch)
 }
-
+ 
 func (m runModel) Cancel() (runModel, tea.Cmd) {
 	if m.Running() && m.cancel != nil {
 		m.cancel()
@@ -108,14 +109,12 @@ func (m runModel) Reset() runModel {
 func listenForProgress(ch <-chan logLine) tea.Cmd {
 	return func() tea.Msg {
 		line, ok := <-ch
-		if !ok {
-			return runFinishedMsg{}
-		}
+		if !ok { return runFinishedMsg{} }
 		return runLogMsg(line)
 	}
 }
 
-func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node, client config.Node,
+func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig,
 	selected []registry.Instance, params launcher.LatencyParams, manifestPath string, ch chan<- logLine) {
 	defer close(ch)
  
@@ -136,7 +135,7 @@ func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node
 			continue
 		}
  
-		if err := l.Build(ctx, pool, nodes, progress); err != nil {
+		if err := l.Build(ctx, pool, nodes, sshCfg, progress); err != nil {
 			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] build failed: %v", name, err)}
 			continue
 		}
@@ -147,7 +146,7 @@ func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node
 		}
  
 		if startErr == nil {
-			resultPath, err := l.RunLatencyBenchmark(ctx, pool, client, params, progress)
+			resultPath, err := l.RunLatencyBenchmark(ctx, pool, nodes, params, progress)
 			if err != nil {
 				ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] benchmark failed: %v", name, err)}
 			} else {
@@ -204,7 +203,7 @@ func (m runModel) View() string {
 	case runRunning:
 		status = "Running..."
 	}
- 
+
 	body := status
 	if len(m.log) > 0 {
 		body += "\n\n"
@@ -221,19 +220,19 @@ func (m runModel) View() string {
 	}
 	return body
 }
- 
+
 func (m runModel) HidesTabNav() bool {
 	return false
 }
- 
+
 func (m runModel) HidesArrowNav() bool {
 	return false
 }
- 
+
 func (m runModel) HidesLetterNav() bool {
 	return m.Running()
 }
- 
+
 func (m runModel) KeyBindings() []key.Binding {
 	return []key.Binding{
 		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "start run")),
@@ -244,7 +243,7 @@ func (m runModel) KeyBindings() []key.Binding {
 		key.NewBinding(key.WithKeys("."), key.WithHelp(".", "toggle debug logs")),
 	}
 }
- 
+
 func (m runModel) Clean(selected []registry.Instance, removeRepo bool) (runModel, tea.Cmd) {
 	if m.Running() || len(selected) == 0 {
 		return m, nil
@@ -263,41 +262,44 @@ func (m runModel) Clean(selected []registry.Instance, removeRepo bool) (runModel
 	return m, listenForProgress(ch)
 }
  
-func cleanAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node,
-	selected []registry.Instance, removeRepo bool, ch chan<- logLine) {
+func cleanAllInstances(
+	ctx context.Context, pool *runner.Pool, nodes []config.Node,
+	selected []registry.Instance, removeRepo bool, ch chan<- logLine,
+) {
 	defer close(ch)
- 
+
 	for _, inst := range selected {
 		if ctx.Err() != nil {
 			ch <- logLine{level: launcher.LevelWarning, text: "clean cancelled"}
 			return
 		}
- 
+
 		name := fmt.Sprintf("%s/%s (%s)", inst.ProjectName, inst.Specification.Protocol, inst.Version.Name)
 		progress := launcher.NewProgress(func(level launcher.Level, msg string) {
 			ch <- logLine{level: level, text: fmt.Sprintf("[%s] %s", name, msg)}
 		})
- 
+
 		l, err := registry.GetLauncher(inst)
 		if err != nil {
 			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] registry error: %v", name, err)}
 			continue
 		}
- 
+
 		if err := l.Clean(ctx, pool, nodes, removeRepo, progress); err != nil {
 			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] clean failed: %v", name, err)}
 			continue
 		}
 	}
- 
+
 	ch <- logLine{level: launcher.LevelInfo, text: "=== clean complete ==="}
 }
- 
+
+
 func (m runModel) ClearLog() runModel {
 	m.log = nil
 	return m
 }
- 
+
 func (m runModel) ToggleDebug() runModel {
 	m.showDebug = !m.showDebug
 	return m

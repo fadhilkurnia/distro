@@ -142,7 +142,7 @@ type Launcher interface {
 	// Each node's actual address (assigned only at Start)
 	Addresses() []NodeAddress
 
-	Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
+	Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig, progress Progress) error
 	Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
 	Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress Progress) error
 	Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress Progress) error
@@ -153,7 +153,7 @@ type Launcher interface {
 
 	// Runs a k6-based latency benchmark from client to all Adresses()
 	// Returns the local path to the fetched result file on success
-	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, client config.Node, params LatencyParams, progress Progress) (string, error)
+	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, params LatencyParams, progress Progress) (string, error)
 }
 
 
@@ -170,6 +170,8 @@ func CheckBinaryExists(ctx context.Context, r runner.Runner, relBinPath string) 
  
 // Get Runner (scoped to meta.WorkDir) for a launcher
 func GetRunner(pool *runner.Pool, n config.Node, meta ProjectMeta, progress Progress) (runner.Runner, error) {
+	progress.Debug("Getting launcher runner in %s (%s)...", n.ID, n.PublicIP)
+
 	r, err := pool.For(n, meta.WorkDir)
 	if err != nil {
 		errMsg := fmt.Errorf("getting runner for %s: %w", n.ID, err)
@@ -177,6 +179,27 @@ func GetRunner(pool *runner.Pool, n config.Node, meta ProjectMeta, progress Prog
 		return nil, errMsg
 	}
 	return r, nil
+}
+
+// Copies sshCfg.KeyPath to all nodes
+// Assumption: sshCfg's public key is already authorized on every node
+func DistributeSSHKey(ctx context.Context, r runner.Runner, sshCfg config.SSHConfig, remoteDir string, progress Progress) (string, error) {
+	remoteKeyPath := remoteDir + "/id_distrobench"
+ 
+	progress.Info("Sending %s to %s...", sshCfg.KeyPath, r.Host())
+	if err := r.SendToNode(ctx, sshCfg.KeyPath, remoteKeyPath); err != nil {
+		errMsg := fmt.Errorf("sending SSH key: %w", err)
+		progress.Error(errMsg)
+		return "", errMsg
+	}
+ 
+	if err := r.Run(ctx, fmt.Sprintf("chmod 600 %s", remoteKeyPath), nil); err != nil {
+		errMsg := fmt.Errorf("chmod SSH key: %w", err)
+		progress.Error(errMsg)
+		return "", errMsg
+	}
+ 
+	return remoteKeyPath, nil
 }
  
 // Get latency benchmark output filename (in driver machine)

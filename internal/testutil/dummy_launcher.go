@@ -24,7 +24,7 @@ func init() {
 		NewLauncher: func(spec launcher.Specification, version launcher.Version) launcher.Launcher {
 			return &DummyLauncher{ProjectMeta: meta}
 		},
-		Specifications: nil, // empty catalog — contributes zero rows to GetInstances
+		Specifications: nil, // empty catalog (contributes zero rows to GetInstances)
 		Versions:       nil,
 	})
 }
@@ -39,24 +39,25 @@ func (d *DummyLauncher) Specification() launcher.Specification { return launcher
 func (d *DummyLauncher) Version() launcher.Version             { return launcher.Version{} }
 func (d *DummyLauncher) Addresses() []launcher.NodeAddress     { return nil }
 
-func (d *DummyLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
+func (d *DummyLauncher) Build(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig, progress launcher.Progress) error {
 	return nil
 }
-
+ 
 func (d *DummyLauncher) Start(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
 	return d.runOnEach(ctx, pool, nodes, progress, "starting")
 }
-
+ 
 func (d *DummyLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress) error {
 	return d.runOnEach(ctx, pool, nodes, progress, "stopping")
 }
-
+ 
 func (d *DummyLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {
 	return nil
 }
 
 func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes []config.Node, progress launcher.Progress, verb string) error {
-	for _, n := range nodes {
+	replicas := config.ReplicaNodes(nodes)
+	for _, n := range replicas {
 		progress.Info("%s %s (%s)...", verb, n.ID, n.PublicIP)
 
 		r, err := launcher.GetRunner(pool, n, d.ProjectMeta, progress)
@@ -75,7 +76,7 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 	return nil
 }
 
-func (d *DummyLauncher) RunLatencyBenchmark(context.Context, *runner.Pool, config.Node, launcher.LatencyParams, launcher.Progress) (string, error) {
+func (d *DummyLauncher) RunLatencyBenchmark(context.Context, *runner.Pool, []config.Node, launcher.LatencyParams, launcher.Progress) (string, error) {
 	return "", nil
 }
 

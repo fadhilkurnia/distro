@@ -51,8 +51,9 @@ func digitsOnly(s string) string {
 }
 
 func newLatencyModel(nodes []config.Node, warmup, duration string, writeRatio float64, s *styles) latencyModel {
+	replicas := config.ReplicaNodes(nodes)
 	defaults := [latencyFieldCount]string{
-		latencyFieldTotal:    strconv.Itoa(len(nodes)), // no existing config source; 1 req/sec per node
+		latencyFieldTotal:    strconv.Itoa(len(replicas)), // no existing config source; 1 req/sec per node
 		latencyFieldWarmup:   digitsOnly(warmup),
 		latencyFieldDuration: digitsOnly(duration),
 		latencyFieldWritePct: strconv.Itoa(int(writeRatio * 100)),
@@ -72,7 +73,7 @@ func newLatencyModel(nodes []config.Node, warmup, duration string, writeRatio fl
 	inputs[latencyFieldTotal].Focus()
 
 	return latencyModel{
-		nodes:    nodes,
+		nodes:    replicas,
 		inputs:   inputs,
 		defaults: defaults,
 		focused:  latencyFieldTotal,
