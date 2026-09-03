@@ -9,7 +9,10 @@
 #   launch-service.sh      - none beyond the xdn CLI binary itself (already
 #                            statically built), included here only because
 #                            every script in this project shares one file
+#   set-placement.sh /
+#   probe-replica.sh       - curl, to talk to the control plane and to a
+#                            specific replica's own address
 { pkgs ? import ../../nix/pkgs.nix }:
 pkgs.mkShell {
-  packages = [ pkgs.jdk21 pkgs.ant pkgs.go pkgs.k6 pkgs.rsync pkgs.openssh ];
+    packages = [ pkgs.jdk21 pkgs.ant pkgs.go pkgs.k6 pkgs.rsync pkgs.openssh pkgs.curl ];
 }

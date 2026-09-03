@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/fadhilkurnia/distro/internal/config"
 	"github.com/fadhilkurnia/distro/internal/launcher"
@@ -77,6 +78,23 @@ func (d *DummyLauncher) runOnEach(ctx context.Context, pool *runner.Pool, nodes 
 }
 
 func (d *DummyLauncher) RunLatencyBenchmark(context.Context, *runner.Pool, []config.Node, launcher.LatencyParams, launcher.Progress) (string, error) {
+	return "", nil
+}
+
+func (d *DummyLauncher) SupportsAddNewPeer() bool { return true }
+
+func (d *DummyLauncher) SupportsMultiClientMode() bool { return true }
+
+func (d *DummyLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
+	triggeredAt := time.Now()
+	return triggeredAt, triggeredAt, nil
+}
+
+func (d *DummyLauncher) AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
+	return time.Now(), nil
+}
+
+func (d *DummyLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (string, error) {
 	return "", nil
 }
 

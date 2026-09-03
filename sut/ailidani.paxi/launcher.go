@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fadhilkurnia/distro/internal/config"
 	"github.com/fadhilkurnia/distro/internal/gitrepo"
@@ -264,6 +265,25 @@ func (l *PaxiLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []conf
 		}
 	}
 	return nil
+}
+
+// Paxi does not support adding a new peer to a running cluster. Its
+// config is loaded once at startup with no way to change membership
+// while it runs.
+func (l *PaxiLauncher) SupportsAddNewPeer() bool { return false }
+
+func (l *PaxiLauncher) SupportsMultiClientMode() bool { return true }
+
+func (l *PaxiLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
+	return time.Time{}, time.Time{}, fmt.Errorf("%s does not support adding a new peer", meta.Name)
+}
+
+func (l *PaxiLauncher) AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("%s does not support adding a new peer", meta.Name)
+}
+
+func (l *PaxiLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (string, error) {
+	return "", fmt.Errorf("%s does not support adding a new peer", meta.Name)
 }
  
 func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {

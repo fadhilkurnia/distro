@@ -454,6 +454,25 @@ func (l *XDNLauncher) Stop(ctx context.Context, pool *runner.Pool, nodes []confi
 	return nil
 }
 
+func (l *XDNLauncher) SupportsAddNewPeer() bool { return true }
+
+func (l *XDNLauncher) SupportsMultiClientMode() bool { return true }
+
+// TODO: replace with the real implementation in a later commit.
+func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
+	return time.Time{}, time.Time{}, fmt.Errorf("not yet implemented")
+}
+
+// TODO: replace with the real implementation in a later commit.
+func (l *XDNLauncher) AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
+	return time.Time{}, fmt.Errorf("not yet implemented")
+}
+
+// TODO: replace with the real implementation in a later commit.
+func (l *XDNLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (string, error) {
+	return "", fmt.Errorf("not yet implemented")
+}
+
 func (l *XDNLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {
 	replicas := config.ReplicaNodes(nodes)
 	if len(replicas) == 0 {

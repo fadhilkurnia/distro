@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fadhilkurnia/distro/internal/config"
 	"github.com/fadhilkurnia/distro/internal/runner"
@@ -19,13 +20,31 @@ type NodeAddress struct {
 	PrivatePort int
 }
 
-// k6 latency benchmark configurations (read once from .env)
+// Latency Benchmark Configurations
 type LatencyParams struct {
 	WarmupDuration  string  // ex: "60s"
 	Duration        string  // ex: "180s"
 	WriteRatio      float64 // ex: 0.2
 	RequestWorkload int     // total requests/sec across all nodes combined
 	OutputFilename  string  // (optional) falls back to an auto-generated name if empty
+}
+
+// Add New Peer Benchmark Configurations
+//
+// The benchmark phase and the warmup phase run as two separate k6
+// invocations, so there is no startTime offset to configure here.
+// JoinOffset is measured from the start of the benchmark phase, not
+// from the start of warmup.
+type AddNewPeerParams struct {
+	WarmupDuration  string        // ex: "60s"
+	Duration        string        // ex: "180s", benchmark phase only
+	WriteRatio      float64       // ex: 0.2
+	RequestWorkload int           // total requests/sec across initial nodes
+	ClientMode      string        // "single" or "multi"
+	JoinOffset      string        // ex: "30s", time into the benchmark phase when the new peer is added
+	Timeout         time.Duration // bounds AwaitDataPlaneReady
+	PollInterval    time.Duration // poll interval used by AwaitDataPlaneReady
+	OutputFilename  string        // (optional) falls back to an auto-generated name if empty
 }
 
 // A combination of protocol, language, consistency, persistency 
@@ -154,6 +173,43 @@ type Launcher interface {
 	// Runs a k6-based latency benchmark from client to all Adresses()
 	// Returns the local path to the fetched result file on success
 	RunLatencyBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, params LatencyParams, progress Progress) (string, error)
+
+	// Runs the full Add New Peer benchmark. nodes is the initial cluster,
+	// newPeer is the node that gets added partway through. k6 keeps running
+	// for its full configured duration no matter what happens with the
+	// reconfiguration itself, since a failed or slow join is a real result,
+	// not something to hide by cutting the run short.
+	// Returns the local path to the fetched k6 result file on success.
+	RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params AddNewPeerParams, progress Progress) (string, error)
+
+	// **********************
+	// Add New Peer Helper Functions:
+	// **********************
+
+	// Reports whether this launcher can add a new peer to a running cluster.
+	// Callers must check this before calling AddNewPeer, AwaitDataPlaneReady,
+	// or RunAddNewPeerBenchmark. Implementations that do not support this
+	// should return false here and a plain error from the other three.
+	SupportsAddNewPeer() bool
+
+	// Reports whether this launcher can serve a workload where each client
+	// thread talks to a different replica at the same time. Some protocols
+	// only accept requests through one designated node.
+	SupportsMultiClientMode() bool
+
+	// Triggers the reconfiguration that adds newPeer to the running cluster
+	// described by nodes. Returns the time the trigger call was made and the
+	// time the control plane accepted or confirmed the change, depending on
+	// what that protocol's own trigger call actually reports. Some protocols
+	// need to poll separately to know when this happened. Where that is the
+	// case, the polling is done here, inside this call, not by the caller.
+	AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress Progress) (triggeredAt time.Time, controlPlaneDoneAt time.Time, err error)
+
+	// Waits until target is actually serving the workload, by sending it a
+	// real request on an interval until one succeeds or ctx is done. Called
+	// once per node that needs confirming, so the caller is responsible for
+	// looping when more than one node needs to be checked at once.
+	AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress Progress) (time.Time, error)
 }
 
 
