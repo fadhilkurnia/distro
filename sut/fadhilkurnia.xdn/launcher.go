@@ -539,6 +539,12 @@ func (l *XDNLauncher) setPlacement(ctx context.Context, pool *runner.Pool, nodes
 func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
 	replicas := config.ReplicaNodes(nodes)
 
+	for _, n := range replicas {
+		if n.ID == newPeer.ID {
+			return time.Time{}, time.Time{}, fmt.Errorf("newPeer %s is already present in nodes, nodes must be the initial replicas and client only", newPeer.ID)
+		}
+	}
+
 	desired := make([]config.Node, 0, len(replicas)+1)
 	for _, n := range replicas {
 		desired = append(desired, n)
