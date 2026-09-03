@@ -63,7 +63,8 @@ type Config struct {
 	WriteRatio     	float64 // ex: 0.2
 
 	// Add New Peer benchmark defaults
-	AddNewPeerTimeout      time.Duration // ex: 60s. Bounds AwaitDataPlaneReady only
+	AddNewPeerTimeout      time.Duration // ex: 60s. Bounds AwaitDataPlaneReady during the real, measured join only
+	AddNewPeerSetupTimeout time.Duration // ex: 90s. Bounds forcing and confirming the initial cluster placement, before the benchmark starts measuring anything
 	AddNewPeerPollInterval time.Duration // ex: 100ms. Poll interval used by AwaitDataPlaneReady
 }
 
@@ -196,6 +197,15 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("config: ADD_NEW_PEER_TIMEOUT must be a duration, got %q: %w", addNewPeerTimeoutStr, err)
 	}
 
+	addNewPeerSetupTimeoutStr := os.Getenv("ADD_NEW_PEER_SETUP_TIMEOUT")
+	if addNewPeerSetupTimeoutStr == "" {
+		addNewPeerSetupTimeoutStr = "90s"
+	}
+	addNewPeerSetupTimeout, err := time.ParseDuration(addNewPeerSetupTimeoutStr)
+	if err != nil {
+		return nil, fmt.Errorf("config: ADD_NEW_PEER_SETUP_TIMEOUT must be a duration, got %q: %w", addNewPeerSetupTimeoutStr, err)
+	}
+
 	addNewPeerPollIntervalStr := os.Getenv("ADD_NEW_PEER_POLL_INTERVAL")
 	if addNewPeerPollIntervalStr == "" {
 		addNewPeerPollIntervalStr = "100ms"
@@ -220,6 +230,7 @@ func Load() (*Config, error) {
 
 		// AddNewPeer Benchmark Defaults
 		AddNewPeerTimeout:      addNewPeerTimeout,
+		AddNewPeerSetupTimeout: addNewPeerSetupTimeout,
 		AddNewPeerPollInterval: addNewPeerPollInterval,
 	}
 
@@ -278,6 +289,10 @@ func (c *Config) Validate() error {
 
 	if c.AddNewPeerTimeout <= 0 {
 		return fmt.Errorf("config: AddNewPeerTimeout must be positive, got %v", c.AddNewPeerTimeout)
+	}
+
+	if c.AddNewPeerSetupTimeout <= 0 {
+		return fmt.Errorf("config: AddNewPeerSetupTimeout must be positive, got %v", c.AddNewPeerSetupTimeout)
 	}
 
 	if c.AddNewPeerPollInterval <= 0 {

@@ -42,7 +42,8 @@ type AddNewPeerParams struct {
 	RequestWorkload int           // total requests/sec across initial nodes
 	ClientMode      string        // "single" or "multi"
 	JoinOffset      string        // ex: "30s", time into the benchmark phase when the new peer is added
-	Timeout         time.Duration // bounds AwaitDataPlaneReady
+	Timeout         time.Duration // bounds AwaitDataPlaneReady during the real, measured join only
+	SetupTimeout    time.Duration // bounds forcing and confirming the initial cluster placement, before the benchmark starts measuring anything
 	PollInterval    time.Duration // poll interval used by AwaitDataPlaneReady
 	OutputFilename  string        // (optional) falls back to an auto-generated name if empty
 }

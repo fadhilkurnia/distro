@@ -698,7 +698,7 @@ func (l *XDNLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.P
 	// measures, so it gets its own timeout budget, not
 	// ADD_NEW_PEER_TIMEOUT, which is reserved for the real, measured
 	// join later.
-	setupCtx, cancelSetup := context.WithTimeout(ctx, params.Timeout)
+	setupCtx, cancelSetup := context.WithTimeout(ctx, params.SetupTimeout)
 	defer cancelSetup()
 	if err := l.ensureInitialPlacement(setupCtx, pool, nodes, params.PollInterval, progress); err != nil {
 		errMsg := fmt.Errorf("setting up initial placement: %w", err)
