@@ -555,7 +555,7 @@ func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes [
 // let a caller choose the initial replica set at creation time, so this
 // removes any doubt about which nodes actually make up the starting
 // cluster before the benchmark begins measuring anything.
-func (l *XDNLauncher) ensureInitialPlacement(ctx context.Context, pool *runner.Pool, nodes []config.Node, initialReplicas []config.Node, pollInterval time.Duration, progress launcher.Progress) error {
+func (l *XDNLauncher) ensureInitialPlacement(ctx context.Context, pool *runner.Pool, nodes []config.Node, pollInterval time.Duration, progress launcher.Progress) error {
 	// Start returns as soon as launch-service.sh's process exits, not
 	// once the service creation has actually settled on the control
 	// plane. We do not have a confirmed way to poll for that settling,
@@ -564,6 +564,7 @@ func (l *XDNLauncher) ensureInitialPlacement(ctx context.Context, pool *runner.P
 	// first place to look. See the design plan document, reminders
 	// section, for the fuller explanation of why this could not be
 	// replaced with a real check yet.
+	initialReplicas := config.ReplicaNodes(nodes)
 	progress.Info("Waiting for service creation to settle (10s)...")
 	time.Sleep(10 * time.Second)
 
