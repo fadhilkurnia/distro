@@ -94,8 +94,8 @@ func (d *DummyLauncher) AwaitDataPlaneReady(ctx context.Context, pool *runner.Po
 	return time.Now(), nil
 }
 
-func (d *DummyLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (string, error) {
-	return "", nil
+func (d *DummyLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (launcher.AddNewPeerResult, error) {
+	return launcher.AddNewPeerResult{Outcome: "success", BenchmarkStartedAt: time.Now()}, nil
 }
 
 // compile-time check that DummyLauncher satisfies Launcher

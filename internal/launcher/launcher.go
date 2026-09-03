@@ -179,8 +179,7 @@ type Launcher interface {
 	// for its full configured duration no matter what happens with the
 	// reconfiguration itself, since a failed or slow join is a real result,
 	// not something to hide by cutting the run short.
-	// Returns the local path to the fetched k6 result file on success.
-	RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params AddNewPeerParams, progress Progress) (string, error)
+	RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params AddNewPeerParams, progress Progress) (AddNewPeerResult, error)
 
 	// **********************
 	// Add New Peer Helper Functions:
@@ -215,6 +214,30 @@ type Launcher interface {
 	AwaitDataPlaneReady(ctx context.Context, pool *runner.Pool, client config.Node, target config.Node, pollInterval time.Duration, progress Progress) (time.Time, error)
 }
 
+// AddNewPeerResult carries everything RunAddNewPeerBenchmark learned
+// during one run, that the caller cannot know on its own, so the
+// caller can build a full AddNewPeerBenchmarkEntry from it and write
+// that to data.json. This mirrors how RunLatencyBenchmark's caller
+// already builds a LatencyBenchmarkEntry from the returned path plus
+// data the caller already has, just with more to carry across here
+// since this benchmark measures more than one thing.
+type AddNewPeerResult struct {
+	// Local path to the fetched k6 result file. Empty if fetching
+	// itself failed.
+	ResultPath string
+
+	// "success", "failed", or "timed_out".
+	Outcome string
+
+	// When the benchmark phase k6 process was started. The offsets
+	// below are seconds since this moment, not absolute timestamps,
+	// see the design plan document for why.
+	BenchmarkStartedAt time.Time
+
+	AddNewPeerOffsetSec       *float64
+	ControlPlaneDoneOffsetSec *float64
+	DataPlaneReadyOffsetSec   *float64
+}
 
 // **********************
 // Helper Functions

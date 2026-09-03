@@ -282,8 +282,8 @@ func (l *PaxiLauncher) AwaitDataPlaneReady(ctx context.Context, pool *runner.Poo
 	return time.Time{}, fmt.Errorf("ailidani.paxi does not support adding a new peer")
 }
 
-func (l *PaxiLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (string, error) {
-	return "", fmt.Errorf("%s does not support adding a new peer", meta.Name)
+func (l *PaxiLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (launcher.AddNewPeerResult, error) {
+	return launcher.AddNewPeerResult{}, fmt.Errorf("ailidani.paxi does not support adding a new peer")
 }
  
 func (l *PaxiLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {

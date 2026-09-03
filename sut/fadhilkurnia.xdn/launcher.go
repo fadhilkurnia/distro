@@ -3,6 +3,7 @@ package xdn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -670,9 +671,148 @@ func (l *XDNLauncher) AwaitDataPlaneReady(ctx context.Context, pool *runner.Pool
 	}
 }
 
-// TODO: replace with the real implementation in a later commit.
-func (l *XDNLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (string, error) {
-	return "", fmt.Errorf("not yet implemented")
+func (l *XDNLauncher) RunAddNewPeerBenchmark(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, params launcher.AddNewPeerParams, progress launcher.Progress) (launcher.AddNewPeerResult, error) {
+	if len(l.addresses) == 0 {
+		errMsg := fmt.Errorf("no addresses recorded, run Start first")
+		progress.Error(errMsg)
+		return launcher.AddNewPeerResult{}, errMsg
+	}
+
+	initialReplicas := config.ReplicaNodes(nodes)
+	client := config.ClientNode(nodes)
+	short := gitrepo.ShortHash(l.version.CommitHash)
+
+	initialAddresses := make([]launcher.NodeAddress, 0, len(initialReplicas))
+	for _, n := range initialReplicas {
+		for _, a := range l.addresses {
+			if a.NodeID == n.ID {
+				initialAddresses = append(initialAddresses, a)
+				break
+			}
+		}
+	}
+
+	// Step 1: force the initial cluster to exactly the intended
+	// replicas, since the control plane does not let a caller pin this
+	// at creation time. This is setup, not something the benchmark
+	// measures, so it gets its own timeout budget, not
+	// ADD_NEW_PEER_TIMEOUT, which is reserved for the real, measured
+	// join later.
+	setupCtx, cancelSetup := context.WithTimeout(ctx, params.Timeout)
+	defer cancelSetup()
+	if err := l.ensureInitialPlacement(setupCtx, pool, nodes, params.PollInterval, progress); err != nil {
+		errMsg := fmt.Errorf("setting up initial placement: %w", err)
+		progress.Error(errMsg)
+		return launcher.AddNewPeerResult{}, errMsg
+	}
+
+	r, err := launcher.GetRunner(pool, client, l.ProjectMeta, progress)
+	if err != nil {
+		return launcher.AddNewPeerResult{}, err
+	}
+
+	scriptRel := gitrepo.ResolveOverride(l.WorkDir, "scripts/latency.js", l.version.Name)
+	scriptAbs := filepath.Join(l.WorkDir, scriptRel)
+	runScript := gitrepo.ResolveOverride(l.WorkDir, "scripts/run-latency.sh", l.version.Name)
+
+	// Step 2: warmup phase, blocking, result discarded. A failure here
+	// aborts the whole benchmark, since a broken warmup means the
+	// deployment itself is suspect.
+	warmupLocalPath, warmupInterval, err := k6.GenerateAddNewPeerScript(
+		l.WorkDir, short, scriptAbs, initialAddresses, params.RequestWorkload,
+		params.ClientMode, "warmup", "WARMUP_DURATION",
+		k6.GeneratedAddNewPeerWarmupScriptFilename,
+	)
+	if err != nil {
+		progress.Error(err)
+		return launcher.AddNewPeerResult{}, err
+	}
+	if err := k6.RunAddNewPeerWarmup(ctx, r, warmupLocalPath, runScript, short, params, warmupInterval, progress); err != nil {
+		progress.Error(err)
+		return launcher.AddNewPeerResult{}, err
+	}
+
+	// Step 3: start the benchmark phase, non blocking, so the
+	// reconfiguration can be triggered while it is still running.
+	benchmarkLocalPath, benchmarkInterval, err := k6.GenerateAddNewPeerScript(
+		l.WorkDir, short, scriptAbs, initialAddresses, params.RequestWorkload,
+		params.ClientMode, "benchmark", "DURATION",
+		k6.GeneratedAddNewPeerBenchmarkScriptFilename,
+	)
+	if err != nil {
+		progress.Error(err)
+		return launcher.AddNewPeerResult{}, err
+	}
+	benchmarkStartedAt := time.Now()
+	stream, relResultPath, err := k6.StartAddNewPeerBenchmarkPhase(ctx, r, benchmarkLocalPath, runScript, short, params, benchmarkInterval, progress)
+	if err != nil {
+		progress.Error(err)
+		return launcher.AddNewPeerResult{}, err
+	}
+
+	// Step 4: wait until the configured join offset, then trigger the
+	// reconfiguration and wait for both signals. k6 keeps running
+	// regardless of what happens here.
+	outcome := "success"
+	var addNewPeerOffsetSec, controlPlaneDoneOffsetSec, dataPlaneReadyOffsetSec *float64
+
+	joinOffset, parseErr := time.ParseDuration(params.JoinOffset)
+	if parseErr != nil {
+		progress.Error(fmt.Errorf("parsing JoinOffset: %w", parseErr))
+		outcome = "failed"
+	} else {
+		select {
+		case <-time.After(joinOffset):
+		case <-ctx.Done():
+			outcome = "failed"
+		}
+	}
+
+	if outcome != "failed" {
+		triggeredAt, controlPlaneDoneAt, addErr := l.AddNewPeer(ctx, pool, nodes, newPeer, progress)
+		if !triggeredAt.IsZero() {
+			offset := triggeredAt.Sub(benchmarkStartedAt).Seconds()
+			addNewPeerOffsetSec = &offset
+		}
+
+		if addErr != nil {
+			progress.Error(fmt.Errorf("adding new peer: %w", addErr))
+			outcome = "failed"
+		} else {
+			offset := controlPlaneDoneAt.Sub(benchmarkStartedAt).Seconds()
+			controlPlaneDoneOffsetSec = &offset
+
+			readyCtx, cancelReady := context.WithTimeout(ctx, params.Timeout)
+			readyAt, readyErr := l.AwaitDataPlaneReady(readyCtx, pool, client, newPeer, params.PollInterval, progress)
+			cancelReady()
+
+			if readyErr != nil {
+				progress.Error(fmt.Errorf("waiting for %s to be ready: %w", newPeer.ID, readyErr))
+				if errors.Is(readyErr, context.DeadlineExceeded) {
+					outcome = "timed_out"
+				} else {
+					outcome = "failed"
+				}
+			} else {
+				offset := readyAt.Sub(benchmarkStartedAt).Seconds()
+				dataPlaneReadyOffsetSec = &offset
+			}
+		}
+	}
+
+	// Step 5: let k6 finish its full configured duration regardless of
+	// the outcome above, then fetch the result.
+	resultPath, fetchErr := k6.FetchAddNewPeerResult(ctx, r, stream, relResultPath, l.WorkDir, short, l.spec, params, progress)
+
+	result := launcher.AddNewPeerResult{
+		ResultPath:                resultPath,
+		Outcome:                   outcome,
+		BenchmarkStartedAt:        benchmarkStartedAt,
+		AddNewPeerOffsetSec:       addNewPeerOffsetSec,
+		ControlPlaneDoneOffsetSec: controlPlaneDoneOffsetSec,
+		DataPlaneReadyOffsetSec:   dataPlaneReadyOffsetSec,
+	}
+	return result, fetchErr
 }
 
 func (l *XDNLauncher) Clean(ctx context.Context, pool *runner.Pool, nodes []config.Node, removeRepo bool, progress launcher.Progress) error {
