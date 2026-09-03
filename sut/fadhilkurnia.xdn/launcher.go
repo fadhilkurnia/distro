@@ -564,10 +564,57 @@ func checkPlacementResponse(output string) error {
 	return nil
 }
 
+// probePath is the request path used against a specific replica's own
+// address to confirm it is caught up and serving, during AwaitDataPlaneReady.
+// This is specific to the bookcatalog service this project is built
+// around. If bookcatalog is ever swapped for a different service, this
+// needs to change together with the k6 script's request shapes,
+// SERVICE_NAME, and SERVICE_YAML_PATH, not on its own.
+const probePath = "/api/books"
 
-// TODO: replace with the real implementation in a later commit.
-func (l *XDNLauncher) AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
-	return time.Time{}, fmt.Errorf("not yet implemented")
+func (l *XDNLauncher) AwaitDataPlaneReady(ctx context.Context, pool *runner.Pool, client config.Node, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
+	if len(l.addresses) == 0 {
+		return time.Time{}, fmt.Errorf("no addresses recorded, run Start first")
+	}
+
+	var targetAddr string
+	for _, a := range l.addresses {
+		if a.NodeID == target.ID {
+			targetAddr = fmt.Sprintf("%s:%d", a.PrivateIP, a.PublicPort)
+			break
+		}
+	}
+	if targetAddr == "" {
+		return time.Time{}, fmt.Errorf("node %s not found in recorded addresses, run Start first", target.ID)
+	}
+
+	r, err := launcher.GetRunner(pool, client, l.ProjectMeta, progress)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	script := gitrepo.ResolveOverride(l.WorkDir, "scripts/probe-replica.sh", l.version.Name)
+	env := map[string]string{
+		"TARGET_ADDR": targetAddr,
+		"PROBE_PATH":  probePath,
+	}
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	progress.Info("Waiting for %s to start serving...", target.ID)
+	for {
+		select {
+		case <-ctx.Done():
+			return time.Time{}, ctx.Err()
+		case <-ticker.C:
+			output, runErr := nix.RunWithOutput(ctx, r, script, env)
+			if runErr == nil && strings.Contains(output, "HTTP_STATUS:200") {
+				progress.Info("%s is now serving", target.ID)
+				return time.Now(), nil
+			}
+		}
+	}
 }
 
 // TODO: replace with the real implementation in a later commit.

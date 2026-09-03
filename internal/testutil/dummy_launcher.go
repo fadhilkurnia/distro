@@ -90,7 +90,7 @@ func (d *DummyLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes
 	return triggeredAt, triggeredAt, nil
 }
 
-func (d *DummyLauncher) AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
+func (d *DummyLauncher) AwaitDataPlaneReady(ctx context.Context, pool *runner.Pool, client config.Node, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
 	return time.Now(), nil
 }
 

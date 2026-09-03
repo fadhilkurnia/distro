@@ -208,8 +208,11 @@ type Launcher interface {
 	// Waits until target is actually serving the workload, by sending it a
 	// real request on an interval until one succeeds or ctx is done. Called
 	// once per node that needs confirming, so the caller is responsible for
-	// looping when more than one node needs to be checked at once.
-	AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress Progress) (time.Time, error)
+	// looping when more than one node needs to be checked at once. client
+	// is the node the probe request is sent from, since a node's private
+	// IP is often only reachable from inside the same network, not from
+	// wherever distrobench itself runs.
+	AwaitDataPlaneReady(ctx context.Context, pool *runner.Pool, client config.Node, target config.Node, pollInterval time.Duration, progress Progress) (time.Time, error)
 }
 
 
