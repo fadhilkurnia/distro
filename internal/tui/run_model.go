@@ -151,25 +151,24 @@ func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node
 		if startErr != nil {
 			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("start failed: %v (cleaning up)", startErr)}
 		}
- 
+
 		if startErr == nil {
 			resultPath, err := l.RunLatencyBenchmark(ctx, pool, nodes, params, progress)
 			if err != nil {
 				ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("benchmark failed: %v", err)}
 			} else {
-				entry := benchmarkhistory.Entry{
-					Project:       inst.ProjectName,
-					Version:       inst.Version.Name,
-					CommitHash:    inst.Version.CommitHash,
-					Protocol:      inst.Specification.Protocol,
-					Language:      inst.Specification.Language,
-					Consistency:   inst.Specification.Consistency,
-					Persistency:   inst.Specification.Persistency,
-					BenchmarkType: "latency",
-					ResultPath:    resultPath,
-					Timestamp:     time.Now(),
+				entry := benchmarkhistory.LatencyBenchmarkEntry{
+					Project:     inst.ProjectName,
+					Version:     inst.Version.Name,
+					CommitHash:  inst.Version.CommitHash,
+					Protocol:    inst.Specification.Protocol,
+					Language:    inst.Specification.Language,
+					Consistency: inst.Specification.Consistency,
+					Persistency: inst.Specification.Persistency,
+					ResultPath:  resultPath,
+					Timestamp:   time.Now(),
 				}
-				if err := benchmarkhistory.Append(manifestPath, entry); err != nil {
+				if err := benchmarkhistory.AppendLatency(manifestPath, entry); err != nil {
 					ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("manifest write failed: %v", err)}
 				}
 			}
