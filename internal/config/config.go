@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 // Differentiates replica nodes and client node
@@ -60,6 +61,10 @@ type Config struct {
 	WarmupDuration 	string  // ex: "60s"
 	Duration       	string  // ex: "180s"
 	WriteRatio     	float64 // ex: 0.2
+
+	// Add New Peer benchmark defaults
+	AddNewPeerTimeout      time.Duration // ex: 60s. Bounds AwaitDataPlaneReady only
+	AddNewPeerPollInterval time.Duration // ex: 100ms. Poll interval used by AwaitDataPlaneReady
 }
 
 // Return nodes with Type == NodeTypeReplica (in original order)
@@ -182,6 +187,24 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("config: WRITE_RATIO must be a number, got %q: %w", writeRatioStr, err)
 	}
 
+	addNewPeerTimeoutStr := os.Getenv("ADD_NEW_PEER_TIMEOUT")
+	if addNewPeerTimeoutStr == "" {
+		addNewPeerTimeoutStr = "60s"
+	}
+	addNewPeerTimeout, err := time.ParseDuration(addNewPeerTimeoutStr)
+	if err != nil {
+		return nil, fmt.Errorf("config: ADD_NEW_PEER_TIMEOUT must be a duration, got %q: %w", addNewPeerTimeoutStr, err)
+	}
+
+	addNewPeerPollIntervalStr := os.Getenv("ADD_NEW_PEER_POLL_INTERVAL")
+	if addNewPeerPollIntervalStr == "" {
+		addNewPeerPollIntervalStr = "100ms"
+	}
+	addNewPeerPollInterval, err := time.ParseDuration(addNewPeerPollIntervalStr)
+	if err != nil {
+		return nil, fmt.Errorf("config: ADD_NEW_PEER_POLL_INTERVAL must be a duration, got %q: %w", addNewPeerPollIntervalStr, err)
+	}
+
 	cfg := &Config{
 		Nodes: nodes,
 		SSH: SSHConfig{
@@ -189,9 +212,15 @@ func Load() (*Config, error) {
 			Username: username,
 		},
 		OutputFile:     outputFile,
+
+		// Latency Benchmark Defaults
 		WarmupDuration: warmupDuration,
 		Duration:       duration,
 		WriteRatio:     writeRatio,
+
+		// AddNewPeer Benchmark Defaults
+		AddNewPeerTimeout:      addNewPeerTimeout,
+		AddNewPeerPollInterval: addNewPeerPollInterval,
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -245,6 +274,14 @@ func (c *Config) Validate() error {
 
 	if c.WriteRatio < 0 || c.WriteRatio > 1 {
 		return fmt.Errorf("config: WriteRatio must be between 0 and 1, got %v", c.WriteRatio)
+	}
+
+	if c.AddNewPeerTimeout <= 0 {
+		return fmt.Errorf("config: AddNewPeerTimeout must be positive, got %v", c.AddNewPeerTimeout)
+	}
+
+	if c.AddNewPeerPollInterval <= 0 {
+		return fmt.Errorf("config: AddNewPeerPollInterval must be positive, got %v", c.AddNewPeerPollInterval)
 	}
 
 	return nil
