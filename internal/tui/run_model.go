@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/fadhilkurnia/distro/internal/benchmarkhistory"
 	"github.com/fadhilkurnia/distro/internal/config"
@@ -48,6 +50,8 @@ type runModel struct {
 	progressCh chan logLine
 	cancel     context.CancelFunc
 	showDebug  bool
+
+	scrollOffset int
 }
 
 func newRunModel(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig, s *styles) runModel {
@@ -60,7 +64,7 @@ func newRunModel(ctx context.Context, pool *runner.Pool, nodes []config.Node, ss
 		status:  runIdle,
 	}
 }
-
+ 
 func (m runModel) Init() tea.Cmd { return nil }
 func (m runModel) Idle() bool    { return m.status == runIdle }
 func (m runModel) Running() bool { return m.status == runRunning }
@@ -80,9 +84,10 @@ func (m runModel) Start(selected []registry.Instance, params launcher.LatencyPar
 	m.log = nil
 	m.progressCh = ch
 	m.cancel = cancel
+	m.scrollOffset = 0
  
 	if err := os.MkdirAll("benchmark", 0755); err != nil {
-		ch <- logLine{level: launcher.LevelWarning, text: fmt.Sprintf("could not create benchmark/ directory: %v", err)}
+		ch <- logLine{level: launcher.LevelWarning, msg: fmt.Sprintf("could not create benchmark/ directory: %v", err)}
 	}
 	manifestPath := filepath.Join("benchmark", outputFilename)
  
@@ -97,7 +102,7 @@ func (m runModel) Cancel() (runModel, tea.Cmd) {
 	}
 	return m, nil
 }
-
+ 
 func (m runModel) Reset() runModel {
 	m.status = runIdle
 	m.log = nil
@@ -105,50 +110,52 @@ func (m runModel) Reset() runModel {
 	m.cancel = nil
 	return m
 }
-
+ 
 func listenForProgress(ch <-chan logLine) tea.Cmd {
 	return func() tea.Msg {
 		line, ok := <-ch
-		if !ok { return runFinishedMsg{} }
+		if !ok {
+			return runFinishedMsg{}
+		}
 		return runLogMsg(line)
 	}
 }
-
+ 
 func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node, sshCfg config.SSHConfig,
 	selected []registry.Instance, params launcher.LatencyParams, manifestPath string, ch chan<- logLine) {
 	defer close(ch)
  
 	for _, inst := range selected {
 		if ctx.Err() != nil {
-			ch <- logLine{level: launcher.LevelWarning, text: "run cancelled"}
+			ch <- logLine{level: launcher.LevelWarning, msg: "run cancelled"}
 			return
 		}
  
 		name := fmt.Sprintf("%s/%s (%s)", inst.ProjectName, inst.Specification.Protocol, inst.Version.Name)
 		progress := launcher.NewProgress(func(level launcher.Level, msg string) {
-			ch <- logLine{level: level, text: fmt.Sprintf("[%s] %s", name, msg)}
+			ch <- logLine{level: level, name: name, msg: msg}
 		})
  
 		l, err := registry.GetLauncher(inst)
 		if err != nil {
-			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] registry error: %v", name, err)}
+			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("registry error: %v", err)}
 			continue
 		}
  
 		if err := l.Build(ctx, pool, nodes, sshCfg, progress); err != nil {
-			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] build failed: %v", name, err)}
+			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("build failed: %v", err)}
 			continue
 		}
  
 		startErr := l.Start(ctx, pool, nodes, progress)
 		if startErr != nil {
-			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] start failed: %v (cleaning up)", name, startErr)}
+			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("start failed: %v (cleaning up)", startErr)}
 		}
  
 		if startErr == nil {
 			resultPath, err := l.RunLatencyBenchmark(ctx, pool, nodes, params, progress)
 			if err != nil {
-				ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] benchmark failed: %v", name, err)}
+				ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("benchmark failed: %v", err)}
 			} else {
 				entry := benchmarkhistory.Entry{
 					Project:       inst.ProjectName,
@@ -163,7 +170,7 @@ func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node
 					Timestamp:     time.Now(),
 				}
 				if err := benchmarkhistory.Append(manifestPath, entry); err != nil {
-					ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] manifest write failed: %v", name, err)}
+					ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("manifest write failed: %v", err)}
 				}
 			}
 		}
@@ -173,13 +180,13 @@ func runAllInstances(ctx context.Context, pool *runner.Pool, nodes []config.Node
 		// actually stopping them.
 		stopCtx := context.Background()
 		if err := l.Stop(stopCtx, pool, nodes, progress); err != nil {
-			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] stop failed: %v", name, err)}
+			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("stop failed: %v", err)}
 		}
 	}
  
-	ch <- logLine{level: launcher.LevelInfo, text: "=== run complete ==="}
+	ch <- logLine{level: launcher.LevelInfo, msg: "=== run complete ==="}
 }
-
+ 
 func (m runModel) Update(msg tea.Msg) (runModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case runLogMsg:
@@ -195,7 +202,7 @@ func (m runModel) Update(msg tea.Msg) (runModel, tea.Cmd) {
 	return m, nil
 }
 
-func (m runModel) View() string {
+func (m runModel) View(width, height int) string {
 	var status string
 	switch m.status {
 	case runIdle:
@@ -203,22 +210,91 @@ func (m runModel) View() string {
 	case runRunning:
 		status = "Running..."
 	}
-
-	body := status
-	if len(m.log) > 0 {
-		body += "\n\n"
-		for _, line := range m.log {
-			if line.level == launcher.LevelDebug && !m.showDebug {
-				continue
+ 
+	// Expand every visible log entry into its wrapped physical lines,
+	// with continuation lines hanging-indented under where the message
+	// text starts, not under the [LEVEL] tag.
+	var lines []string
+	for _, line := range m.log {
+		if line.level == launcher.LevelDebug && !m.showDebug {
+			continue
+		}
+ 
+		tag := "[" + line.level.String() + "]"
+		if m.styles != nil {
+			tag = m.styles.logStyle(line.level).Render(tag)
+		}
+		prefix := tag + " "
+		if line.name != "" {
+			prefix = tag + " [" + line.name + "] "
+		}
+		prefixWidth := lipgloss.Width(prefix)
+ 
+		wrapWidth := width - prefixWidth
+		if wrapWidth < 1 {
+			wrapWidth = 1
+		}
+		wrapped := lipgloss.Wrap(line.msg, wrapWidth, "")
+		for i, seg := range strings.Split(wrapped, "\n") {
+			if i == 0 {
+				lines = append(lines, prefix+seg)
+			} else {
+				lines = append(lines, strings.Repeat(" ", prefixWidth)+seg)
 			}
-			tag := "[" + line.level.String() + "]"
-			if m.styles != nil {
-				tag = m.styles.logStyle(line.level).Render(tag)
-			}
-			body += tag + " " + line.text + "\n"
 		}
 	}
+ 
+	// Height budget for the log window: total height minus the status
+	// line and the blank separator line above the log block.
+	logHeight := height - lipgloss.Height(status) - 1
+	if logHeight < 0 {
+		logHeight = 0
+	}
+ 
+	// Windowing: scrollOffset is "how many lines back from the live
+	// bottom". Clamp scrollOffset itself against the actual line count
+	// on every render — past a certain point, further scrolling can't
+	// reveal anything new, so it pins to the topmost lines rather than
+	// (incorrectly) sliding past them into an empty view.
+	maxOffset := len(lines) - logHeight
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	offset := m.scrollOffset
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+	end := len(lines) - offset
+	if end > len(lines) {
+		end = len(lines)
+	}
+	if end < 0 {
+		end = 0
+	}
+	start := end - logHeight
+	if start < 0 {
+		start = 0
+	}
+	visible := lines[start:end]
+ 
+	body := status
+	if len(visible) > 0 {
+		body += "\n\n" + strings.Join(visible, "\n")
+	}
 	return body
+}
+ 
+func (m runModel) ScrollUp() runModel {
+	m.scrollOffset++
+	return m
+}
+ 
+func (m runModel) ScrollDown() runModel {
+	m.scrollOffset--
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
+	}
+	return m
 }
 
 func (m runModel) HidesTabNav() bool {
@@ -248,20 +324,20 @@ func (m runModel) Clean(selected []registry.Instance, removeRepo bool) (runModel
 	if m.Running() || len(selected) == 0 {
 		return m, nil
 	}
- 
+
 	ctx, cancel := context.WithCancel(m.baseCtx)
 	ch := make(chan logLine, 100)
- 
+
 	m.status = runRunning
 	m.log = nil
 	m.progressCh = ch
 	m.cancel = cancel
- 
+
 	go cleanAllInstances(ctx, m.pool, m.nodes, selected, removeRepo, ch)
- 
+
 	return m, listenForProgress(ch)
 }
- 
+
 func cleanAllInstances(
 	ctx context.Context, pool *runner.Pool, nodes []config.Node,
 	selected []registry.Instance, removeRepo bool, ch chan<- logLine,
@@ -270,28 +346,28 @@ func cleanAllInstances(
 
 	for _, inst := range selected {
 		if ctx.Err() != nil {
-			ch <- logLine{level: launcher.LevelWarning, text: "clean cancelled"}
+			ch <- logLine{level: launcher.LevelWarning, msg: "clean cancelled"}
 			return
 		}
 
 		name := fmt.Sprintf("%s/%s (%s)", inst.ProjectName, inst.Specification.Protocol, inst.Version.Name)
 		progress := launcher.NewProgress(func(level launcher.Level, msg string) {
-			ch <- logLine{level: level, text: fmt.Sprintf("[%s] %s", name, msg)}
+			ch <- logLine{level: level, name: name, msg: msg}
 		})
 
 		l, err := registry.GetLauncher(inst)
 		if err != nil {
-			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] registry error: %v", name, err)}
+			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("registry error: %v", err)}
 			continue
 		}
 
 		if err := l.Clean(ctx, pool, nodes, removeRepo, progress); err != nil {
-			ch <- logLine{level: launcher.LevelError, text: fmt.Sprintf("[%s] clean failed: %v", name, err)}
+			ch <- logLine{level: launcher.LevelError, name: name, msg: fmt.Sprintf("clean failed: %v", err)}
 			continue
 		}
 	}
 
-	ch <- logLine{level: launcher.LevelInfo, text: "=== clean complete ==="}
+	ch <- logLine{level: launcher.LevelInfo, msg: "=== clean complete ==="}
 }
 
 

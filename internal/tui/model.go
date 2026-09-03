@@ -1,11 +1,14 @@
 package tui
 
 import (
+	"fmt"
+	"os"
 	"strings"
+	"time"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
@@ -82,7 +85,6 @@ func (m rootModel) activeKeyBindings() []key.Binding {
 	return nil
 }
 
-
 func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
 	case runLogMsg, runFinishedMsg:
@@ -90,10 +92,10 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.run, cmd = m.run.Update(msg)
 		return m, cmd
 	}
-
+ 
 	hideArrows := m.activeHidesArrowNav()
 	hideLetters := m.activeHidesLetterNav()
-
+ 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -175,14 +177,24 @@ func (m rootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.run = m.run.ClearLog()
 				return m, nil
 			}
-			case ".": // toggle DEBUG log in run_model
+		case ".":
 			if m.active == 3 {
 				m.run = m.run.ToggleDebug()
 				return m, nil
 			}
+		case "pgup":
+			if m.active == 3 {
+				m.run = m.run.ScrollUp()
+				return m, nil
+			}
+		case "pgdown":
+			if m.active == 3 {
+				m.run = m.run.ScrollDown()
+				return m, nil
+			}
 		}
 	}
-
+ 
 	var cmd tea.Cmd
 	switch m.active {
 	case 0:
@@ -201,18 +213,18 @@ func (m rootModel) View() tea.View {
 	if m.styles == nil {
 		return tea.NewView("")
 	}
-
-	content := strings.Builder{}
+ 
 	s := m.styles
-
+	const topMargin = 2
+ 
 	type tabInfo struct {
 		title string
 		style lipgloss.Style
 	}
-
+ 
 	var tabs []tabInfo
 	naturalTotal := 0
-
+ 
 	for i, t := range m.tabTitles {
 		var style lipgloss.Style
 		isFirst, isLast, isActive := i == 0, i == len(m.tabTitles)-1, i == m.active
@@ -232,61 +244,61 @@ func (m rootModel) View() tea.View {
 			border.BottomRight = "┤"
 		}
 		style = style.Border(border)
-
+ 
 		tabs = append(tabs, tabInfo{title: t, style: style})
 		naturalTotal += lipgloss.Width(style.Render(t))
 	}
-
+ 
 	views := []string{
 		m.configs.View(),
 		m.instances.View(),
 		m.benchmarks.View(),
-		m.run.View(),
 	}
-	activeView := views[m.active]
-
-	// after
-	// bodyWidth is driven only by Configs/Instances/Benchmarks
-	// run_model's content will be wrapped down to fit that width 
-	// by s.body.Render() instead of changing the bodyWidth
+ 
 	bodyWidth := naturalTotal
-	for _, v := range views[:3] {
+	contentBodyHeight := 0
+	for _, v := range views {
 		if w := lipgloss.Width(v); w > bodyWidth {
 			bodyWidth = w
 		}
-	}
-
-	renderedBody := s.body.Width(bodyWidth + 4).Render(activeView)
-	targetWidth := lipgloss.Width(renderedBody)
-
-	deficit := targetWidth - naturalTotal
-	if deficit < 0 {
-		deficit = 0
-	}
-	share := deficit / len(tabs)
-	remainder := deficit % len(tabs)
-
-	var renderedTabs []string
-	for i, ti := range tabs {
-		extra := share
-		if i < remainder {
-			extra++
+		if h := lipgloss.Height(v); h > contentBodyHeight {
+			contentBodyHeight = h
 		}
-		title := ti.title
-		if extra > 0 {
-			title += strings.Repeat(" ", extra)
-		}
-		renderedTabs = append(renderedTabs, ti.style.Render(title))
 	}
-	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
-
-	content.WriteString(row)
-	content.WriteString("\n")
-	content.WriteString(renderedBody)
-
+ 
+	// buildRow's tab-width padding and the help text below both depend
+	// only on bodyWidth (already fixed above) and the active tab's
+	// static key bindings — never on the body's own height. That means
+	// they can be built once and reused both for measuring the
+	// terminal-derived height ceiling below and for the real final
+	// render, rather than needing the real body first.
+	buildRow := func(renderedBodyForWidth string) string {
+		targetWidth := lipgloss.Width(renderedBodyForWidth)
+		deficit := targetWidth - naturalTotal
+		if deficit < 0 {
+			deficit = 0
+		}
+		share := deficit / len(tabs)
+		remainder := deficit % len(tabs)
+ 
+		var renderedTabs []string
+		for i, ti := range tabs {
+			extra := share
+			if i < remainder {
+				extra++
+			}
+			title := ti.title
+			if extra > 0 {
+				title += strings.Repeat(" ", extra)
+			}
+			renderedTabs = append(renderedTabs, ti.style.Render(title))
+		}
+		return lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
+	}
+ 
 	hideArrows := m.activeHidesArrowNav()
 	hideLetters := m.activeHidesLetterNav()
-
+ 
 	var bindings []key.Binding
 	switch {
 	case !hideArrows && !hideLetters:
@@ -301,16 +313,71 @@ func (m rootModel) View() tea.View {
 		bindings = append(bindings, keyQuit)
 	}
 	m.help.SetWidth(bodyWidth + 4)
-	content.WriteString("\n\n" + m.help.FullHelpView([][]key.Binding{bindings}))
-
-	const topMargin = 2
-
-	rendered := s.doc.Render(content.String())
+	helpText := m.help.FullHelpView([][]key.Binding{bindings})
+ 
+	assemble := func(renderedBody string) string {
+		content := strings.Builder{}
+		content.WriteString(buildRow(renderedBody))
+		content.WriteString("\n")
+		content.WriteString(renderedBody)
+		content.WriteString("\n\n" + helpText)
+		return s.doc.Render(content.String())
+	}
+ 
+	// Determine the terminal-derived ceiling for the body's height:
+	// total rows available minus every row consumed by things that
+	// aren't the body. Walking the screen top to bottom: s.doc adds 1
+	// row of padding above its content and 1 below (Padding(1,2,1,2));
+	// s.body adds 1 row of padding above the body and 1 below
+	// (Padding(1)), plus a single border line at the bottom (its top
+	// border is turned off elsewhere so it visually joins the tab row
+	// above it); the tab row itself is always exactly 1 line; and one
+	// blank line separates the body from the help text below it. Help
+	// text's own height isn't a constant — it varies by which tab is
+	// active, since each tab has a different list of key bindings — so
+	// it's measured directly from the string already built above rather
+	// than folded into the fixed count.
+	const (
+		docVerticalPadding  = 2 // s.doc: 1 top + 1 bottom
+		bodyVerticalPadding = 2 // s.body: 1 top + 1 bottom
+		bodyBottomBorder    = 1 // s.body: only the bottom border survives UnsetBorderTop()
+		tabRowHeight        = 1
+		separatorBeforeHelp = 1
+	)
+	fixedChromeHeight := docVerticalPadding + bodyVerticalPadding + bodyBottomBorder + tabRowHeight + separatorBeforeHelp
+ 
+	// maxBodyHeight is purely terminal-derived once a real size is
+	// known — content height (contentBodyHeight, from the other three
+	// tabs) no longer factors in. Run is free to be as tall as the
+	// terminal allows; anything past that scrolls via pgup/pgdown
+	// instead of being capped to match the other tabs' natural height.
+	maxBodyHeight := contentBodyHeight // fallback only, before the first real WindowSizeMsg
+	budget := -1                       // sentinel: stays -1 until a real WindowSizeMsg has arrived
+	if m.height > 0 {
+		budget = (m.height - topMargin) - fixedChromeHeight - lipgloss.Height(helpText)
+		if budget < 1 {
+			budget = 1
+		}
+		maxBodyHeight = budget
+	}
+	debugLogDimensions(m.width, m.height, bodyWidth, contentBodyHeight, fixedChromeHeight, lipgloss.Height(helpText), budget, maxBodyHeight)
+ 
+	// Run is appended last, using bodyWidth and the (possibly
+	// terminal-clamped) height ceiling derived above. Its own content
+	// never grows the shared box — it wraps and scrolls within
+	// whatever size is available instead, and shrinks below the
+	// ceiling when its log is shorter than the budget.
+	views = append(views, m.run.View(bodyWidth, maxBodyHeight))
+	activeView := views[m.active]
+ 
+	renderedBody := s.body.Width(bodyWidth + 4).Render(activeView)
+	rendered := assemble(renderedBody)
+ 
 	if m.width > 0 && m.height > 0 {
 		rendered = lipgloss.Place(m.width, m.height-topMargin, lipgloss.Center, lipgloss.Top, rendered)
 		rendered = strings.Repeat("\n", topMargin) + rendered
 	}
-
+ 
 	v := tea.NewView(rendered)
 	v.AltScreen = true
 	return v
@@ -342,4 +409,18 @@ func (m rootModel) activeHidesLetterNav() bool {
 		return m.run.HidesLetterNav()
 	}
 	return false
+}
+
+// debugLogDimensions appends every computed layout number to a local log
+// file, purely for manual inspection against a real terminal. Remove
+// this function and its one call site in View() once you're done
+// checking the numbers.
+func debugLogDimensions(mWidth, mHeight, bodyWidth, contentBodyHeight, fixedChromeHeight, helpTextHeight, budget, maxBodyHeight int) {
+	f, err := os.OpenFile("tui_debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return // best-effort — a logging failure shouldn't affect rendering
+	}
+	defer f.Close()
+	fmt.Fprintf(f, "%s m.width=%d m.height=%d bodyWidth=%d contentBodyHeight=%d fixedChromeHeight=%d helpTextHeight=%d budget=%d maxBodyHeight=%d\n",
+		time.Now().Format("15:04:05.000"), mWidth, mHeight, bodyWidth, contentBodyHeight, fixedChromeHeight, helpTextHeight, budget, maxBodyHeight)
 }
