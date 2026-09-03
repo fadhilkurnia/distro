@@ -472,31 +472,33 @@ func (l *XDNLauncher) arLabel(node config.Node) (string, error) {
 	return "", fmt.Errorf("node %s not found in recorded addresses, run Start first", node.ID)
 }
 
-func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
+// setPlacement runs the placement PUT against the control plane,
+// setting the cluster to run on exactly desiredReplicas, with the first
+// of them as coordinator. desiredReplicas is the complete desired
+// membership, not a delta added on top of whatever is currently active.
+func (l *XDNLauncher) setPlacement(ctx context.Context, pool *runner.Pool, nodes []config.Node, desiredReplicas []config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
 	if len(l.addresses) == 0 {
 		return time.Time{}, time.Time{}, fmt.Errorf("no addresses recorded, run Start first")
 	}
+	if len(desiredReplicas) == 0 {
+		return time.Time{}, time.Time{}, fmt.Errorf("desiredReplicas must not be empty")
+	}
 
-	replicas := config.ReplicaNodes(nodes)
-	control := replicas[0]
-	coordinator, err := l.arLabel(control)
+	control := config.ReplicaNodes(nodes)[0]
+
+	coordinator, err := l.arLabel(desiredReplicas[0])
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
 
-	currentARs := make([]string, 0, len(replicas)+1)
-	for _, n := range replicas {
+	desiredARs := make([]string, 0, len(desiredReplicas))
+	for _, n := range desiredReplicas {
 		ar, err := l.arLabel(n)
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
-		currentARs = append(currentARs, ar)
+		desiredARs = append(desiredARs, ar)
 	}
-	newPeerAR, err := l.arLabel(newPeer)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	desiredARs := append(currentARs, newPeerAR)
 
 	nodesJSON, err := json.Marshal(desiredARs)
 	if err != nil {
@@ -517,7 +519,6 @@ func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes [
 		"PLACEMENT_BODY":    body,
 	}
 
-	progress.Info("Adding %s (%s) to the cluster...", newPeer.ID, newPeerAR)
 	triggeredAt := time.Now()
 	output, runErr := nix.RunWithOutput(ctx, r, script, env)
 	controlPlaneDoneAt := time.Now()
@@ -533,6 +534,51 @@ func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes [
 	}
 
 	return triggeredAt, controlPlaneDoneAt, nil
+}
+
+func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
+	replicas := config.ReplicaNodes(nodes)
+
+	desired := make([]config.Node, 0, len(replicas)+1)
+	for _, n := range replicas {
+		desired = append(desired, n)
+	}
+	desired = append(desired, newPeer)
+
+	progress.Info("Adding %s to the cluster...", newPeer.ID)
+	return l.setPlacement(ctx, pool, nodes, desired, progress)
+}
+
+// ensureInitialPlacement forces the service to run on exactly
+// initialReplicas, regardless of which ARs the control plane happened
+// to pick when Start launched the service. The control plane does not
+// let a caller choose the initial replica set at creation time, so this
+// removes any doubt about which nodes actually make up the starting
+// cluster before the benchmark begins measuring anything.
+func (l *XDNLauncher) ensureInitialPlacement(ctx context.Context, pool *runner.Pool, nodes []config.Node, initialReplicas []config.Node, pollInterval time.Duration, progress launcher.Progress) error {
+	// Start returns as soon as launch-service.sh's process exits, not
+	// once the service creation has actually settled on the control
+	// plane. We do not have a confirmed way to poll for that settling,
+	// so this sleep is a guess, not a real wait condition. If this
+	// corrective placement starts failing intermittently, this is the
+	// first place to look. See the design plan document, reminders
+	// section, for the fuller explanation of why this could not be
+	// replaced with a real check yet.
+	progress.Info("Waiting for service creation to settle (10s)...")
+	time.Sleep(10 * time.Second)
+
+	progress.Info("Forcing initial placement to %d nodes...", len(initialReplicas))
+	if _, _, err := l.setPlacement(ctx, pool, nodes, initialReplicas, progress); err != nil {
+		return fmt.Errorf("forcing initial placement: %w", err)
+	}
+
+	client := config.ClientNode(nodes)
+	for _, n := range initialReplicas {
+		if _, err := l.AwaitDataPlaneReady(ctx, pool, client, n, pollInterval, progress); err != nil {
+			return fmt.Errorf("waiting for %s to be ready: %w", n.ID, err)
+		}
+	}
+	return nil
 }
 
 // placementResponse is the JSON body XDN's control plane returns from
