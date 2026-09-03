@@ -3,6 +3,7 @@ package nix
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/fadhilkurnia/distro/internal/runner"
@@ -32,6 +33,24 @@ func Run(ctx context.Context, r runner.Runner, script string, env map[string]str
 
 func Stream(ctx context.Context, r runner.Runner, script string, env map[string]string) (*runner.StreamHandle, error) {
 	return r.Stream(ctx, wrap(script), env)
+}
+
+// RunWithOutput runs script the same way Run does, but also returns
+// everything the script printed to stdout and stderr, so the caller can
+// inspect it. Use this when a plain success or failure from Run is not
+// enough on its own, for example when a script can exit 0 but still
+// report a failure in what it printed.
+func RunWithOutput(ctx context.Context, r runner.Runner, script string, env map[string]string) (string, error) {
+	stream, err := r.Stream(ctx, wrap(script), env)
+	if err != nil {
+		return "", err
+	}
+	output, readErr := io.ReadAll(stream.Output)
+	waitErr := stream.Wait()
+	if waitErr != nil {
+		return string(output), waitErr
+	}
+	return string(output), readErr
 }
 
 // Check if the target node machine has nix-shell.

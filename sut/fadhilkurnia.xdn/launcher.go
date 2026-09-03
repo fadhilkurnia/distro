@@ -2,6 +2,7 @@ package xdn
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -458,10 +459,111 @@ func (l *XDNLauncher) SupportsAddNewPeer() bool { return true }
 
 func (l *XDNLauncher) SupportsMultiClientMode() bool { return true }
 
-// TODO: replace with the real implementation in a later commit.
-func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
-	return time.Time{}, time.Time{}, fmt.Errorf("not yet implemented")
+// arLabel returns the gigapaxos AR label XDN assigned to node during
+// Start, based on its position in l.addresses. Start and every add new
+// peer call must be given the exact same node slice, in the exact same
+// order, or this lookup silently points at the wrong replica.
+func (l *XDNLauncher) arLabel(node config.Node) (string, error) {
+	for i, a := range l.addresses {
+		if a.NodeID == node.ID {
+			return fmt.Sprintf("AR%d", i), nil
+		}
+	}
+	return "", fmt.Errorf("node %s not found in recorded addresses, run Start first", node.ID)
 }
+
+func (l *XDNLauncher) AddNewPeer(ctx context.Context, pool *runner.Pool, nodes []config.Node, newPeer config.Node, progress launcher.Progress) (time.Time, time.Time, error) {
+	if len(l.addresses) == 0 {
+		return time.Time{}, time.Time{}, fmt.Errorf("no addresses recorded, run Start first")
+	}
+
+	replicas := config.ReplicaNodes(nodes)
+	control := replicas[0]
+	coordinator, err := l.arLabel(control)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	currentARs := make([]string, 0, len(replicas)+1)
+	for _, n := range replicas {
+		ar, err := l.arLabel(n)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+		currentARs = append(currentARs, ar)
+	}
+	newPeerAR, err := l.arLabel(newPeer)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	desiredARs := append(currentARs, newPeerAR)
+
+	nodesJSON, err := json.Marshal(desiredARs)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("encoding placement nodes: %w", err)
+	}
+	body := fmt.Sprintf(`{"NODES":%s,"COORDINATOR":%q}`, nodesJSON, coordinator)
+
+	client := config.ClientNode(nodes)
+	r, err := launcher.GetRunner(pool, client, l.ProjectMeta, progress)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	script := gitrepo.ResolveOverride(l.WorkDir, "scripts/set-placement.sh", l.version.Name)
+	env := map[string]string{
+		"XDN_CONTROL_PLANE": control.PrivateIP,
+		"SERVICE_NAME":      serviceName,
+		"PLACEMENT_BODY":    body,
+	}
+
+	progress.Info("Adding %s (%s) to the cluster...", newPeer.ID, newPeerAR)
+	triggeredAt := time.Now()
+	output, runErr := nix.RunWithOutput(ctx, r, script, env)
+	controlPlaneDoneAt := time.Now()
+
+	if runErr != nil {
+		errMsg := fmt.Errorf("sending placement request: %w\noutput:\n%s", runErr, output)
+		progress.Error(errMsg)
+		return triggeredAt, time.Time{}, errMsg
+	}
+	if err := checkPlacementResponse(output); err != nil {
+		progress.Error(err)
+		return triggeredAt, controlPlaneDoneAt, err
+	}
+
+	return triggeredAt, controlPlaneDoneAt, nil
+}
+
+// placementResponse is the JSON body XDN's control plane returns from
+// a placement PUT. A 200 status alone does not mean the change actually
+// applied, the control plane reports that separately in this body.
+type placementResponse struct {
+	Failed          bool   `json:"FAILED"`
+	ResponseMessage string `json:"RESPONSE_MESSAGE"`
+}
+
+// checkPlacementResponse reads what set-placement.sh printed and
+// confirms the control plane actually accepted the request, not just
+// that curl itself ran without error. output is the JSON body followed
+// by a trailing HTTP_STATUS line, added by set-placement.sh so a curl
+// level failure can be told apart from an HTTP level one.
+func checkPlacementResponse(output string) error {
+	body, _, found := strings.Cut(output, "\nHTTP_STATUS:")
+	if !found {
+		return fmt.Errorf("unexpected response format:\n%s", output)
+	}
+
+	var resp placementResponse
+	if err := json.Unmarshal([]byte(body), &resp); err != nil {
+		return fmt.Errorf("parsing placement response: %w\nbody:\n%s", err, body)
+	}
+	if resp.Failed {
+		return fmt.Errorf("control plane rejected placement request: %s", resp.ResponseMessage)
+	}
+	return nil
+}
+
 
 // TODO: replace with the real implementation in a later commit.
 func (l *XDNLauncher) AwaitDataPlaneReady(ctx context.Context, target config.Node, pollInterval time.Duration, progress launcher.Progress) (time.Time, error) {
